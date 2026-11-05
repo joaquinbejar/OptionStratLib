@@ -12,7 +12,7 @@ use crate::model::Options;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
-use rust_decimal::{Decimal, RoundingStrategy};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -58,7 +58,7 @@ pub struct SettlementPrice {
 }
 
 /// How cash amounts are rounded: to `scale` decimal places with
-/// [`RoundingStrategy::MidpointNearestEven`].
+/// [`rust_decimal::RoundingStrategy::MidpointNearestEven`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 #[serde(deny_unknown_fields)]
@@ -160,12 +160,18 @@ pub struct SettlementObligation {
 ///
 /// # Rounding
 ///
-/// Only `cash` is rounded, to [`CashRounding::scale`] decimal places with
-/// [`RoundingStrategy::MidpointNearestEven`] (banker's rounding). The rounding
-/// is applied to the magnitude before the sign, so the two sides of a contract
-/// get exactly opposite amounts. A value with no more decimal places than the
-/// scale is left as it is. `underlying` and `extinguished_quantity` are never
-/// rounded.
+/// `cash` is computed exactly from `S`, `K`, `q` and `m`, and rounded once at
+/// the end, to [`CashRounding::scale`] decimal places with
+/// [`rust_decimal::RoundingStrategy::MidpointNearestEven`] (banker's rounding).
+/// No intermediate product is rounded, so it cannot create or break a tie. The
+/// rounding is applied to the magnitude before the sign, so the two sides of a
+/// contract get exactly opposite amounts. A value with no more decimal places
+/// than the scale is left as it is. A `Decimal` holds at most 28 decimal places
+/// and 96 bits, so a larger scale, or an amount too large for the scale, keeps
+/// as many places as fit, still rounded from the exact value.
+///
+/// `underlying` is [`Options::position_size`], `q·m` at `Decimal` precision, with
+/// no [`CashRounding`] applied. `extinguished_quantity` is `q` as given.
 ///
 /// # Errors
 ///
@@ -177,8 +183,8 @@ pub struct SettlementObligation {
 ///   after `terms.cutoff`.
 /// - [`SettlementError::MissingPrice`] for an expiry or a cash settlement with
 ///   no price.
-/// - [`SettlementError::ArithmeticOverflow`] when the position size or a cash
-///   amount leaves the representable range.
+/// - [`SettlementError::ArithmeticOverflow`] when the position size or the
+///   integer part of a cash amount leaves the representable range.
 ///
 /// # Examples
 ///
@@ -250,6 +256,8 @@ pub fn settlement_obligation(
         .position_size()
         .map_err(|error| overflow("position size", error))?
         .to_dec();
+    let quantity = option.quantity.to_dec();
+    let multiplier = option.contract_size.to_dec();
 
     let (cash, underlying) = match (terms.settlement_type, terms.event, intrinsic) {
         (SettlementType::Cash, _, None)
@@ -260,7 +268,13 @@ pub fn settlement_obligation(
             });
         }
         (SettlementType::Cash, _, Some(intrinsic)) => {
-            let amount = rounded_product("cash settlement", intrinsic, size, terms.rounding)?;
+            let amount = rounded_amount(
+                "cash settlement",
+                intrinsic,
+                quantity,
+                multiplier,
+                terms.rounding,
+            )?;
             (signed(amount, option.side == Side::Long), Decimal::ZERO)
         }
         (SettlementType::Physical, SettlementEvent::Expiry, Some(intrinsic))
@@ -269,8 +283,15 @@ pub fn settlement_obligation(
             (Decimal::ZERO, Decimal::ZERO)
         }
         (SettlementType::Physical, _, _) => {
-            let strike = option.strike_price.to_dec();
-            let amount = rounded_product("physical cash", strike, size, terms.rounding)?;
+            let strike = ExactDecimal::from_decimal(option.strike_price.to_dec())
+                .ok_or_else(|| overflow("physical cash", "the strike is out of range"))?;
+            let amount = rounded_amount(
+                "physical cash",
+                strike,
+                quantity,
+                multiplier,
+                terms.rounding,
+            )?;
             let receives_underlying = matches!(
                 (option.side, option.option_style),
                 (Side::Long, OptionStyle::Call) | (Side::Short, OptionStyle::Put)
@@ -319,37 +340,253 @@ fn observed_price(terms: &SettlementTerms) -> Result<Option<Positive>, Settlemen
     }
 }
 
-/// The value of one unit of the option at `price`: `S−K` for a call and `K−S`
-/// for a put, floored at zero. Zero means at or out of the money.
+/// The value of one unit of the option at `price`, exactly: `S−K` for a call
+/// and `K−S` for a put, floored at zero. Zero means at or out of the money.
 fn intrinsic_per_unit(
     style: OptionStyle,
     strike: Positive,
     price: Positive,
-) -> Result<Decimal, SettlementError> {
+) -> Result<ExactDecimal, SettlementError> {
     let (minuend, subtrahend) = match style {
         OptionStyle::Call => (price.to_dec(), strike.to_dec()),
         OptionStyle::Put => (strike.to_dec(), price.to_dec()),
     };
-    let difference = minuend.checked_sub(subtrahend).ok_or_else(|| {
+    let scale = minuend.scale().max(subtrahend.scale());
+    let aligned = |value: Decimal| {
+        (value.scale()..scale).try_fold(
+            ExactUint::from_u128(value.mantissa().unsigned_abs())?,
+            |digits, _| digits.checked_mul_u32(10),
+        )
+    };
+    let difference = aligned(minuend).zip(aligned(subtrahend)).ok_or_else(|| {
         overflow(
             "intrinsic value",
             format!("{minuend} minus {subtrahend} is out of range"),
         )
     })?;
-    Ok(difference.max(Decimal::ZERO))
+    Ok(ExactDecimal {
+        digits: difference
+            .0
+            .checked_sub(difference.1)
+            .unwrap_or(ExactUint::ZERO),
+        scale,
+    })
 }
 
-/// `left × right` rounded by `rounding`.
-fn rounded_product(
+/// `amount × quantity × multiplier`, computed exactly and rounded once by
+/// `rounding`.
+fn rounded_amount(
     operation: &'static str,
-    left: Decimal,
-    right: Decimal,
+    amount: ExactDecimal,
+    quantity: Decimal,
+    multiplier: Decimal,
     rounding: CashRounding,
 ) -> Result<Decimal, SettlementError> {
-    let product = left
-        .checked_mul(right)
-        .ok_or_else(|| overflow(operation, format!("{left} times {right} is out of range")))?;
-    Ok(product.round_dp_with_strategy(rounding.scale, RoundingStrategy::MidpointNearestEven))
+    let out_of_range = || {
+        overflow(
+            operation,
+            format!("{quantity} times {multiplier} leaves the range"),
+        )
+    };
+    let digits = amount
+        .digits
+        .checked_mul_u128(quantity.mantissa().unsigned_abs())
+        .and_then(|digits| digits.checked_mul_u128(multiplier.mantissa().unsigned_abs()))
+        .ok_or_else(out_of_range)?;
+    let scale = amount
+        .scale
+        .checked_add(quantity.scale())
+        .and_then(|scale| scale.checked_add(multiplier.scale()))
+        .ok_or_else(out_of_range)?;
+    ExactDecimal { digits, scale }
+        .rounded(rounding.scale)
+        .ok_or_else(out_of_range)
+}
+
+/// Limbs of an [`ExactUint`]: 384 bits hold every amount computed here. An
+/// intrinsic value aligned to scale 28 is below `2^190`, and the mantissas of
+/// the quantity and the multiplier are each below `2^96`.
+const EXACT_LIMBS: usize = 12;
+
+/// The bits of one limb of an [`ExactUint`].
+const LIMB_BITS: u32 = u32::BITS;
+
+/// Selects the low limb of a `u128`.
+const LIMB_MASK: u128 = 0xFFFF_FFFF;
+
+/// The most decimal places a `Decimal` holds.
+const MAX_DECIMAL_SCALE: u32 = 28;
+
+/// An unsigned integer wide enough to hold a settlement amount without rounding,
+/// least significant limb first. Every operation returns `None` on overflow
+/// rather than truncating, which the bound on [`EXACT_LIMBS`] rules out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ExactUint([u32; EXACT_LIMBS]);
+
+impl ExactUint {
+    const ZERO: Self = Self([0; EXACT_LIMBS]);
+
+    fn from_u128(value: u128) -> Option<Self> {
+        let mut limbs = [0; EXACT_LIMBS];
+        let mut rest = value;
+        for limb in limbs.iter_mut().take(4) {
+            *limb = u32::try_from(rest & LIMB_MASK).ok()?;
+            rest = rest.checked_shr(LIMB_BITS)?;
+        }
+        Some(Self(limbs))
+    }
+
+    /// The value, when it fits in 128 bits.
+    fn to_u128(self) -> Option<u128> {
+        if self.0.iter().skip(4).any(|limb| *limb != 0) {
+            return None;
+        }
+        self.0.iter().take(4).rev().try_fold(0_u128, |value, limb| {
+            Some(value.checked_shl(LIMB_BITS)? | u128::from(*limb))
+        })
+    }
+
+    fn is_zero(self) -> bool {
+        self == Self::ZERO
+    }
+
+    fn is_odd(self) -> bool {
+        self.0.first().is_some_and(|limb| limb & 1 == 1)
+    }
+
+    fn checked_add(self, other: Self) -> Option<Self> {
+        let mut limbs = self.0;
+        let mut carry = 0_u64;
+        for (limb, addend) in limbs.iter_mut().zip(other.0) {
+            let sum = u64::from(*limb)
+                .checked_add(u64::from(addend))?
+                .checked_add(carry)?;
+            (*limb, carry) = split_limb(sum)?;
+        }
+        (carry == 0).then_some(Self(limbs))
+    }
+
+    /// `None` when `other` is larger.
+    fn checked_sub(self, other: Self) -> Option<Self> {
+        let mut limbs = self.0;
+        let mut borrow = false;
+        for (limb, subtrahend) in limbs.iter_mut().zip(other.0) {
+            let (partial, first) = limb.overflowing_sub(subtrahend);
+            let (difference, second) = partial.overflowing_sub(u32::from(borrow));
+            *limb = difference;
+            borrow = first || second;
+        }
+        (!borrow).then_some(Self(limbs))
+    }
+
+    fn checked_mul_u32(self, factor: u32) -> Option<Self> {
+        let mut limbs = self.0;
+        let mut carry = 0_u64;
+        for limb in &mut limbs {
+            let product = u64::from(*limb)
+                .checked_mul(u64::from(factor))?
+                .checked_add(carry)?;
+            (*limb, carry) = split_limb(product)?;
+        }
+        (carry == 0).then_some(Self(limbs))
+    }
+
+    /// Schoolbook multiplication, from the most significant limb of `factor`.
+    fn checked_mul_u128(self, factor: u128) -> Option<Self> {
+        let factor = Self::from_u128(factor)?;
+        factor
+            .0
+            .iter()
+            .take(4)
+            .rev()
+            .try_fold(Self::ZERO, |product, limb| {
+                product
+                    .shifted_one_limb()?
+                    .checked_add(self.checked_mul_u32(*limb)?)
+            })
+    }
+
+    fn shifted_one_limb(self) -> Option<Self> {
+        let mut limbs = self.0;
+        limbs.rotate_right(1);
+        (limbs.first() == Some(&0)).then_some(Self(limbs))
+    }
+
+    /// The quotient and the remainder of a division by ten.
+    fn divided_by_ten(self) -> Option<(Self, u32)> {
+        let mut limbs = self.0;
+        let mut remainder = 0_u64;
+        for limb in limbs.iter_mut().rev() {
+            let dividend = remainder.checked_shl(LIMB_BITS)? | u64::from(*limb);
+            *limb = u32::try_from(dividend.checked_div(10)?).ok()?;
+            remainder = dividend.checked_rem(10)?;
+        }
+        Some((Self(limbs), u32::try_from(remainder).ok()?))
+    }
+}
+
+/// The low limb of `value` and what carries into the next one.
+#[inline]
+fn split_limb(value: u64) -> Option<(u32, u64)> {
+    let low = u32::try_from(value & u64::from(u32::MAX)).ok()?;
+    Some((low, value.checked_shr(LIMB_BITS)?))
+}
+
+/// An exact non-negative decimal: `digits / 10^scale`.
+#[derive(Debug, Clone, Copy)]
+struct ExactDecimal {
+    digits: ExactUint,
+    scale: u32,
+}
+
+impl ExactDecimal {
+    fn from_decimal(value: Decimal) -> Option<Self> {
+        Some(Self {
+            digits: ExactUint::from_u128(value.mantissa().unsigned_abs())?,
+            scale: value.scale(),
+        })
+    }
+
+    fn is_zero(self) -> bool {
+        self.digits.is_zero()
+    }
+
+    /// The value rounded half to even at `scale` decimal places, or at as many
+    /// as a `Decimal` can hold, or `None` when its integer part does not fit.
+    fn rounded(self, scale: u32) -> Option<Decimal> {
+        let target = scale.min(MAX_DECIMAL_SCALE);
+        let mut digits = self.digits;
+        let mut current = self.scale;
+        // The most significant digit dropped, and whether anything below it was
+        // not zero: what tells a tie from a value on either side of it.
+        let mut dropped = 0;
+        let mut below_dropped = false;
+        loop {
+            if current <= target {
+                let rounds_up = dropped > 5 || (dropped == 5 && (below_dropped || digits.is_odd()));
+                let rounded = if rounds_up {
+                    digits.checked_add(ExactUint::from_u128(1)?)?
+                } else {
+                    digits
+                };
+                let value = rounded
+                    .to_u128()
+                    .and_then(|mantissa| i128::try_from(mantissa).ok())
+                    .and_then(|mantissa| Decimal::try_from_i128_with_scale(mantissa, current).ok());
+                if value.is_some() {
+                    return value;
+                }
+                if current == 0 {
+                    return None;
+                }
+            }
+            let (quotient, digit) = digits.divided_by_ten()?;
+            below_dropped = below_dropped || dropped != 0;
+            dropped = digit;
+            digits = quotient;
+            current = current.checked_sub(1)?;
+        }
+    }
 }
 
 /// `magnitude` with the sign of a flow the position receives or pays. A zero
@@ -730,6 +967,220 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_settlement_physical_cash_rounds_the_exact_triple_product() {
+        // q·m is 1 − 1e-30, which a Decimal rounds to 1: going through it would
+        // turn 101.01499…9 into the tie 101.015, and that tie into 101.02.
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(101.015),
+            dec!(1.000000000000001),
+            dec!(0.999999999999999),
+        );
+        let terms = terms(SettlementType::Physical, SettlementEvent::Exercise, None);
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, .. }) if cash == dec!(-101.01)
+        ));
+    }
+
+    #[test]
+    fn test_settlement_cash_settlement_rounds_the_exact_triple_product() {
+        // The same false tie through the intrinsic value: 1.015 × (1 − 1e-30).
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(100),
+            dec!(1.000000000000001),
+            dec!(0.999999999999999),
+        );
+        let terms = terms(
+            SettlementType::Cash,
+            SettlementEvent::Expiry,
+            Some(dec!(101.015)),
+        );
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, .. }) if cash == dec!(1.01)
+        ));
+    }
+
+    #[test]
+    fn test_settlement_cash_rounds_the_exact_intrinsic_value() {
+        // S − K is 1000000000000.13499…9, which a Decimal rounds to the tie
+        // 1000000000000.135, and that tie to .14.
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(0.0000000000000000000000000001),
+            dec!(1),
+            dec!(1),
+        );
+        let terms = terms(
+            SettlementType::Cash,
+            SettlementEvent::Expiry,
+            Some(dec!(1000000000000.135)),
+        );
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, .. }) if cash == dec!(1000000000000.13)
+        ));
+    }
+
+    #[test]
+    fn test_settlement_expiry_keeps_an_exact_intrinsic_value_above_zero() {
+        // S − K is 1e-28 at a scale a Decimal holds, and it is in the money.
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(1),
+            dec!(1),
+            dec!(1),
+        );
+        let terms = terms(
+            SettlementType::Physical,
+            SettlementEvent::Expiry,
+            Some(dec!(1.0000000000000000000000000001)),
+        );
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, underlying, .. })
+                if cash == dec!(-1) && underlying == dec!(1)
+        ));
+    }
+
+    #[test]
+    fn test_settlement_rounding_a_true_tie_still_goes_to_even() {
+        for (strike, expected) in [
+            (dec!(101.015), dec!(-101.02)),
+            (dec!(101.025), dec!(-101.02)),
+        ] {
+            let option = contract(
+                OptionType::European,
+                Side::Long,
+                OptionStyle::Call,
+                strike,
+                dec!(1),
+                dec!(1),
+            );
+            let terms = terms(SettlementType::Physical, SettlementEvent::Exercise, None);
+
+            assert!(matches!(
+                settlement_obligation(&option, &terms),
+                Ok(SettlementObligation { cash, .. }) if cash == expected
+            ));
+        }
+    }
+
+    #[test]
+    fn test_settlement_rounding_scale_above_decimal_precision_keeps_what_fits() {
+        // The exact product has 30 decimal places, and a Decimal holds 28.
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(1),
+            dec!(1.000000000000001),
+            dec!(0.999999999999999),
+        );
+        let mut terms = terms(SettlementType::Physical, SettlementEvent::Exercise, None);
+        terms.rounding = CashRounding { scale: 40 };
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, .. }) if cash == dec!(-1)
+        ));
+    }
+
+    #[test]
+    fn test_settlement_large_amount_keeps_the_places_that_fit() {
+        // 8e18 × 1.0000000001 at scale 10 needs more than 96 bits; at scale 9
+        // it fits, rounded from the exact value.
+        let option = contract(
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            dec!(8000000000000000000),
+            dec!(1.0000000001),
+            dec!(1),
+        );
+        let mut terms = terms(SettlementType::Physical, SettlementEvent::Exercise, None);
+        terms.rounding = CashRounding { scale: 28 };
+
+        assert!(matches!(
+            settlement_obligation(&option, &terms),
+            Ok(SettlementObligation { cash, .. }) if cash == dec!(-8000000000800000000)
+        ));
+    }
+
+    /// `ExactUint::from_u128` for a test: every `u128` fits, so a zero here can
+    /// only fail the comparison that follows.
+    fn exact(value: u128) -> ExactUint {
+        ExactUint::from_u128(value).unwrap_or(ExactUint::ZERO)
+    }
+
+    #[test]
+    fn test_exact_uint_arithmetic_matches_u128() {
+        let left: u128 = 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
+        let right: u128 = 0xFFFF_FFFF;
+        assert_eq!(exact(u128::MAX).to_u128(), Some(u128::MAX));
+        assert_eq!(
+            exact(left)
+                .checked_mul_u128(right)
+                .and_then(ExactUint::to_u128),
+            left.checked_mul(right)
+        );
+        assert_eq!(
+            exact(left)
+                .checked_add(exact(right))
+                .and_then(ExactUint::to_u128),
+            left.checked_add(right)
+        );
+        assert_eq!(
+            exact(left)
+                .checked_sub(exact(right))
+                .and_then(ExactUint::to_u128),
+            left.checked_sub(right)
+        );
+        assert_eq!(exact(right).checked_sub(exact(left)), None);
+        assert_eq!(
+            exact(left)
+                .divided_by_ten()
+                .and_then(|(quotient, _)| quotient.to_u128()),
+            Some(left / 10)
+        );
+        assert_eq!(
+            exact(left)
+                .divided_by_ten()
+                .map(|(_, remainder)| u128::from(remainder)),
+            Some(left % 10)
+        );
+    }
+
+    #[test]
+    fn test_exact_uint_holds_the_largest_amount_and_refuses_more() {
+        // The bound behind EXACT_LIMBS: below 2^190 × 2^96 × 2^96.
+        let mantissa: u128 = (1 << 96) - 1;
+        let largest = (0..28)
+            .try_fold(exact(mantissa), |digits, _| digits.checked_mul_u32(10))
+            .and_then(|digits| digits.checked_mul_u128(mantissa))
+            .and_then(|digits| digits.checked_mul_u128(mantissa));
+        assert!(largest.is_some());
+        assert_eq!(
+            largest.and_then(|digits| digits.checked_mul_u128(1 << 96)),
+            None
+        );
     }
 
     #[test]

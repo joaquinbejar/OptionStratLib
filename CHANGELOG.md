@@ -55,8 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   moneyness, out of the money included, and needs no settlement price; a
   cash-settled one pays the intrinsic value, so nothing at or out of the money.
   Physical settlement moves `q·m` of underlying against `K·q·m` of cash; cash
-  settlement moves only the intrinsic value. Cash is rounded to the given scale
-  with `MidpointNearestEven`. European and American are the supported option
+  settlement moves only the intrinsic value. Cash is computed exactly and
+  rounded once, to the given scale with `MidpointNearestEven`, so no
+  intermediate product can create or break a tie. European and American are the supported option
   types. Failures are a new `#[non_exhaustive]` `SettlementError`: unsupported
   option type, missing price, price observed after the cutoff, event
   incompatible with the side, and arithmetic overflow. The aggregate
