@@ -918,7 +918,7 @@ impl Optimizable for PoorMansCoveredCall {
             )
         })?;
 
-        let mut strategy = PoorMansCoveredCall::new(
+        let mut strategy = PoorMansCoveredCall::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -935,6 +935,7 @@ impl Optimizable for PoorMansCoveredCall {
             self.long_call.close_fee,
             self.short_call.open_fee,
             self.short_call.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

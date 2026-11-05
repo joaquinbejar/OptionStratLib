@@ -21,7 +21,6 @@
 //!
 //! ```rust
 //! # #[cfg(feature = "clock")] {
-//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::{PerpetualPosition, MarginType};
 //! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
@@ -40,7 +39,6 @@
 //!     Utc::now(),
 //!     pos_or_panic!(5.0),           // $5 fees
 //! );
-//! # }
 //! # }
 //! ```
 

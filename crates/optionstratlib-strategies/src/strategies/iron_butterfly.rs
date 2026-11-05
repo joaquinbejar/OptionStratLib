@@ -46,7 +46,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-use optionstratlib_core::utils::time::now;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -1157,7 +1157,7 @@ impl Optimizable for IronButterfly {
                     &self.long_put,
                 ])?
                 .checked_div_f64(8.0)?;
-                let mut strategy = IronButterfly::new(
+                let mut strategy = IronButterfly::new_at(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     short_strike.strike_price,
@@ -1174,6 +1174,7 @@ impl Optimizable for IronButterfly {
                     long_put_ask,
                     fee_per_leg,
                     fee_per_leg,
+                    now_or(self.short_call.date),
                 )?;
                 // The rebuilt legs keep the contract size of the strategy they
                 // are rebuilt from.

@@ -19,6 +19,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
 use optionstratlib_core::model::types::Side;
 use optionstratlib_core::model::{ExpirationDate, Options, Position, resolve_expiration_date};
+use optionstratlib_core::utils::time::resolution_base;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
@@ -207,8 +208,12 @@ impl PnLCalculator for Position {
         let initial_income = self.premium_received()?;
         // `ExpirationDate::get_date` resolves a relative expiration with the
         // `+` operator on `DateTime<Utc>`, which aborts past the calendar
-        // range instead of reporting it.
-        let date_time = resolve_expiration_date(&self.option.expiration_date)?;
+        // range instead of reporting it. Only stamps the record: with no time
+        // to count from, a relative expiration counts from the leg's open date.
+        let date_time = match resolution_base() {
+            Ok(_) => resolve_expiration_date(&self.option.expiration_date)?,
+            Err(_) => self.option.expiration_date.get_date_at(self.date)?,
+        };
 
         // A cost or an income at the top of the `Positive` range overflows the
         // raw `Decimal` operators, so the running total is taken through

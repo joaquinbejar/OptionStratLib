@@ -368,6 +368,10 @@ impl<'a> AdjustmentOptimizer<'a> {
         let target_delta_sign = delta_gap.signum();
         let contract_size = self.portfolio_contract_size();
 
+        // The date a candidate would open at: with no date `get_position` asks the
+        // clock, and in a build without one every candidate would vanish here.
+        let opened_at = self.positions.first().map(|leg| now_or(leg.date));
+
         for opt_data in chain.get_single_iter() {
             // Filter by liquidity
             if let Some(min_oi) = self.config.min_liquidity
@@ -386,7 +390,7 @@ impl<'a> AdjustmentOptimizer<'a> {
             // Try both call and put options
             for option_style in &self.config.allowed_styles {
                 if let Ok(position) =
-                    opt_data.get_position(Side::Long, *option_style, None, None, None)
+                    opt_data.get_position(Side::Long, *option_style, opened_at, None, None)
                 {
                     // Size the new leg like the legs it adjusts, so its
                     // delta and quantity are per contract of that size.

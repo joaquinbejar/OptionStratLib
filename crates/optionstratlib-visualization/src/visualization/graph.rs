@@ -293,19 +293,15 @@ pub trait Graph {
 #[inline(never)]
 fn show_in_browser(plot: &Plot) -> Result<(), GraphError> {
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::time::{SystemTime, UNIX_EPOCH};
 
-    // Process id, wall-clock nanoseconds and a per-process sequence number
-    // keep two pages shown at once from overwriting each other; the
-    // sequence only names files, so it is free to wrap.
+    // Process id and a per-process sequence number keep two pages shown at once
+    // from overwriting each other; the sequence only names files, so it is free
+    // to wrap. The name reads no clock: a later run with the same process id
+    // reuses a page nothing is showing any more.
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_nanos())
-        .unwrap_or_default();
     let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!(
-        "plotly_optionstratlib_{}_{nanos}_{sequence}.html",
+        "plotly_optionstratlib_{}_{sequence}.html",
         std::process::id()
     ));
     std::fs::write(&path, plot.to_html())?;

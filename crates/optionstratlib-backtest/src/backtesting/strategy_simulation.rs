@@ -21,12 +21,13 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::{ExpirationDate, Options};
 use optionstratlib_core::utils::Len;
-use optionstratlib_core::utils::time::evaluation_time;
+use optionstratlib_core::utils::time::{ReferenceCarrier, evaluation_time, now_or};
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_simulation::error::SimulationError;
 use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
 use optionstratlib_simulation::simulation::simulator::Simulator;
 use optionstratlib_simulation::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};
+use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::base::Positionable;
 use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut, Strategies};
 use rayon::prelude::*;
@@ -238,6 +239,14 @@ where
         let option = self.strategy.simulated_option()?;
         let initial_premium = self.initial_premium;
         let mark_adjustment = self.strategy.mark_adjustment()?.to_dec();
+        // What an exit is stamped with when the build has no clock.
+        let opened_at = self
+            .strategy
+            .get_positions()
+            .map_err(StrategyError::from)?
+            .first()
+            .map(|leg| leg.date)
+            .ok_or_else(|| SimulationError::invalid_parameters("the strategy has no leg"))?;
 
         let mut max_premium = initial_premium;
         let mut min_premium = initial_premium;
@@ -354,7 +363,7 @@ where
                     unrealized: None,
                     initial_costs: Positive::ZERO,
                     initial_income: Positive::ZERO,
-                    date_time: evaluation_time()?,
+                    date_time: now_or(opened_at),
                 };
                 final_pnl = Some(pnl);
                 break;
@@ -444,11 +453,12 @@ where
     // how to show it.
     let walks = sim.get_random_walks();
     let walk_count = walks.len();
+    let carrier = ReferenceCarrier::capture();
     let outcomes: Vec<Result<SimulationResult, BacktestError>> = walks
         .into_par_iter()
         .enumerate()
         .map(|(path, random_walk)| {
-            let outcome = evaluator.evaluate_path(random_walk, &exit);
+            let outcome = carrier.run(|| evaluator.evaluate_path(random_walk, &exit));
             tracing::debug!(path, total = walk_count, "simulated path evaluated");
             outcome
         })

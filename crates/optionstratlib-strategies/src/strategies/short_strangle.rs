@@ -1291,7 +1291,7 @@ impl Optimizable for ShortStrangle {
             )
         })?;
 
-        let mut strategy = ShortStrangle::new(
+        let mut strategy = ShortStrangle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -1308,6 +1308,7 @@ impl Optimizable for ShortStrangle {
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.short_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1524,7 +1525,7 @@ impl PnLCalculator for ShortStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         (Side::Short, OptionStyle::Put) => {
@@ -1538,7 +1539,7 @@ impl PnLCalculator for ShortStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         _ => {
@@ -1565,7 +1566,7 @@ impl PnLCalculator for ShortStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         (Side::Short, OptionStyle::Put) => {
@@ -1579,7 +1580,7 @@ impl PnLCalculator for ShortStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         _ => {

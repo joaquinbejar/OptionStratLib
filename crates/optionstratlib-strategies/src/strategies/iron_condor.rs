@@ -1186,7 +1186,7 @@ impl Optimizable for IronCondor {
                     &self.long_put,
                 ])?
                 .checked_div_f64(8.0)?;
-                let mut strategy = IronCondor::new(
+                let mut strategy = IronCondor::new_at(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     short_call.strike_price,
@@ -1204,6 +1204,7 @@ impl Optimizable for IronCondor {
                     long_put_ask,
                     fee_per_leg,
                     fee_per_leg,
+                    now_or(self.short_call.date),
                 )?;
                 // The rebuilt legs keep the contract size of the strategy they
                 // are rebuilt from.

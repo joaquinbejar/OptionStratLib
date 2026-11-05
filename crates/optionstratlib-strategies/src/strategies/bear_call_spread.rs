@@ -928,7 +928,7 @@ impl Optimizable for BearCallSpread {
                 "missing call_ask for long leg",
             )
         })?;
-        let mut strategy = BearCallSpread::new(
+        let mut strategy = BearCallSpread::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             short.strike_price,
@@ -944,6 +944,7 @@ impl Optimizable for BearCallSpread {
             self.short_call.close_fee,
             self.long_call.open_fee,
             self.long_call.close_fee,
+            now_or(self.short_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

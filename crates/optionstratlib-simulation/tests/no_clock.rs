@@ -33,6 +33,50 @@ mod without_clock {
         assert_eq!(now(), Err(ClockError::Unavailable));
     }
 
+    /// A parallel `Simulator::new` runs the generator on rayon workers, and its steps read
+    /// their days there.
+    #[test]
+    fn test_simulator_carries_the_reference_to_its_workers() {
+        use optionstratlib_simulation::simulation::simulator::Simulator;
+        use optionstratlib_simulation::simulation::steps::Step;
+        use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
+
+        #[derive(Clone)]
+        struct Walker;
+        impl WalkTypeAble<Positive, Positive> for Walker {}
+
+        let base = Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap();
+        ExpirationDate::set_reference_datetime(Some(base));
+        let init_step = Step::new(
+            Positive::ONE,
+            TimeFrame::Day,
+            ExpirationDate::DateTime(base + Duration::days(30)),
+            Positive::HUNDRED,
+        );
+        let params = WalkParams {
+            size: 2,
+            init_step,
+            walker: Box::new(Walker),
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices: vec![Positive::HUNDRED, Positive::HUNDRED],
+                symbol: None,
+            },
+            seed: None,
+        };
+        let simulator = Simulator::new(
+            "paths".to_string(),
+            32,
+            &params,
+            |walk: &WalkParams<Positive, Positive>| {
+                let next = walk.init_step.next(Positive::HUNDRED)?;
+                Ok::<_, SimulationError>(vec![walk.init_step.clone(), next])
+            },
+        );
+        ExpirationDate::set_reference_datetime(None);
+        assert_eq!(simulator.unwrap().get_random_walks().len(), 32);
+    }
+
     /// With no time to measure from, the step keeps its instant instead of
     /// reading as already expired, and asking for the days is a typed error.
     #[test]

@@ -24,8 +24,9 @@ use optionstratlib_core::model::{
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_core::utils::Len;
 use optionstratlib_core::utils::rng::get_random_element;
-use optionstratlib_core::utils::time::now;
-use optionstratlib_core::utils::time::{days_to_expiration, expiration_date_string};
+use optionstratlib_core::utils::time::{
+    ReferenceCarrier, days_to_expiration, expiration_date_string, now, years_to_expiration,
+};
 use optionstratlib_math::curves::{Curve, Point2D};
 use optionstratlib_math::geometrics::LinearInterpolation;
 use optionstratlib_pricing::error::GreeksError;
@@ -305,6 +306,26 @@ impl<'de> Deserialize<'de> for OptionChain {
 /// prices 9 and above in parallel.
 pub(crate) const PARALLEL_STRIKE_THRESHOLD: usize = 8;
 
+/// One strike's Greek in an aggregate exposure.
+///
+/// Without a clock an empty Greek is an error: it may be a strike whose time to
+/// expiry could not be measured, and adding it as zero would report a total for a
+/// chain with no Greeks at all. A build with a clock keeps adding it as zero.
+fn exposure_term(
+    greek: Option<Decimal>,
+    strike: Positive,
+    name: &str,
+) -> Result<Decimal, ChainError> {
+    match greek {
+        Some(value) => Ok(value),
+        None if now().is_ok() => Ok(Decimal::ZERO),
+        None => Err(ChainError::invalid_parameters(
+            name,
+            &format!("strike {strike} has none: call try_update_greeks first"),
+        )),
+    }
+}
+
 /// Whether `strikes` strikes are priced on the rayon pool.
 ///
 /// A call already running on a rayon worker stays serial:
@@ -526,6 +547,11 @@ impl OptionChain {
             )
         })?;
         reject_unrepresentable_expiration(&expiration_date)?;
+        // Pricing a strike only logs a failure, and the walk stops at a step that
+        // priced nothing: with no time to measure from, that would be a short chain
+        // reported as a success. Ask on this thread first.
+        years_to_expiration(&expiration_date)?;
+        let carrier = ReferenceCarrier::capture();
 
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
@@ -758,7 +784,10 @@ impl OptionChain {
                 })
             };
             let priced: Vec<_> = if batch_steps > 1 {
-                planned.into_par_iter().map(price).collect()
+                planned
+                    .into_par_iter()
+                    .map(|step| carrier.run(|| price(step)))
+                    .collect()
             } else {
                 planned.into_iter().map(price).collect()
             };
@@ -1461,11 +1490,59 @@ impl OptionChain {
     /// of delta with respect to the underlying asset's price.
     ///
     /// The original options in the chain are replaced with the ones containing the updated Greeks.
+    ///
+    /// Needs the `clock` feature: without it, a `DateTime` expiration with no time to measure
+    /// from would leave the Greeks empty and report nothing. Use
+    /// [`Self::try_update_greeks`], which says so.
+    #[cfg(feature = "clock")]
     pub fn update_greeks(&mut self) {
+        self.refresh_greeks();
+    }
+
+    /// Calculates and updates the delta and gamma Greeks, as [`Self::update_greeks`] does,
+    /// and reports a chain whose time to expiry cannot be measured.
+    ///
+    /// A strike whose Greeks fail for any other reason keeps them empty, as in
+    /// [`Self::update_greeks`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ExpirationDate`] when the time to expiry of a strike cannot be
+    /// measured: a `DateTime` expiration in a build with neither the `clock` feature nor a
+    /// reference datetime on this thread. The chain is left as it was.
+    pub fn try_update_greeks(&mut self) -> Result<(), ChainError> {
+        self.require_time_to_expiry()?;
+        self.refresh_greeks();
+        Ok(())
+    }
+
+    /// Refreshes delta and gamma of every strike.
+    fn refresh_greeks(&mut self) {
         self.refresh_each_strike(|option| {
             option.calculate_delta();
             option.calculate_gamma();
         });
+    }
+
+    /// Fails if the time to expiry of a strike cannot be measured on this thread.
+    ///
+    /// The Greeks of a strike only log a failure, and the projections skip a strike they
+    /// cannot compute, so this is where a missing clock becomes an error. It cannot fail
+    /// for lack of a time in a build with a clock.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ExpirationDate`] for a `DateTime` expiration in a build with
+    /// neither the `clock` feature nor a reference datetime on this thread.
+    pub fn require_time_to_expiry(&self) -> Result<(), ChainError> {
+        for expiration_date in self
+            .options
+            .iter()
+            .filter_map(|option| option.expiration_date.as_ref())
+        {
+            years_to_expiration(expiration_date)?;
+        }
+        Ok(())
     }
 
     /// Applies `refresh` to a copy of every strike and stores the copies.
@@ -1477,7 +1554,10 @@ impl OptionChain {
     fn refresh_each_strike(&mut self, refresh: impl Fn(&mut OptionData) + Sync) {
         let mut options: Vec<OptionData> = self.options.iter().cloned().collect();
         if price_in_parallel(options.len()) {
-            options.par_iter_mut().for_each(&refresh);
+            let carrier = ReferenceCarrier::capture();
+            options
+                .par_iter_mut()
+                .for_each(|option| carrier.run(|| refresh(option)));
         } else {
             options.iter_mut().for_each(&refresh);
         }
@@ -1495,8 +1575,24 @@ impl OptionChain {
     ///
     /// A strike whose greeks cannot be computed keeps a `None` snapshot and
     /// logs at `debug` level; see [`OptionData::calculate_greeks`].
+    ///
+    /// Needs the `clock` feature: without it, use [`Self::try_update_greek_snapshots`],
+    /// for the reason given at [`Self::update_greeks`].
+    #[cfg(feature = "clock")]
     pub fn update_greek_snapshots(&mut self) {
         self.refresh_each_strike(OptionData::calculate_greeks);
+    }
+
+    /// Recomputes the full twelve-greek snapshots, as [`Self::update_greek_snapshots`] does,
+    /// and reports a chain whose time to expiry cannot be measured.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::try_update_greeks`]. The chain is left as it was.
+    pub fn try_update_greek_snapshots(&mut self) -> Result<(), ChainError> {
+        self.require_time_to_expiry()?;
+        self.refresh_each_strike(OptionData::calculate_greeks);
+        Ok(())
     }
 
     /// Saves the option chain data to a CSV file.
@@ -1753,7 +1849,8 @@ impl OptionChain {
     #[cfg(feature = "async")]
     pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
-        tokio::task::spawn_blocking(move || Self::load_from_csv(&path))
+        let carrier = ReferenceCarrier::capture();
+        tokio::task::spawn_blocking(move || carrier.run(|| Self::load_from_csv(&path)))
             .await
             .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
@@ -1801,7 +1898,7 @@ impl OptionChain {
         });
 
         option_chain.update_mid_prices();
-        option_chain.update_greeks();
+        option_chain.try_update_greeks()?;
         // if implied volatility is in percentage, convert it to decimal
         option_chain.check_and_convert_implied_volatility();
         Ok(option_chain)
@@ -1821,7 +1918,8 @@ impl OptionChain {
     #[cfg(feature = "async")]
     pub async fn load_from_json_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
-        tokio::task::spawn_blocking(move || Self::load_from_json(&path))
+        let carrier = ReferenceCarrier::capture();
+        tokio::task::spawn_blocking(move || carrier.run(|| Self::load_from_json(&path)))
             .await
             .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
@@ -2467,7 +2565,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's gamma calculation fails
-    /// - Options greeks are not initialized
+    /// - Options greeks are not initialized; a build with the `clock` feature adds a
+    ///   strike with no gamma as zero
     ///
     /// # Note
     ///
@@ -2477,7 +2576,7 @@ impl OptionChain {
         for option in &self.options {
             gamma_exposure = d_add(
                 gamma_exposure,
-                option.gamma.unwrap_or(Decimal::ZERO),
+                exposure_term(option.gamma, option.strike_price, "gamma")?,
                 "chains::gamma_exposure",
             )?;
         }
@@ -2498,7 +2597,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's delta calculation fails
-    /// - Options greeks are not initialized
+    /// - Options greeks are not initialized; a build with the `clock` feature adds a
+    ///   strike with no delta as zero
     ///
     /// # Note
     ///
@@ -2508,12 +2608,12 @@ impl OptionChain {
         for option in &self.options {
             delta_exposure = d_add(
                 delta_exposure,
-                option.delta_call.unwrap_or(Decimal::ZERO),
+                exposure_term(option.delta_call, option.strike_price, "call delta")?,
                 "chains::delta_exposure::call",
             )?;
             delta_exposure = d_add(
                 delta_exposure,
-                option.delta_put.unwrap_or(Decimal::ZERO),
+                exposure_term(option.delta_put, option.strike_price, "put delta")?,
                 "chains::delta_exposure::put",
             )?;
         }
@@ -2730,7 +2830,7 @@ impl OptionChain {
         // Replace the old options with the updated ones
         self.options = updated_options;
 
-        self.update_greeks();
+        self.refresh_greeks();
     }
 
     /// Retrieves the expiration date of the option chain.
@@ -3679,6 +3779,7 @@ mod tests_chain_base {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_load_from_json() {
         let mut chain = OptionChain::new(
@@ -3719,6 +3820,7 @@ mod tests_chain_base {
     /// one wrote, the pretty serialization of the chain, and the buffered
     /// reader must load them back to the same chain.
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_save_to_json_buffered_writes_the_pretty_serialization() {
         let mut chain = OptionChain::new(
@@ -6886,7 +6988,7 @@ mod tests_theta_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_vanna_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -6943,7 +7045,7 @@ mod tests_vanna_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_vomma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -6996,7 +7098,7 @@ mod tests_vomma_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_veta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -7049,7 +7151,7 @@ mod tests_veta_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_charm_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -7102,7 +7204,7 @@ mod tests_charm_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_color_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;

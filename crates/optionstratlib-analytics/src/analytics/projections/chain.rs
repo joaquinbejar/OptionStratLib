@@ -39,6 +39,9 @@ impl BasicCurves for OptionChain {
                 axis: format!("{axis:?}"),
             });
         }
+        // A strike that fails below is skipped, so with no time to measure from this
+        // would be an empty curve reported as a success.
+        self.require_time_to_expiry()?;
         let points = self
             .get_single_iter()
             .filter_map(|opt| {
@@ -89,6 +92,7 @@ impl BasicSurfaces for OptionChain {
             });
         }
 
+        self.require_time_to_expiry()?;
         let mut points = BTreeSet::new();
 
         for opt in self.get_single_iter() {
@@ -152,6 +156,7 @@ impl BasicSurfaces for OptionChain {
             });
         }
 
+        self.require_time_to_expiry()?;
         let mut points = BTreeSet::new();
 
         for opt in self.get_single_iter() {
@@ -1411,7 +1416,7 @@ mod tests_gamma_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_delta_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1497,7 +1502,7 @@ mod tests_delta_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_vega_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1583,7 +1588,7 @@ mod tests_vega_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_theta_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1669,7 +1674,7 @@ mod tests_theta_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_vanna_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1732,7 +1737,7 @@ mod tests_vanna_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_veta_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1795,7 +1800,7 @@ mod tests_veta_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_charm_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1858,7 +1863,7 @@ mod tests_charm_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_color_calculations_projections {
     #![allow(clippy::indexing_slicing)]
 

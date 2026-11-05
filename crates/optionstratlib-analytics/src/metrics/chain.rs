@@ -1732,7 +1732,7 @@ impl ColorSurface for OptionChain {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_price_metrics_traits {
     #![allow(clippy::indexing_slicing)]
     use super::*;

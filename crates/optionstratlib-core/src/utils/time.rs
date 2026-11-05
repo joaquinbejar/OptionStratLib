@@ -89,6 +89,12 @@ pub fn now_or(existing: DateTime<Utc>) -> DateTime<Utc> {
 /// fails. Code that needs the same answer in every build takes the time as an
 /// argument: the `*_at` forms read neither.
 ///
+/// **`clock` is not behaviourally additive here.** Features unify, so if any crate in
+/// the final graph enables `clock`, a replay engine driven by the reference datetime
+/// silently measures a `DateTime` from the wall clock instead, with no compile error.
+/// A consumer that depends on the reference should assert at startup that the build
+/// has no clock: `assert!(now().is_err())`.
+///
 /// # Errors
 ///
 /// Returns [`ClockError::Unavailable`] when the build has no clock and the
@@ -110,6 +116,77 @@ pub fn evaluation_time() -> Result<DateTime<Utc>, ClockError> {
 #[inline]
 pub fn resolution_base() -> Result<DateTime<Utc>, ClockError> {
     ExpirationDate::get_reference_datetime().map_or_else(now, Ok)
+}
+
+/// Carries the calling thread's reference datetime into a parallel section.
+///
+/// The reference datetime belongs to one thread, so a rayon worker or a blocking
+/// task does not see the one its caller set. Without the `clock` feature that would
+/// make the same call give an answer serially and fail in parallel, so every parallel
+/// section that can reach [`evaluation_time`] or [`resolution_base`] captures the
+/// reference first and runs its work through it:
+///
+/// ```
+/// use optionstratlib_core::utils::time::ReferenceCarrier;
+///
+/// let carrier = ReferenceCarrier::capture();
+/// let work = move |x: i32| carrier.run(|| x + 1);
+/// assert_eq!(work(1), 2);
+/// ```
+///
+/// With the `clock` feature it does nothing: a worker there measures from the wall
+/// clock, as it always has, so a default build is unchanged.
+#[derive(Debug, Clone, Copy)]
+#[must_use = "a carrier does nothing until its work is run through it"]
+pub struct ReferenceCarrier {
+    #[cfg(not(feature = "clock"))]
+    reference: Option<DateTime<Utc>>,
+}
+
+/// Puts back the reference datetime a worker had before it ran carried work.
+#[cfg(not(feature = "clock"))]
+struct RestoreReference(Option<DateTime<Utc>>);
+
+#[cfg(not(feature = "clock"))]
+impl Drop for RestoreReference {
+    fn drop(&mut self) {
+        ExpirationDate::set_reference_datetime(self.0);
+    }
+}
+
+impl ReferenceCarrier {
+    /// Captures the calling thread's reference datetime.
+    #[cfg(not(feature = "clock"))]
+    #[inline]
+    pub fn capture() -> Self {
+        Self {
+            reference: ExpirationDate::get_reference_datetime(),
+        }
+    }
+
+    /// Does nothing: a build with a clock carries no reference across threads.
+    #[cfg(feature = "clock")]
+    #[inline]
+    pub fn capture() -> Self {
+        Self {}
+    }
+
+    /// Runs `work` with the captured reference datetime set on this thread, and puts
+    /// back the one the thread had, also if `work` panics.
+    #[cfg(not(feature = "clock"))]
+    #[inline]
+    pub fn run<R>(&self, work: impl FnOnce() -> R) -> R {
+        let _restore = RestoreReference(ExpirationDate::get_reference_datetime());
+        ExpirationDate::set_reference_datetime(self.reference);
+        work()
+    }
+
+    /// Runs `work`.
+    #[cfg(feature = "clock")]
+    #[inline]
+    pub fn run<R>(&self, work: impl FnOnce() -> R) -> R {
+        work()
+    }
 }
 
 /// The years from now to `expiration`, on Actual/365 Fixed.
@@ -1123,9 +1200,58 @@ mod tests_clock_helpers {
         }
     }
 
+    #[test]
+    fn test_reference_carrier_returns_what_the_work_returns() {
+        let carrier = ReferenceCarrier::capture();
+        assert_eq!(carrier.run(|| 2 + 2), 4);
+    }
+
     #[cfg(not(feature = "clock"))]
     mod without_clock {
         use super::*;
+
+        /// The carrier takes the reference to a thread that does not have it, and
+        /// leaves that thread as it was.
+        #[test]
+        fn test_reference_carrier_sets_the_reference_on_another_thread() {
+            ExpirationDate::set_reference_datetime(Some(base()));
+            let carrier = ReferenceCarrier::capture();
+            ExpirationDate::set_reference_datetime(None);
+            let (inside, after) = std::thread::spawn(move || {
+                let inside = carrier.run(evaluation_time);
+                (inside, ExpirationDate::get_reference_datetime())
+            })
+            .join()
+            .unwrap();
+            assert_eq!(inside, Ok(base()));
+            assert_eq!(after, None);
+        }
+
+        #[test]
+        fn test_reference_carrier_restores_what_the_thread_had() {
+            let own = base() + Duration::days(1);
+            ExpirationDate::set_reference_datetime(Some(base()));
+            let carrier = ReferenceCarrier::capture();
+            ExpirationDate::set_reference_datetime(Some(own));
+            assert_eq!(carrier.run(evaluation_time), Ok(base()));
+            assert_eq!(ExpirationDate::get_reference_datetime(), Some(own));
+            let panicked = std::panic::catch_unwind(|| {
+                carrier.run(|| panic!("work panics"));
+            });
+            assert!(panicked.is_err());
+            assert_eq!(ExpirationDate::get_reference_datetime(), Some(own));
+            ExpirationDate::set_reference_datetime(None);
+        }
+
+        /// A carrier captured with no reference clears the one on the worker: the
+        /// caller's state decides, not what an earlier task left.
+        #[test]
+        fn test_reference_carrier_without_a_reference_gives_the_typed_error() {
+            let carrier = ReferenceCarrier::capture();
+            ExpirationDate::set_reference_datetime(Some(base()));
+            assert_eq!(carrier.run(evaluation_time), Err(ClockError::Unavailable));
+            ExpirationDate::set_reference_datetime(None);
+        }
 
         #[test]
         fn test_now_is_the_typed_error() {

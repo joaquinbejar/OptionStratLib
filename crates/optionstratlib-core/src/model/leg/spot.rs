@@ -20,7 +20,6 @@
 //!
 //! ```rust
 //! # #[cfg(feature = "clock")] {
-//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::SpotPosition;
 //! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
@@ -35,7 +34,6 @@
 //!     Positive::ONE,        // $1 open fee
 //!     Positive::ONE,        // $1 close fee
 //! );
-//! # }
 //! # }
 //! ```
 

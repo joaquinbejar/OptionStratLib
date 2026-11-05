@@ -1129,7 +1129,7 @@ impl Optimizable for LongButterflySpread {
                     )
                 })?;
 
-                let mut strategy = LongButterflySpread::new(
+                let mut strategy = LongButterflySpread::new_at(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     low_strike.strike_price,
@@ -1149,6 +1149,7 @@ impl Optimizable for LongButterflySpread {
                     self.long_call_low.close_fee,
                     self.long_call_high.open_fee,
                     self.long_call_high.close_fee,
+                    now_or(self.long_call_low.date),
                 )?;
                 // The rebuilt legs keep the contract size of the strategy they
                 // are rebuilt from.

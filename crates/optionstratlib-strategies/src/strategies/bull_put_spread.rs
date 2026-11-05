@@ -1027,7 +1027,7 @@ impl Optimizable for BullPutSpread {
                 "missing put_bid for short leg",
             )
         })?;
-        let mut strategy = BullPutSpread::new(
+        let mut strategy = BullPutSpread::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -1043,6 +1043,7 @@ impl Optimizable for BullPutSpread {
             self.long_put.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.long_put.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

@@ -3,11 +3,41 @@
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use optionstratlib_core::model::{ExpirationDate, Positive};
 use optionstratlib_core::pos_or_panic;
+#[cfg(not(feature = "clock"))]
+use optionstratlib_core::spos;
 use optionstratlib_market::chains::OptionChain;
+#[cfg(not(feature = "clock"))]
+use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib_market::series::OptionSeries;
+#[cfg(not(feature = "clock"))]
+use rust_decimal::Decimal;
+#[cfg(not(feature = "clock"))]
+use rust_decimal_macros::dec;
 
 fn base() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap()
+}
+
+#[cfg(not(feature = "clock"))]
+fn chain_params(chain_size: usize, expiration: ExpirationDate) -> OptionChainBuildParams {
+    OptionChainBuildParams::new(
+        "TEST".to_string(),
+        None,
+        chain_size,
+        spos!(1.0),
+        dec!(-0.3),
+        Decimal::ZERO,
+        pos_or_panic!(0.02),
+        2,
+        OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            Some(expiration),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("TEST".to_string()),
+        ),
+        pos_or_panic!(0.17),
+    )
 }
 
 fn chain(symbol: &str) -> OptionChain {
@@ -113,13 +143,148 @@ mod without_clock {
     use optionstratlib_core::utils::time::now;
     use optionstratlib_market::chains::{OptionData, UpdateFromOptionData};
     use optionstratlib_market::error::ChainError;
-    use rust_decimal::Decimal;
 
     /// Fails if anything in this configuration turned the clock on, the
     /// `io`, `synthetic` and `async` dependencies included.
     #[test]
     fn test_no_dependency_turns_the_clock_on() {
         assert_eq!(now(), Err(ClockError::Unavailable));
+    }
+
+    /// Above the parallel threshold every strike is priced on a rayon worker, which does
+    /// not have the caller's reference datetime of its own.
+    #[test]
+    fn test_build_chain_above_the_parallel_threshold_prices_every_strike() {
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+        let built = OptionChain::build_chain(&chain_params(20, expiration));
+        ExpirationDate::set_reference_datetime(None);
+        let built = built.unwrap();
+        assert_eq!(built.options.len(), 41);
+        assert!(built.options.iter().all(|option| option.call_bid.is_some()));
+        assert!(
+            built
+                .options
+                .iter()
+                .all(|option| option.delta_call.is_some())
+        );
+    }
+
+    /// Serial and parallel builds must agree, to the decimal.
+    #[test]
+    fn test_build_chain_gives_the_same_strikes_serially_and_in_parallel() {
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+        let parallel = OptionChain::build_chain(&chain_params(20, expiration)).unwrap();
+        let serial = rayon::ThreadPoolBuilder::new()
+            .num_threads(1)
+            .build()
+            .unwrap()
+            .install(|| {
+                ExpirationDate::set_reference_datetime(Some(base()));
+                let built = OptionChain::build_chain(&chain_params(20, expiration));
+                ExpirationDate::set_reference_datetime(None);
+                built
+            })
+            .unwrap();
+        ExpirationDate::set_reference_datetime(None);
+        let bids = |chain: &OptionChain| {
+            chain
+                .options
+                .iter()
+                .map(|option| option.call_bid)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(bids(&parallel), bids(&serial));
+    }
+
+    #[test]
+    fn test_build_chain_of_a_datetime_without_a_reference_is_a_typed_error() {
+        for chain_size in [3, 20] {
+            let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+            assert!(matches!(
+                OptionChain::build_chain(&chain_params(chain_size, expiration)),
+                Err(ChainError::ExpirationDate(_))
+            ));
+        }
+    }
+
+    /// A chain stores a calendar date, so even a `Days` needs a base here.
+    #[test]
+    fn test_build_chain_of_days_without_a_reference_is_a_typed_error() {
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
+        assert!(matches!(
+            OptionChain::build_chain(&chain_params(20, expiration)),
+            Err(ChainError::ExpirationDate(_))
+        ));
+    }
+
+    fn chain_without_greeks(chain_size: usize) -> OptionChain {
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+        let mut built = OptionChain::build_chain(&chain_params(chain_size, expiration)).unwrap();
+        ExpirationDate::set_reference_datetime(None);
+        let stripped = built
+            .options
+            .iter()
+            .cloned()
+            .map(|mut option| {
+                option.delta_call = None;
+                option.delta_put = None;
+                option.gamma = None;
+                option
+            })
+            .collect();
+        built.options = stripped;
+        built
+    }
+
+    #[test]
+    fn test_try_update_greeks_above_the_parallel_threshold_fills_every_strike() {
+        let mut chain = chain_without_greeks(20);
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let updated = chain.try_update_greeks();
+        ExpirationDate::set_reference_datetime(None);
+        updated.unwrap();
+        assert_eq!(chain.options.len(), 41);
+        assert!(chain.options.iter().all(|option| {
+            option.delta_call.is_some() && option.delta_put.is_some() && option.gamma.is_some()
+        }));
+        assert_ne!(chain.gamma_exposure().unwrap(), Decimal::ZERO);
+        assert_ne!(chain.delta_exposure().unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_try_update_greek_snapshots_above_the_parallel_threshold_fills_every_strike() {
+        let mut chain = chain_without_greeks(20);
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let updated = chain.try_update_greek_snapshots();
+        ExpirationDate::set_reference_datetime(None);
+        updated.unwrap();
+        assert!(
+            chain
+                .options
+                .iter()
+                .all(|option| option.greeks_call.is_some())
+        );
+    }
+
+    #[test]
+    fn test_try_update_greeks_without_a_reference_is_a_typed_error_and_changes_nothing() {
+        let mut chain = chain_without_greeks(20);
+        assert!(matches!(
+            chain.try_update_greeks(),
+            Err(ChainError::ExpirationDate(_))
+        ));
+        assert!(chain.options.iter().all(|option| option.gamma.is_none()));
+    }
+
+    /// An exposure over strikes with no Greeks is not zero: nothing was measured.
+    #[test]
+    fn test_exposures_over_empty_greeks_are_errors_not_zero() {
+        let chain = chain_without_greeks(20);
+        assert!(chain.delta_exposure().is_err());
+        assert!(chain.gamma_exposure().is_err());
     }
 
     /// Refreshing a position re-stamps its open date, and there is no time to give it.

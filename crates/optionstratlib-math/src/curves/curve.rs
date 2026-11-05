@@ -19,6 +19,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter,
 };
 use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::time::ReferenceCarrier;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
@@ -693,6 +694,8 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                 let span = d_sub(t_end, t_start, op).map_err(construction_err)?;
                 let step_size = d_div(span, Decimal::from(steps), op).map_err(construction_err)?;
 
+                // `f` is the caller's, and may price on a rayon worker.
+                let carrier = ReferenceCarrier::capture();
                 let points: Result<BTreeSet<Point2D>, CurveError> = (0..=steps)
                     .into_par_iter()
                     .map(|i| {
@@ -707,7 +710,7 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                             t_end,
                             i == steps,
                         );
-                        f(t)
+                        carrier.run(|| f(t))
                     })
                     .collect();
 

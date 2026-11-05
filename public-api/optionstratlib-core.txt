@@ -1133,6 +1133,10 @@ pub fn optionstratlib_core::utils::time::TimeFrame::name() -> alloc::borrow::Cow
 pub fn optionstratlib_core::utils::time::TimeFrame::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::utils::time::TimeFrame
 pub fn optionstratlib_core::utils::time::TimeFrame::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::utils::time::ReferenceCarrier
+impl optionstratlib_core::utils::time::ReferenceCarrier
+pub fn optionstratlib_core::utils::time::ReferenceCarrier::capture() -> Self
+pub fn optionstratlib_core::utils::time::ReferenceCarrier::run<R>(&self, impl core::ops::function::FnOnce() -> R) -> R
 pub fn optionstratlib_core::utils::time::convert_time_frame(positive::positive::Positive, &optionstratlib_core::utils::time::TimeFrame, &optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib_core::utils::time::days_to_expiration(&expiration_date::ExpirationDate) -> core::result::Result<positive::positive::Positive, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::utils::time::evaluation_time() -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, optionstratlib_core::error::ClockError>

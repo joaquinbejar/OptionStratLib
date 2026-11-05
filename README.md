@@ -1094,14 +1094,19 @@ exist and the build cannot read the wall clock, which simulators and replay
 engines need. `make check-no-clock` asserts this for every published crate
 and facade combination. What changes:
 
-- **A `Days` expiration needs no clock.** It prices, and gives Greeks, to the
-  same decimal in every build.
-- **A `DateTime` expiration needs a time to measure from**: the thread's
-  reference datetime, from `ExpirationDate::set_reference_datetime`. With
-  none, a time to expiry is an error (`ExpirationDateError::InvalidDateTime`
-  inside the crate's error, for example `PricingError::Options`), never a made-up
-  instant. The
-  reference datetime belongs to one thread and is not seen by `rayon` workers.
+- **A `Days` expiration needs no time to price.** Its time to expiry, price and
+  Greeks come from its day count, to the same decimal in every build. It needs a time
+  only where it must become a calendar date, and then the reference datetime is that
+  time: `build_chain` and `build_series`, which store the date; `expiration_date_string`
+  and `resolve_expiration_date`; and the P&L of a bare `Options`, which is stamped with
+  the expiry. A `Position` counts from its own open date instead, so its P&L at
+  expiration and a single-leg `simulate` need no reference at all.
+- **A `DateTime` expiration needs a time for any time to expiry**: the thread's
+  reference datetime, from `ExpirationDate::set_reference_datetime`. Parallel sections
+  carry the caller's reference to their workers. With none, every path with an error
+  channel fails, with `ExpirationDateError::InvalidDateTime` inside the crate's error
+  (for example `PricingError::Options`) or a `Clock` variant, and never with a made-up
+  instant. What has no error channel is listed below.
 - **The `*_at` forms take the time as an argument** and exist in every build:
   `Trade::new_at`, `Position::days_held_at`, `days_to_expiration_at` and
   `trade_at`, `OptionSeries::odte_at`, `new_at` on the strategies with a public `new`,
@@ -1115,22 +1120,33 @@ and facade combination. What changes:
   and each strategy's `new`, as `TradeError::Clock` and `StrategyError::Clock`;
   `PositionError`, `ChainError` and `TransactionError` have the same variant. `get_strategy` works and keeps the date each leg
   already carries.
+- **Filling a chain's Greeks reports a missing time**: `OptionChain::try_update_greeks`
+  and `try_update_greek_snapshots` fail on it, and `delta_exposure` and `gamma_exposure`
+  fail on a strike with no Greek, where a build with the clock adds it as zero.
 - **What cannot report an error needs the feature**: the `Default` of
   `Position`, of the strategies, of `TradeRecord` and `PnLMetrics`;
   `long` and `short` on the spot, future and perpetual legs (`new` takes the
   date); `create_sample_position`, `get_today_formatted` and
   `get_today_or_tomorrow_formatted`; `From<PathOutcome> for SimulationResult`.
   So do the methods whose fallback would read as an answer: `OptionSeries::odte`
-  (use `odte_at`), `is_delta_neutral` and `meets_greek_targets` (use `delta` and
+  (use `odte_at`), `OptionChain::update_greeks` and `update_greek_snapshots` (use the
+  `try_` forms), `is_delta_neutral` and `meets_greek_targets` (use `delta` and
   `portfolio_greeks`).
+- **Without an error channel, three things still fall back**, each logged and none a
+  figure: `Step::get_graph_x_in_days_left` places a step at zero on a chart, the
+  per-strike `OptionData::calculate_delta` and friends leave the Greek empty, and the
+  chart of an option falls back to a default price range.
 - **The two builds can differ on purpose** in two places, both documented where
   they are defined: `now_or` stamps a record with the time of the call or, without
   the clock, the time it already carries; `evaluation_time` measures a `DateTime`
   from the wall clock or, without it, from the reference datetime. For the same
   answer in every build, use the `*_at` forms.
 
-Features unify across a build: if any crate in the final graph enables `clock`,
-this build has it.
+`clock` is **not behaviourally additive**. Features unify across a build: if any crate
+in the final graph enables it, this build has it, nothing fails to compile, and a
+replay engine driven by the reference datetime silently measures a `DateTime` from the
+wall clock instead. A consumer that depends on the reference should say so at startup:
+`assert!(optionstratlib::utils::time::now().is_err())`.
 
 **Combinations that do not exist.** The implications are the whole
 dependency story, so some builds cannot be asked for:

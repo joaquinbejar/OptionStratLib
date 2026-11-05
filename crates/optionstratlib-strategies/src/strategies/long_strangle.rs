@@ -1023,7 +1023,7 @@ impl Optimizable for LongStrangle {
                 "missing put_ask for long put leg",
             )
         })?;
-        let mut strategy = LongStrangle::new(
+        let mut strategy = LongStrangle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -1039,6 +1039,7 @@ impl Optimizable for LongStrangle {
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1242,7 +1243,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         (Side::Long, OptionStyle::Put) => {
@@ -1255,7 +1256,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         _ => PnL::default(),
@@ -1278,7 +1279,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         (Side::Long, OptionStyle::Put) => {
@@ -1291,7 +1292,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: now()?,
+                                date_time: now_or(position.date),
                             }
                         }
                         _ => PnL::default(),

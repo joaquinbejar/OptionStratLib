@@ -1107,7 +1107,7 @@ impl Optimizable for BullCallLadder {
                 "missing call_bid for short_call_high leg",
             )
         })?;
-        let mut strategy = BullCallLadder::new(
+        let mut strategy = BullCallLadder::new_at(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_call.strike_price,
@@ -1127,6 +1127,7 @@ impl Optimizable for BullCallLadder {
             self.short_call_low.close_fee,
             self.short_call_high.open_fee,
             self.short_call_high.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

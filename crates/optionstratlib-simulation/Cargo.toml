@@ -22,7 +22,7 @@ clock = ["optionstratlib-core/clock", "optionstratlib-pricing/clock"]
 schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-pricing/schema"]
 
 [package.metadata.docs.rs]
-# docs.rs builds the default features, empty for this crate, so name the
+# docs.rs builds the default features, `clock` alone for this crate, so name the
 # optional ones the API documents. Nothing here needs a browser or the network.
 features = ["schema"]
 

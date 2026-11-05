@@ -118,8 +118,120 @@ fn test_new_at_builds_single_leg_multi_leg_and_condor_strategies() {
 mod without_clock {
     use super::*;
     use optionstratlib_core::error::ClockError;
+    use optionstratlib_core::model::Options;
+    use optionstratlib_core::model::Position;
+    use optionstratlib_core::model::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::spos;
     use optionstratlib_core::utils::time::now;
+    use optionstratlib_market::chains::OptionChain;
+    use optionstratlib_market::chains::StrategyLegs;
+    use optionstratlib_market::chains::utils::{
+        FindOptimalSide, OptionChainBuildParams, OptionDataPriceParams,
+    };
     use optionstratlib_strategies::strategies::StrategyConstructor;
+    use optionstratlib_strategies::strategies::base::Optimizable;
+    use optionstratlib_strategies::strategies::delta_neutral::{
+        AdjustmentConfig, AdjustmentOptimizer, AdjustmentTarget,
+    };
+    use optionstratlib_strategies::strategies::utils::OptimizationCriteria;
+    use rust_decimal::Decimal;
+
+    /// A 21-strike chain, built from the reference datetime, so the search is parallel.
+    fn chain() -> OptionChain {
+        ExpirationDate::set_reference_datetime(Some(date()));
+        let built = OptionChain::build_chain(&OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            spos!(1.0),
+            dec!(-0.3),
+            Decimal::ZERO,
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("TEST".to_string()),
+            ),
+            pos_or_panic!(0.17),
+        ));
+        ExpirationDate::set_reference_datetime(None);
+        built.unwrap()
+    }
+
+    /// The optimiser builds each candidate with `create_strategy` and drops what fails, so
+    /// a constructor that needed the clock used to leave it with nothing, silently.
+    #[test]
+    fn test_create_strategy_opens_at_the_date_of_the_strategy() {
+        let chain = chain();
+        let strategy = spread(date()).unwrap();
+        let options: Vec<_> = chain.options.iter().collect();
+        let legs = StrategyLegs::TwoLegs {
+            first: options[5],
+            second: options[15],
+        };
+        let created = strategy.create_strategy(&chain, &legs).unwrap();
+        assert_eq!(created.long_call.date, date());
+    }
+
+    #[test]
+    fn test_filter_combinations_and_find_optimal_find_candidates() {
+        let chain = chain();
+        let mut strategy = spread(date()).unwrap();
+        assert!(
+            strategy
+                .filter_combinations(&chain, FindOptimalSide::All)
+                .count()
+                > 0
+        );
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
+        assert_eq!(strategy.long_call.date, date());
+    }
+
+    /// Candidates for a new leg used to vanish: with no date, `get_position` asks the clock.
+    #[test]
+    fn test_adjustment_optimizer_finds_new_leg_candidates() {
+        let chain = chain();
+        let positions = vec![Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Long,
+                "TEST".to_string(),
+                Positive::HUNDRED,
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                Positive::ONE,
+                Positive::HUNDRED,
+                dec!(0.05),
+                OptionStyle::Call,
+                Positive::ZERO,
+                None,
+            ),
+            pos_or_panic!(5.0),
+            date(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        )];
+        let config = AdjustmentConfig {
+            prefer_existing_legs: false,
+            ..AdjustmentConfig::default()
+        };
+        let plan = AdjustmentOptimizer::with_chain(
+            &positions,
+            &chain,
+            config,
+            AdjustmentTarget::delta_neutral(),
+        )
+        .optimize()
+        .unwrap();
+        assert!(!plan.actions.is_empty());
+    }
 
     /// Fails if anything in this configuration turned the clock on.
     #[test]

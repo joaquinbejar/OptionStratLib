@@ -11,6 +11,11 @@ fails if the clock turns out to be on (`tests/no_clock.rs`).
 
 The default build must keep the clock, so that is asserted too.
 
+Features are not the whole story: `std::time` needs none, so this also scans the
+production sources. `utils/time.rs` is the one file that may read the clock, with
+`Utc::now` or `Local::now`. `SystemTime::now` is nowhere, and `Instant::now` only
+where the same function measures a duration with `.elapsed()`.
+
 Usage:
     check_no_clock.py               assert the trees, then lint, build and test
     check_no_clock.py --trees       assert the trees only
@@ -82,6 +87,66 @@ LEAK_RE = re.compile(
 )
 
 
+# A read of the clock in production code. `Instant` is monotonic and never tells the
+# time, so it is held to the narrower rule in `clock_reads`.
+CLOCK_READ_RE = re.compile(r"\b(?:Utc|Local)::now\s*\(")
+SYSTEM_TIME_RE = re.compile(r"\bSystemTime::now\s*\(")
+INSTANT_RE = re.compile(r"(?:let\s+(?:mut\s+)?(\w+)\s*=\s*)?(?:std::time::)?\bInstant::now\s*\(")
+# The only file that may read the clock (`wall_clock` and the local date helper).
+CLOCK_FILE = "crates/optionstratlib-core/src/utils/time.rs"
+
+
+def production_lines(text: str) -> list[tuple[int, str]]:
+    """The numbered lines outside comments and `#[cfg(test)]` items."""
+    out: list[tuple[int, str]] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if stripped == "#[cfg(test)]" or stripped.startswith("#[cfg(all(test,"):
+            depth = 0
+            started = False
+            i += 1
+            while i < len(lines):
+                opens = lines[i].count("{")
+                started = started or opens > 0
+                depth += opens - lines[i].count("}")
+                if (started and depth <= 0) or (not started and lines[i].rstrip().endswith(";")):
+                    break
+                i += 1
+            i += 1
+            continue
+        if not stripped.startswith("//"):
+            out.append((i + 1, lines[i]))
+        i += 1
+    return out
+
+
+def clock_reads(path: str, text: str) -> list[str]:
+    """Where one production source reads the clock against the rule."""
+    found = []
+    lines = production_lines(text)
+    for index, (number, line) in enumerate(lines):
+        code = line.split("//", 1)[0]
+        if SYSTEM_TIME_RE.search(code) or (CLOCK_READ_RE.search(code) and path != CLOCK_FILE):
+            found.append(f"{path}:{number}: {line.strip()}")
+        instant = INSTANT_RE.search(code)
+        if instant:
+            name = instant.group(1)
+            rest = "\n".join(following for _, following in lines[index + 1 : index + 60])
+            if name is None or f"{name}.elapsed()" not in rest:
+                found.append(f"{path}:{number}: `Instant::now` that measures no duration: {line.strip()}")
+    return found
+
+
+def check_sources() -> list[str]:
+    found = []
+    sources = [*ROOT.glob("crates/*/src/**/*.rs"), *ROOT.glob("src/**/*.rs")]
+    for source in sorted(sources):
+        found += clock_reads(str(source.relative_to(ROOT)), source.read_text(encoding="utf-8"))
+    return found
+
+
 def leaks(tree: str) -> list[str]:
     """The lines of a tree that show the clock enabled."""
     return [line for line in tree.splitlines() if LEAK_RE.search(line)]
@@ -109,7 +174,7 @@ def describe(package: str, features: str) -> str:
 
 
 def check_trees() -> list[str]:
-    problems = []
+    problems = [f"reads the clock outside `{CLOCK_FILE}`: {found}" for found in check_sources()]
     configurations = [(package, "") for package in COMPONENTS]
     configurations += [(package, COMPONENT_FEATURES[package]) for package in COMPONENTS]
     configurations += [(FACADE, features) for features in FACADE_TREES]
@@ -168,6 +233,36 @@ def self_test() -> int:
         "option_type forwards it": (leaks('option_type feature "clock"'), 1),
         "a package reading the time zone is a leak": (leaks("iana-time-zone v0.1.65"), 1),
         "another crate's `clock` is not ours": (leaks('tokio feature "clock"'), 0),
+    }
+    other = "crates/x/src/y.rs"
+    cases |= {
+        "`Utc::now` elsewhere": (clock_reads(other, "fn f() { let t = Utc::now(); }"), 1),
+        "`chrono::Utc::now` elsewhere": (clock_reads(other, "let t = chrono::Utc::now();"), 1),
+        "`Local::now` elsewhere": (clock_reads(other, "let t = Local::now();"), 1),
+        "`SystemTime::now` elsewhere": (clock_reads(other, "let t = SystemTime::now();"), 1),
+        "`std::time::SystemTime::now`": (clock_reads(other, "let t = std::time::SystemTime::now();"), 1),
+        "`Utc::now` in the clock file": (clock_reads(CLOCK_FILE, "fn f() { Utc::now() }"), 0),
+        "`SystemTime::now` in the clock file": (clock_reads(CLOCK_FILE, "let t = SystemTime::now();"), 1),
+        "a comment is not a read": (clock_reads(other, "// Utc::now()"), 0),
+        "a trailing comment is not a read": (clock_reads(other, "let x = 1; // Utc::now()"), 0),
+        "a test module is not production": (
+            clock_reads(other, "#[cfg(test)]\nmod t {\n    fn f() { Utc::now(); }\n}\n"),
+            0,
+        ),
+        "a gated test module is not production": (
+            clock_reads(other, '#[cfg(all(test, feature = "clock"))]\nmod t {\n    fn f() { Utc::now(); }\n}\n'),
+            0,
+        ),
+        "production after a test module": (
+            clock_reads(other, "#[cfg(test)]\nmod t {}\nfn f() { Utc::now(); }\n"),
+            1,
+        ),
+        "an `Instant` measuring a duration": (
+            clock_reads(other, "let started = Instant::now();\nwork();\nlet d = started.elapsed();\n"),
+            0,
+        ),
+        "an `Instant` kept as a time": (clock_reads(other, "let started = Instant::now();\nkeep(started);\n"), 1),
+        "an `Instant` with no binding": (clock_reads(other, "keep(Instant::now());\n"), 1),
     }
     failed = [name for name, (found, want) in cases.items() if len(found) != want]
     for name in failed:

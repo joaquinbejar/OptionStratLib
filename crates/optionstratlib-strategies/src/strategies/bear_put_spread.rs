@@ -901,7 +901,7 @@ impl Optimizable for BearPutSpread {
                 "missing put_bid for short leg",
             )
         })?;
-        let mut strategy = BearPutSpread::new(
+        let mut strategy = BearPutSpread::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -917,6 +917,7 @@ impl Optimizable for BearPutSpread {
             self.long_put.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.long_put.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

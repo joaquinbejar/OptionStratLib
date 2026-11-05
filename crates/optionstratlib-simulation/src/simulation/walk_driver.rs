@@ -21,6 +21,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::d_sqrt;
 use optionstratlib_core::utils::TimeFrame;
 use optionstratlib_core::utils::numeric::calculate_log_returns;
+use optionstratlib_core::utils::time::ReferenceCarrier;
 use optionstratlib_pricing::volatility::{adjust_volatility, constant_volatility};
 use rust_decimal::Decimal;
 use std::convert::TryInto;
@@ -425,6 +426,7 @@ where
     // speculative error past a stop signal cannot mask the stop: the
     // ordered assembly below decides what the serial driver would have
     // observed.
+    let carrier = ReferenceCarrier::capture();
     let built: Vec<Result<Option<Y>, E>> = x_steps
         .par_iter()
         .enumerate()
@@ -441,7 +443,7 @@ where
                 .as_ref()
                 .and_then(|vols| vols.get(price_index).copied())
                 .or(constant_vol);
-            next_y(&y_step, volatility, x_step)
+            carrier.run(|| next_y(&y_step, volatility, x_step))
         })
         .collect();
 

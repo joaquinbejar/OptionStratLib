@@ -923,7 +923,7 @@ impl Optimizable for LongStraddle {
                 "missing put_ask for long put leg",
             )
         })?;
-        let mut strategy = LongStraddle::new(
+        let mut strategy = LongStraddle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -938,6 +938,7 @@ impl Optimizable for LongStraddle {
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

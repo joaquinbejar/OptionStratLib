@@ -21,6 +21,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter, decimal_to_f64,
 };
 use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::time::ReferenceCarrier;
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_decimal::Decimal;
@@ -884,6 +885,8 @@ impl GeometricObject<Point3D, Point2D> for Surface {
 
                 // Wrap f in an Arc so it can be shared across threads
                 let f = Arc::new(f);
+                // `f` is the caller's, and may price on a rayon worker.
+                let carrier = ReferenceCarrier::capture();
 
                 let points: Result<BTreeSet<Point3D>, SurfaceError> = (0..=x_steps)
                     .into_par_iter()
@@ -909,7 +912,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                                 j == y_steps,
                             );
                             let t = Point2D::new(x, y);
-                            f(t)
+                            carrier.run(|| f(t))
                         })
                     })
                     .collect();

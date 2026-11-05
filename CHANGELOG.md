@@ -17,11 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cargo tree -e features -i chrono` shows no `clock` in any published crate or
   facade combination, and `make check-no-clock` and the `No clock` CI job assert
   that and lint, build and test those builds. A `Days` expiration prices to the
-  same decimal in every build; a `DateTime` measures from the thread's reference
-  datetime, and with none it is a typed error, never a made-up instant. New in
-  `optionstratlib_core::utils::time`, in every build: `now`, `now_or`,
-  `evaluation_time`, `resolution_base`, `years_to_expiration`, `days_to_expiration`
-  and `expiration_date_string`; with `clock`, `wall_clock`. New pure forms that take
+  same decimal in every build, and needs a time only where it must become a calendar
+  date: `build_chain`, `build_series` and the P&L of a bare `Options`. A `DateTime`
+  measures from the thread's reference datetime, which parallel sections carry to their
+  workers; with none, every path with an error channel fails, never with a made-up
+  instant. New in `optionstratlib_core::utils::time`, in every build: `now`, `now_or`,
+  `evaluation_time`, `resolution_base`, `ReferenceCarrier`, `years_to_expiration`,
+  `days_to_expiration` and `expiration_date_string`; with `clock`, `wall_clock`. New
+  `OptionChain::try_update_greeks`, `try_update_greek_snapshots` and
+  `require_time_to_expiry`. New pure forms that take
   the time: `Trade::new_at`, `Position::blank_at`, `days_held_at`,
   `days_to_expiration_at` and `trade_at`, `OptionSeries::odte_at`, `new_at` on every
   strategy with a public `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
@@ -145,10 +149,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   perpetual legs, `create_sample_position`, `get_today_formatted`,
   `get_today_or_tomorrow_formatted` and `From<PathOutcome> for SimulationResult`.
   Neither do the methods whose fallback would read as an answer: `OptionSeries::odte`
-  (`None`, "no such chain"; use the new `odte_at`), and `is_delta_neutral` and
-  `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). A single-leg
-  simulation whose steps cannot read their days returns the error instead of
-  reporting the path as expired.
+  (`None`, "no such chain"; use the new `odte_at`), `OptionChain::update_greeks` and
+  `update_greek_snapshots` (empty Greeks; use the `try_` forms), and `is_delta_neutral`
+  and `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). Without the
+  feature, `delta_exposure` and `gamma_exposure` fail on a strike with no Greek where a
+  build with it adds zero, and a single-leg simulation whose steps cannot read their
+  days returns the error instead of reporting the path as expired.
 - **`TradeError`, `PositionError`, `ChainError`, `StrategyError` and
   `TransactionError` gain a `Clock(ClockError)` variant** (#944). Breaking, since
   they are exhaustive, and released with the 0.24.0 bump (#947). The aggregate

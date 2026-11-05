@@ -955,7 +955,7 @@ impl Optimizable for ShortStraddle {
                 "missing put_bid for short put leg",
             )
         })?;
-        let mut strategy = ShortStraddle::new(
+        let mut strategy = ShortStraddle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -970,6 +970,7 @@ impl Optimizable for ShortStraddle {
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.short_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.

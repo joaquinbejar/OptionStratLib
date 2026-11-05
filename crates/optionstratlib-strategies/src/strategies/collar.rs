@@ -94,7 +94,7 @@ use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use optionstratlib_core::utils::time::now;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
@@ -1283,7 +1283,7 @@ impl PnLCalculator for Collar {
             unrealized: Some(profit),
             initial_costs: spot_cost.checked_add(&put_cost)?,
             initial_income: call_income,
-            date_time: now()?,
+            date_time: now_or(self.short_call.date),
         })
     }
 }
