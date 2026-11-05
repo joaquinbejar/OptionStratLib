@@ -860,6 +860,21 @@ fn test_static_arbitrage_surface_keeps_an_unevaluated_point() {
 }
 
 #[test]
+fn test_butterfly_point_without_a_strike_and_with_nothing_to_report_is_not_an_error() {
+    // The docs state this: no strike exists at this k, and the true g of -0.0525 is
+    // within its band of 0.0588, which grows with k^2. So it passes rather than fail.
+    let far = slice(
+        dec!(22.272553),
+        dec!(4.40013),
+        dec!(-0.5),
+        dec!(0),
+        dec!(0.0000000000000000000000000008),
+    );
+    let report = check_butterfly(&far, &[dec!(121142260000)]).unwrap();
+    assert!(report.passed(), "{report:?}");
+}
+
+#[test]
 fn test_static_arbitrage_overflow_at_extreme_parameters_is_a_typed_error() {
     for k in [Decimal::MAX, Decimal::MIN, dec!(1000000000000000)] {
         assert!(matches!(

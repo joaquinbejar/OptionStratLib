@@ -333,16 +333,21 @@ impl SviParameters {
     /// per squared unit of log moneyness. It is `b / sigma` at the vertex
     /// `k = m`, so it can leave the `Decimal` range for a tiny `sigma`.
     ///
+    /// Far from a tiny `sigma`, `R / sigma` itself can leave the range, with
+    /// `R = sqrt((k - m)^2 + sigma^2)`. The result is then zero, not an error, and
+    /// that is the correctly rounded value: `sigma` is at least `1e-28`, so `R` is
+    /// above 7 and `sigma / R` below `2e-29`, which puts the curvature below
+    /// `b * 1e-58`, under the last place for any `b` a `Decimal` can hold.
+    ///
     /// # Errors
     ///
-    /// Returns [`SviError::Decimal`] if a step leaves the `Decimal` range.
+    /// Returns [`SviError::Decimal`] if the curvature leaves the `Decimal` range.
     pub fn total_variance_curvature(&self, k: Decimal) -> Result<Decimal, SviError> {
         const OP: &str = "svi::total_variance_curvature";
         let shape = unit_shape(d_sub(k, self.m, OP)?, self.sigma)?;
         // `R / sigma` is at least one, so it keeps 28 significant digits where
-        // `sigma / R` would keep few of them far from the vertex. Past the range of
-        // a `Decimal` it means `sigma / R` is below 1e-28 with `R` above 7, so the
-        // curvature is below anything the 28 places can hold.
+        // `sigma / R` would keep few of them far from the vertex. The docs say why
+        // its leaving the range means zero.
         let Some(root_over_sigma) = shape
             .scale
             .checked_div(self.sigma)
@@ -353,12 +358,20 @@ impl SviParameters {
         // `1 / R` is taken through its parts: rounding `R` itself would cost a tiny
         // `R` its relative precision.
         let one_over_root = d_div(d_div(Decimal::ONE, shape.scale, OP)?, shape.unit_root, OP)?;
-        let curvature = d_div(
-            d_div(one_over_root, root_over_sigma, OP)?,
-            root_over_sigma,
-            OP,
-        )?;
-        Ok(d_mul(self.b, curvature, OP)?)
+        let shrink = |value: Decimal| -> Result<Decimal, SviError> {
+            Ok(d_div(
+                d_div(value, root_over_sigma, OP)?,
+                root_over_sigma,
+                OP,
+            )?)
+        };
+        // `b` first: the divisions round at 28 places, which a large `b` would then
+        // multiply. Only if `b / R` leaves the range, while the curvature may not,
+        // the value is large enough to keep its digits through the divisions alone.
+        match self.b.checked_mul(one_over_root) {
+            Some(scaled) => shrink(scaled),
+            None => Ok(d_mul(self.b, shrink(one_over_root)?, OP)?),
+        }
     }
 
     /// An upper bound on the rounding of [`SviParameters::total_variance`] at
@@ -2013,21 +2026,37 @@ mod tests {
 
     #[test]
     fn test_total_variance_rounding_covers_the_slope_at_a_large_b_and_tiny_root() {
-        // The slope rounds at about b * 1e-28 however small the root is, so the band
-        // keeps a term in b when the capped radicand term has gone below it.
+        // At k = sigma = 1e-28 the slope is 1000 * (0.3 + 1 / sqrt(2)), which rounds:
+        // its fraction, past the 1007 taken away, has more than 28 places. The capped
+        // radicand term is below the last place here, so only the term in `b` covers
+        // that rounding. Reference to 60 digits from the same script.
+        let tiny = dec!(0.0000000000000000000000000001);
+        let parameters =
+            SviParameters::try_new(dec!(0), dec!(1000), dec!(0.3), dec!(0), tiny).unwrap();
+        let slope = parameters.total_variance_slope(tiny).unwrap() - dec!(1007);
+        let error = (slope - dec!(0.1067811865475244008443621048)).abs();
+        let rounding = parameters.total_variance_rounding(tiny).unwrap().to_dec();
+        assert!(error > dec!(0.0000000000000000000000000004), "{error}");
+        assert!(error <= rounding, "{error} vs {rounding}");
+    }
+
+    #[test]
+    fn test_total_variance_curvature_with_a_large_b_keeps_its_value_past_b_over_root() {
+        // x = 1e-20, sigma = 1e-24, b = 1e9: b / R is 1e29, out of range, while
+        // w'' = b * sigma^2 / R^3 is 1e21 * (1 - 1.5e-8 + ...). Same script.
         let parameters = SviParameters::try_new(
+            dec!(1),
+            dec!(1000000000),
             dec!(0),
-            dec!(1000),
             dec!(0),
-            dec!(0),
-            dec!(0.0000000000000000000000000001),
+            dec!(0.000000000000000000000001),
         )
         .unwrap();
-        let rounding = parameters
-            .total_variance_rounding(dec!(0))
-            .unwrap()
-            .to_dec();
-        assert!(rounding >= dec!(0.0000000000000000000000004), "{rounding}");
+        let curvature = parameters
+            .total_variance_curvature(dec!(0.00000000000000000001))
+            .unwrap();
+        let truth = dec!(999999985000000187499.9978125);
+        assert!(((curvature - truth) / truth).abs() < dec!(0.00000000000000000000000001));
     }
 
     #[test]

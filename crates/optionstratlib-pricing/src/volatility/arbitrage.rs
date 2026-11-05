@@ -100,7 +100,8 @@
 //! The calendar check has the same limit on a different reference. A pair of
 //! expiries is a [`StaticArbitrageUnevaluatedPoint::Calendar`] when either declared
 //! rounding exceeds `1e-12` of the larger of their two total variances, because a
-//! band that wide could hide a real decrease. This compares neither slice with its
+//! band that wide could hide a real decrease. A real decrease of up to
+//! `2e-12 * max(w)` can therefore still pass. This compares neither slice with its
 //! own `w`, so a zero `w` beside a large one is still a resolved comparison.
 //!
 //! # Tolerances
@@ -121,11 +122,19 @@
 //!   The minimum peaks at about `1.3e-14 * b`, at `R` near `3e-14`.
 //! - Butterfly: `g` is a sum of terms that each carry the rounding of `w`, in
 //!   proportion to their size, so its band is
-//!   `((1 + |q| + |k|)^2 + w'^2 / (4 * w) + w'^2 / 16 + |w''| / 2) * (2 * r + 1e-26)`
-//!   with `q = k * w' / (2 * w)` and `r` the rounding of `w` over `w`. `1e-26` is
-//!   100 units in the last place of a `Decimal`, for the arithmetic of `g` itself.
+//!   `((1 + |q| + |k|)^2 + w'^2 / (4 * w) + w'^2 / 16 + |w''| / 2) * (2 * r + 1e-26)
+//!   + |w'| * rounding / 4`
+//!   with `q = k * w' / (2 * w)`, `rounding` that of `w`, and `r` the rounding of `w`
+//!   over `w`. `1e-26` is 100 units in the last place of a `Decimal`, for the
+//!   arithmetic of `g` itself.
 //!   At a raw SVI point of ordinary size this is about `1e-23`. Where `w` is barely
 //!   resolved, `r` is `1e-12` and the band is `2e-12` times the size of the terms.
+//!
+//! These bounds were compared with a 150-digit reference on about 200000 random raw
+//! SVI points: `b` from `1e-6` to `1e10`, `sigma` from `1e-27` to `100`, `|rho|` up
+//! to `0.999999`, `|m|` up to `2`, `a` from the floor to about `9 * b`, and `k` up to
+//! about `9e9` from the vertex. No evaluated `g` was outside its band and no `w`
+//! outside its rounding. Outside that range only the argument above stands.
 //!
 //! # Failure
 //!
@@ -133,6 +142,13 @@
 //! than two slices for a calendar check, two slices with one expiry, a slice
 //! without a forward or an expiry, and any overflow of `Decimal` at extreme
 //! parameters are [`StaticArbitrageError`]s, and the report is not returned.
+//!
+//! A strike is only computed for a finding. A grid point whose `F * exp(k)` leaves
+//! the range, at `|k|` of about 65 and beyond, is an error if it has a finding to
+//! name, and not an error if it has nothing to report. It should not be read as
+//! tested either: out there the butterfly band grows with `k^2`. At `a = 22.272553`,
+//! `b = 4.40013`, `rho = -0.5`, `m = 0`, `sigma = 8e-28`, `k = 121142260000`, the
+//! true `g` is `-0.0525` and it passes within a band of `0.0588`.
 //!
 //! # Example
 //!
@@ -673,8 +689,9 @@ struct DensityFactor {
 /// the module docs': a relative rounding of `w`, called `rounding` here, moves
 /// `q = k * r` by up to `(|q| + |k| / 2) * rounding`, since it also bounds that
 /// of `w'`, which gives the first term of `magnitude`; and `|w'| / 2` is at most
-/// `1 + w'^2 / 16` by the arithmetic-geometric mean, so the `w'` rounding of the
-/// other terms is within it too.
+/// `1 + w'^2 / 16` by the arithmetic-geometric mean, so the `w'` rounding of
+/// `w'^2 / (4 * w)` is within it too. `w'^2 / 16` has no `1 / w` to put its `w'`
+/// rounding in terms of `r`, so that one is added on its own.
 fn density_factor(
     k: Decimal,
     w: Decimal,
@@ -709,9 +726,10 @@ fn density_factor(
         G_ARITHMETIC_ROUNDING,
         OP,
     )?;
+    let over_four_rounding = d_mul(quarter_slope.abs(), rounding, OP)?;
     Ok(DensityFactor {
         g,
-        band: d_mul(magnitude, relative, OP)?,
+        band: d_add(d_mul(magnitude, relative, OP)?, over_four_rounding, OP)?,
     })
 }
 
@@ -995,6 +1013,65 @@ mod tests {
         .unwrap();
         let difference = (factor.g - dec!(3238.5477894615521609485374)).abs();
         assert!(difference < factor.band, "{difference} vs {}", factor.band);
+    }
+
+    /// `g` and its band, the way a check computes them.
+    fn factor_of(slice: &SviSlice, k: Decimal) -> DensityFactor {
+        density_factor(
+            k,
+            SviSlice::total_variance(slice, k).unwrap().to_dec(),
+            SviSlice::total_variance_slope(slice, k).unwrap(),
+            SviSlice::total_variance_curvature(slice, k).unwrap(),
+            TotalVarianceSlice::total_variance_rounding(slice, k)
+                .unwrap()
+                .to_dec(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_density_factor_large_b_is_not_a_false_violation() {
+        // The true g is +9.2e-22, from the same script. Without the rounding of `w'`
+        // in `w'^2 / 16`, and with `b` applied after the divisions of the curvature,
+        // this read as a violation of 4.55e-21.
+        let parameters = SviParameters::try_new(
+            dec!(10198617),
+            dec!(39781903),
+            dec!(-0.999999),
+            dec!(0),
+            dec!(0.000011),
+        )
+        .unwrap();
+        let slice = SviSlice::try_new(parameters, Positive::HUNDRED, Positive::ONE).unwrap();
+        let k = dec!(0.030430593442154205258362455);
+        let truth = dec!(0.0000000000000000000009199435);
+        let factor = factor_of(&slice, k);
+        let difference = (factor.g - truth).abs();
+        assert!(difference <= factor.band, "{difference} vs {}", factor.band);
+        assert!(
+            check_butterfly(&slice, &[k])
+                .unwrap()
+                .violations()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_density_factor_large_b_stays_within_its_band_with_b_applied_first() {
+        // With `b` applied after the two divisions of the curvature, g here is 7.5e-21
+        // off against a band of 1.3e-21. Same script.
+        let parameters = SviParameters::try_new(
+            dec!(1066743530.278020518029584448),
+            dec!(354400000),
+            dec!(-0.999999),
+            dec!(0),
+            dec!(0.0009372),
+        )
+        .unwrap();
+        let slice = SviSlice::try_new(parameters, Positive::HUNDRED, Positive::ONE).unwrap();
+        let factor = factor_of(&slice, dec!(0.662699978302572854858704983));
+        let difference = (factor.g - dec!(535.7811679546582669017279115)).abs();
+        assert!(difference <= factor.band, "{difference} vs {}", factor.band);
     }
 
     #[test]
