@@ -260,6 +260,10 @@ where
         for step in random_walk.get_steps().iter().skip(1) {
             let days_left = match step.x.days_left() {
                 Ok(days) => days,
+                // With no time to measure from nothing has expired: the leg's
+                // life is unknown, and a path that read as expired would report
+                // a P&L for a date no one chose.
+                Err(error) if evaluation_time().is_err() => return Err(error.into()),
                 Err(_) => {
                     expired = true;
                     break;
@@ -1440,5 +1444,79 @@ mod tests_simulate_short_put {
         // Verify win rate is calculated
         assert!(stats.win_rate >= dec!(0.0));
         assert!(stats.win_rate <= dec!(100.0));
+    }
+}
+
+/// A path whose steps cannot read their days is not a path that expired.
+#[cfg(all(test, not(feature = "clock")))]
+mod tests_without_clock {
+    use super::*;
+    use chrono::{Duration, TimeZone, Utc};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_simulation::simulation::steps::Step;
+    use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
+    use optionstratlib_strategies::strategies::LongCall;
+    use rust_decimal_macros::dec;
+    use std::convert::Infallible;
+
+    #[derive(Clone)]
+    struct Walker;
+    impl WalkTypeAble<Positive, Positive> for Walker {}
+
+    #[test]
+    fn test_dated_step_without_a_time_is_an_error_not_an_expiry() {
+        let date = Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap();
+        let strategy = LongCall::new_at(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(5.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            date,
+        )
+        .unwrap();
+        let step = || {
+            Step::new(
+                Positive::ONE,
+                TimeFrame::Day,
+                ExpirationDate::DateTime(date + Duration::days(30)),
+                Positive::HUNDRED,
+            )
+        };
+        let params = WalkParams {
+            size: 2,
+            init_step: step(),
+            walker: Box::new(Walker),
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices: vec![Positive::HUNDRED, Positive::HUNDRED],
+                symbol: None,
+            },
+            seed: None,
+        };
+        let walk = RandomWalk::new("dated".to_string(), &params, |_| {
+            Ok::<_, Infallible>(vec![step(), step()])
+        })
+        .unwrap();
+        let result = SingleLegPathEvaluator::new(&strategy)
+            .unwrap()
+            .evaluate_path(&walk, &ExitPolicy::Expiration);
+        assert!(matches!(result, Err(BacktestError::Simulation(_))));
+
+        // With a reference datetime the same path has days to read and runs.
+        ExpirationDate::set_reference_datetime(Some(date));
+        let result = SingleLegPathEvaluator::new(&strategy)
+            .unwrap()
+            .evaluate_path(&walk, &ExitPolicy::Expiration);
+        ExpirationDate::set_reference_datetime(None);
+        assert!(result.is_ok());
     }
 }

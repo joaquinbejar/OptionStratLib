@@ -23,8 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `evaluation_time`, `resolution_base`, `years_to_expiration`, `days_to_expiration`
   and `expiration_date_string`; with `clock`, `wall_clock`. New pure forms that take
   the time: `Trade::new_at`, `Position::blank_at`, `days_held_at`,
-  `days_to_expiration_at` and `trade_at`, `new_at` on every strategy with a public
-  `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
+  `days_to_expiration_at` and `trade_at`, `OptionSeries::odte_at`, `new_at` on every
+  strategy with a public `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
   `ClockError` in `optionstratlib_core::error`, also at `optionstratlib::error`: the
   exhaustive error enums carry it through `ExpirationDateError::InvalidDateTime` or
   an existing variant, so no variant is added until the 0.24.0 bump (#947). See
@@ -117,14 +117,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`expiration_date` 0.6 and `option_type` 0.6** (#944). Breaking, and released
   with the 0.24.0 bump (#947):
   - `ExpirationDate`'s `Ord` no longer reads the clock: every `Days` sorts before
-    every `DateTime`, where a mixed comparison used to go by instant. In this
-    library that changes the order of a `BTreeMap<ExpirationDate, _>` holding both
-    variants, so `OptionSeries::chains`, `get_expiration_dates` and the chain
-    `to_build_params` uses, and `OptionChain`'s `Ord` on chains whose
-    `expiration_date` strings mix a day count and a date; both are unchanged for one
-    variant, which is all `build_series` and deserialization produce.
-    `OptionSeries::odte` keeps comparing in time, through `cmp_at`. Compare mixed
-    variants with `ExpirationDate::cmp_at`.
+    every `DateTime`, where a mixed comparison used to go by instant. This library
+    does not read the clock inside a comparison to keep the old order, so a mix of
+    the two variants now orders by variant in `OptionSeries::chains` and everything
+    that walks it (`get_expiration_dates`, the chain `to_build_params` reads), and in
+    `OptionChain`'s `Ord` on chains whose `expiration_date` strings mix a day count
+    and a date. One variant orders as before, which is all `build_series` and
+    deserialization produce. Migration: to order a mix in time, sort with
+    `ExpirationDate::cmp_at(&other, base)`. `OptionSeries::odte` already compares in
+    time this way.
   - `ExpirationDate::from_string` and `get_days` no longer write the thread's
     reference datetime. Before, parsing a date or asking a `DateTime` for its days
     silently moved what every later `Days` on that thread resolved to. Call
@@ -143,6 +144,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TradeRecord` and `PnLMetrics`, `long` and `short` on the spot, future and
   perpetual legs, `create_sample_position`, `get_today_formatted`,
   `get_today_or_tomorrow_formatted` and `From<PathOutcome> for SimulationResult`.
+  Neither do the methods whose fallback would read as an answer: `OptionSeries::odte`
+  (`None`, "no such chain"; use the new `odte_at`), and `is_delta_neutral` and
+  `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). A single-leg
+  simulation whose steps cannot read their days returns the error instead of
+  reporting the path as expired.
 - `Strategy::new` opens all the legs of one call at one instant rather than reading
   the clock once per leg, and `SimulationStatsResult::from_outcomes` stamps all its
   results with one instant (#944).

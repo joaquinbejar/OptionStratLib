@@ -236,10 +236,11 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             });
         }
 
+        let net_delta = self.delta()?;
         Ok(DeltaInfo {
-            net_delta: self.delta()?,
+            net_delta,
             individual_deltas,
-            is_neutral: self.is_delta_neutral(),
+            is_neutral: net_delta.abs() <= DELTA_THRESHOLD,
             underlying_price,
             neutrality_threshold: DELTA_THRESHOLD,
         })
@@ -253,7 +254,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Returns
     /// A boolean (`true` or `false`):
     /// * `true` if the absolute value of the net delta is within the threshold.
-    /// * `false` otherwise.
+    /// * `false` otherwise, and when the delta cannot be computed.
+    ///
+    /// Needs the `clock` feature: without it a `DateTime` leg has no delta to
+    /// compute, and `false` would read as "not neutral". Use `delta`, which reports
+    /// why.
+    #[cfg(feature = "clock")]
     fn is_delta_neutral(&self) -> bool {
         match self.delta() {
             Ok(delta) => delta.abs() <= DELTA_THRESHOLD,
@@ -1023,7 +1029,13 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// # Returns
     ///
-    /// `true` if all specified targets are met within tolerance
+    /// `true` if all specified targets are met within tolerance; `false` otherwise,
+    /// and when the Greeks cannot be computed.
+    ///
+    /// Needs the `clock` feature: without it a `DateTime` leg has no Greeks to
+    /// compute, and `false` would read as "target missed". Use `portfolio_greeks`,
+    /// which reports why.
+    #[cfg(feature = "clock")]
     fn meets_greek_targets(&self, target: &AdjustmentTarget, tolerance: Decimal) -> bool {
         match self.portfolio_greeks() {
             Ok(greeks) => target.is_satisfied(&greeks, tolerance),

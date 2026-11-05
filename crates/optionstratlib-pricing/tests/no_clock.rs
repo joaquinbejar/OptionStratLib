@@ -51,6 +51,7 @@ mod without_clock {
     use optionstratlib_core::model::ExpirationDateError;
     use optionstratlib_core::utils::time::now;
     use optionstratlib_pricing::error::PricingError;
+    use optionstratlib_pricing::pricing::OptionPricing;
 
     /// Fails if anything in this configuration turned the clock on, a
     /// dev-dependency included: features unify, and the run would prove nothing.
@@ -69,6 +70,17 @@ mod without_clock {
                 ExpirationDateError::InvalidDateTime(_)
             ))
         ));
+    }
+
+    /// The solver's first guess tolerates a missing time to expiry, so the failure
+    /// has to come out of the solve: a `DateTime` with no time to measure from is an
+    /// error, not an unsolved volatility.
+    #[test]
+    fn test_implied_volatility_of_a_datetime_without_a_reference_is_an_error() {
+        let expiry = Utc.with_ymd_and_hms(2030, 1, 31, 0, 0, 0).unwrap();
+        let solved =
+            option(ExpirationDate::DateTime(expiry)).calculate_implied_volatility(dec!(5.0));
+        assert!(solved.is_err());
     }
 
     #[test]

@@ -20,17 +20,18 @@ fn chain(symbol: &str) -> OptionChain {
     )
 }
 
-/// A series with these chains, compared from `base` through the reference
-/// datetime, so the answer is the same with and without the clock.
-fn odte(chains: Vec<(ExpirationDate, &str)>) -> Option<String> {
+fn series(chains: Vec<(ExpirationDate, &str)>) -> OptionSeries {
     let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
     for (expiration, symbol) in chains {
         series.chains.insert(expiration, chain(symbol));
     }
-    ExpirationDate::set_reference_datetime(Some(base()));
-    let found = series.odte();
-    ExpirationDate::set_reference_datetime(None);
-    found.map(|chain| chain.symbol)
+    series
+}
+
+/// The chain found from `base`: the pure form, so the answer is the same with and
+/// without the clock.
+fn odte(chains: Vec<(ExpirationDate, &str)>) -> Option<String> {
+    series(chains).odte_at(base()).map(|chain| chain.symbol)
 }
 
 /// `expiration_date` 0.6 orders a `DateTime` after every `Days`, so a plain
@@ -72,6 +73,38 @@ fn test_odte_days_earlier_than_a_datetime_is_found() {
     );
 }
 
+/// The expiration is 40 hours from `base`, so a later base brings it within a day.
+#[test]
+fn test_odte_at_depends_only_on_the_base() {
+    let expiration = ExpirationDate::DateTime(base() + Duration::hours(40));
+    let series = series(vec![(expiration, "TEST")]);
+    assert!(series.odte_at(base()).is_none());
+    assert!(series.odte_at(base() + Duration::hours(20)).is_some());
+}
+
+#[test]
+fn test_odte_at_of_days_counts_from_any_base() {
+    let near = series(vec![(ExpirationDate::Days(Positive::ONE), "TEST")]);
+    let far = series(vec![(ExpirationDate::Days(Positive::TWO), "TEST")]);
+    assert!(near.odte_at(base()).is_some());
+    assert!(far.odte_at(base()).is_none());
+}
+
+/// `odte` is `odte_at` from the reference datetime or the current time.
+#[cfg(feature = "clock")]
+#[test]
+fn test_odte_delegates_to_odte_at() {
+    let far_future = base() + Duration::days(60_000);
+    let expiration = ExpirationDate::DateTime(far_future + Duration::hours(6));
+    let series = series(vec![(expiration, "TEST")]);
+    ExpirationDate::set_reference_datetime(Some(far_future));
+    let found = series.odte();
+    ExpirationDate::set_reference_datetime(None);
+    assert!(found.is_some());
+    // From the wall clock it is far from a day away.
+    assert!(series.odte().is_none());
+}
+
 #[cfg(not(feature = "clock"))]
 mod without_clock {
     use super::*;
@@ -85,28 +118,17 @@ mod without_clock {
         assert_eq!(now(), Err(ClockError::Unavailable));
     }
 
-    fn series(expiration: ExpirationDate) -> OptionSeries {
-        let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
-        series.chains.insert(expiration, chain("TEST"));
-        series
-    }
-
+    /// `get_expiration_dates` has an error channel, so a `DateTime` is an error
+    /// rather than a missing entry.
     #[test]
-    fn test_odte_of_days_needs_no_base() {
-        assert!(series(ExpirationDate::Days(Positive::ONE)).odte().is_some());
-        assert!(series(ExpirationDate::Days(Positive::TWO)).odte().is_none());
-    }
-
-    /// With no base a `DateTime` cannot be placed in time: no answer, rather
-    /// than a wrong one.
-    #[test]
-    fn test_odte_of_a_datetime_without_a_base_is_none() {
-        assert!(series(ExpirationDate::DateTime(base())).odte().is_none());
+    fn test_expiration_dates_of_a_datetime_without_a_base_is_an_error() {
+        let dated = series(vec![(ExpirationDate::DateTime(base()), "TEST")]);
+        assert!(dated.get_expiration_dates().is_err());
     }
 
     #[test]
     fn test_expiration_dates_of_days_need_no_base() {
-        let days = series(ExpirationDate::Days(Positive::TWO))
+        let days = series(vec![(ExpirationDate::Days(Positive::TWO), "TEST")])
             .get_expiration_dates()
             .unwrap();
         assert_eq!(days, vec![Positive::TWO]);

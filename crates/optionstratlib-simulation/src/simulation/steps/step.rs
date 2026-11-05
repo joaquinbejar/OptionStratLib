@@ -203,6 +203,11 @@ where
     /// * `Positive` - A guaranteed positive decimal value representing the number of days
     ///   until expiration. This value is extracted from the step's x-component's expiration date.
     ///
+    /// A chart position, not a figure to compute with: where the days cannot be read
+    /// it logs a warning and gives zero. That includes a `DateTime` step in a build
+    /// with neither the `clock` feature nor a reference datetime on this thread. Use
+    /// [`Xstep::days_left`] for the error.
+    ///
     pub fn get_graph_x_in_days_left(&self) -> Positive {
         // Used by visualization; on error we fall back to ZERO so the
         // chart renders the step at the rightmost edge instead of

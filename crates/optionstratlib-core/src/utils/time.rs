@@ -59,8 +59,15 @@ pub fn now() -> Result<DateTime<Utc>, ClockError> {
 /// The current instant when the build has a clock, `existing` otherwise.
 ///
 /// For the code that re-stamps something that already carries a time, such as
-/// a leg rebuilt into a strategy: without a clock it keeps the time the caller
-/// gave it.
+/// a leg rebuilt into a strategy or the P&L of a dated transaction.
+///
+/// **The two builds stamp differently**: the same call gives the time of the call
+/// with the `clock` feature and `existing` without it, and features unify, so
+/// another crate in the build can change which one this is. That is acceptable
+/// because the result only labels a record and goes into no price, Greek or P&L
+/// figure, and because `existing` came from the caller, so it is never a made-up
+/// time. Code whose result depends on the instant must not use this: take the time
+/// as an argument, or use [`now`] and report [`ClockError`].
 #[must_use]
 #[inline]
 pub fn now_or(existing: DateTime<Utc>) -> DateTime<Utc> {
@@ -72,6 +79,15 @@ pub fn now_or(existing: DateTime<Utc>) -> DateTime<Utc> {
 /// With the `clock` feature, the wall clock; the thread's reference datetime is
 /// ignored, as `ExpirationDate::get_years` ignores it. Without it, the
 /// thread's reference datetime.
+///
+/// **The two builds can evaluate differently**: with a reference datetime set, a
+/// `DateTime` expiration is measured from the wall clock with the `clock` feature
+/// and from the reference without it, so the same call can price differently, and
+/// features unify. That is acceptable because the default build has to keep
+/// measuring from the wall clock, and without a clock the reference datetime is the
+/// only time the caller can have chosen: it is never made up, and with none this
+/// fails. Code that needs the same answer in every build takes the time as an
+/// argument: the `*_at` forms read neither.
 ///
 /// # Errors
 ///
@@ -1101,7 +1117,8 @@ mod tests_clock_helpers {
 
         #[test]
         fn test_now_or_reads_the_clock() {
-            assert!(now_or(base() - Duration::days(365_000)) > base() - Duration::days(365_000));
+            let long_ago = base() - Duration::days(365_000);
+            assert!(now_or(long_ago) > long_ago);
             assert!(now().is_ok());
         }
     }
@@ -1118,6 +1135,31 @@ mod tests_clock_helpers {
         #[test]
         fn test_now_or_keeps_the_given_instant() {
             assert_eq!(now_or(base()), base());
+        }
+
+        /// The caller's instant wins over the reference datetime: `now_or` only
+        /// ever gives back what it was handed.
+        #[test]
+        fn test_now_or_ignores_the_reference_datetime() {
+            ExpirationDate::set_reference_datetime(Some(base() + Duration::days(1)));
+            let stamped = now_or(base());
+            ExpirationDate::set_reference_datetime(None);
+            assert_eq!(stamped, base());
+        }
+
+        /// A `DateTime` is measured from the reference, so moving the reference
+        /// moves the answer: the difference from a build with the clock.
+        #[test]
+        fn test_evaluation_time_moves_a_datetime_with_the_reference() {
+            let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+            let at = |reference: DateTime<Utc>| {
+                ExpirationDate::set_reference_datetime(Some(reference));
+                let days = days_to_expiration(&expiration);
+                ExpirationDate::set_reference_datetime(None);
+                days.unwrap()
+            };
+            assert_eq!(at(base()), pos_or_panic!(30.0));
+            assert_eq!(at(base() + Duration::days(10)), pos_or_panic!(20.0));
         }
 
         #[test]

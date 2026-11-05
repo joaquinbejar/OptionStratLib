@@ -613,6 +613,7 @@ pub fn optionstratlib_market::series::OptionSeries::build_series(&optionstratlib
 pub fn optionstratlib_market::series::OptionSeries::get_expiration_dates(&self) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::series::OptionSeries::new(alloc::string::String, positive::positive::Positive) -> Self
 pub fn optionstratlib_market::series::OptionSeries::odte(&self) -> core::option::Option<optionstratlib_market::chains::chain::OptionChain>
+pub fn optionstratlib_market::series::OptionSeries::odte_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::option::Option<optionstratlib_market::chains::chain::OptionChain>
 pub fn optionstratlib_market::series::OptionSeries::to_build_params(&self) -> core::result::Result<optionstratlib_market::series::OptionSeriesBuildParams, optionstratlib_market::error::chains::ChainError>
 impl core::convert::From<&optionstratlib_market::series::OptionSeries> for positive::positive::Positive
 pub fn positive::positive::Positive::from(&optionstratlib_market::series::OptionSeries) -> Self

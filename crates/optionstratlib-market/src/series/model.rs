@@ -1,13 +1,13 @@
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::utils::Len;
-use optionstratlib_core::utils::time::{
-    days_to_expiration, expiration_date_string, resolution_base,
-};
+#[cfg(feature = "clock")]
+use optionstratlib_core::utils::time::wall_clock;
+use optionstratlib_core::utils::time::{days_to_expiration, expiration_date_string};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
@@ -96,43 +96,37 @@ impl OptionSeries {
     /// - This method assumes that there is a defined threshold of "1 day" to determine closeness.
     ///
     /// The chains are compared in time, from the thread's reference datetime or
-    /// else the current time. In a build without the `clock` feature and with no
-    /// reference datetime, a series holding a `DateTime` expiration has no answer
-    /// and returns `None`.
+    /// else the current time. Needs the `clock` feature: without it, a series
+    /// holding a `DateTime` could not be placed in time, and `None` would read as
+    /// "no such chain". Use [`OptionSeries::odte_at`] there.
     ///
     /// # Errors
     /// This function does not return errors but may return `None` if no conditions are met.
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn odte(&self) -> Option<OptionChain> {
+        self.odte_at(ExpirationDate::get_reference_datetime().unwrap_or_else(wall_clock))
+    }
+
+    /// Retrieves the zero-days-to-expiration chain, as seen at the instant `base`.
+    ///
+    /// Takes the chain with the earliest expiration in time, a `Days` counting
+    /// from `base`, and returns it if that expiration is within one day of `base`.
+    /// `Ord` cannot answer this: it puts every `Days` before every `DateTime`,
+    /// whatever their dates. Pure: reads neither the clock nor the thread's
+    /// reference datetime.
+    ///
+    /// # Returns
+    /// - `Some(OptionChain)` if the earliest expiration is within one day.
+    /// - `None` if there are no chains, or the earliest is more than one day away.
+    #[must_use]
+    pub fn odte_at(&self, base: DateTime<Utc>) -> Option<OptionChain> {
         let one_day = ExpirationDate::Days(Positive::ONE);
-        // `Ord` puts every `Days` before every `DateTime`, so the first key is
-        // not the earliest one when both variants are present: the comparison
-        // in time needs a base.
-        let Ok(base) = resolution_base() else {
-            return match self.chains.first_key_value() {
-                Some((days @ ExpirationDate::Days(_), chain))
-                    if days <= &one_day && !self.has_datetime_expiration() =>
-                {
-                    Some(chain.clone())
-                }
-                _ => None,
-            };
-        };
         let (expiration_date, chain) = self
             .chains
             .iter()
             .min_by(|left, right| left.0.cmp_at(right.0, base))?;
         (expiration_date.cmp_at(&one_day, base) != Ordering::Greater).then(|| chain.clone())
-    }
-
-    /// Whether a chain of the series expires at an absolute instant.
-    ///
-    /// `Ord` puts every `Days` first, so only the last key needs looking at.
-    fn has_datetime_expiration(&self) -> bool {
-        matches!(
-            self.chains.last_key_value(),
-            Some((ExpirationDate::DateTime(_), _))
-        )
     }
 
     /// Retrieves the expiration dates associated with the chains.
@@ -565,6 +559,7 @@ mod tests_option_series {
         }
     }
 
+    #[cfg(feature = "clock")]
     mod tests_odte_method {
         use super::*;
 
