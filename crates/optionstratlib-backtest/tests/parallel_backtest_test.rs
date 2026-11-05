@@ -91,7 +91,7 @@ fn leg(side: Side, style: OptionStyle, premium: Decimal) -> Position {
 }
 
 fn long_call() -> LongCall {
-    let mut strategy = LongCall::default();
+    let mut strategy = LongCall::blank_at(chrono::DateTime::UNIX_EPOCH);
     strategy
         .add_position(&leg(Side::Long, OptionStyle::Call, dec!(4.5)))
         .unwrap_or_else(|e| panic!("{e}"));
@@ -99,7 +99,7 @@ fn long_call() -> LongCall {
 }
 
 fn short_put() -> ShortPut {
-    let mut strategy = ShortPut::default();
+    let mut strategy = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
     strategy
         .add_position(&leg(Side::Short, OptionStyle::Put, dec!(4.0)))
         .unwrap_or_else(|e| panic!("{e}"));

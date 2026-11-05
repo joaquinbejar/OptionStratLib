@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate, optionstratlib_core::model::OptionStyle,
@@ -10,12 +11,13 @@ use {
 };
 
 #[cfg_attr(target_os = "windows", ignore)]
+#[cfg(feature = "clock")]
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortStrangle strategy
     let underlying_price = pos_or_panic!(24209.5);
 
-    let mut strategy = ShortStrangle::new(
+    let mut strategy = ShortStrangle::new_at(
         "CL".to_string(),
         underlying_price, // underlying_price
         // Seed legs, replaced by the optimizer; `new` validates them since
@@ -34,6 +36,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.1),    // close_fee_short_call
         pos_or_panic!(0.1),    // open_fee_short_put
         pos_or_panic!(0.1),    // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

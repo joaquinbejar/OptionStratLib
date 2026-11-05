@@ -1308,7 +1308,7 @@ impl PnLCalculator for LongStrangle {
 #[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(LongStrangle, test_short_call_implementations);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_long_strangle_probability {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -1328,7 +1328,7 @@ mod tests_long_strangle_probability {
     }
 
     fn create_test_long_strangle() -> LongStrangle {
-        LongStrangle::new(
+        LongStrangle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // call_strike
@@ -1344,6 +1344,7 @@ mod tests_long_strangle_probability {
             Positive::ZERO,                            // close_fee_long_call
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1470,24 +1471,37 @@ mod tests_long_strangle_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_long_strangle_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_strangle::{LongStrangle, Positive};
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos_or_panic!(7138.5);
-        LongStrangle::new(
+        LongStrangle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
@@ -1503,10 +1517,12 @@ mod tests_long_strangle_delta {
             pos_or_panic!(7.01),   // close_fee_long_call
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos_or_panic!(7450.0);
@@ -1558,6 +1574,7 @@ mod tests_long_strangle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos_or_panic!(7050.0);
@@ -1602,6 +1619,7 @@ mod tests_long_strangle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7445.5), pos_or_panic!(7050.0));
@@ -1617,23 +1635,35 @@ mod tests_long_strangle_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_long_strangle_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_strangle::{LongStrangle, Positive};
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::{Action, OptionStyle};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos_or_panic!(7138.5);
-        LongStrangle::new(
+        LongStrangle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
@@ -1649,10 +1679,12 @@ mod tests_long_strangle_delta_size {
             pos_or_panic!(7.01),   // close_fee_long_call
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_apply_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
@@ -1789,6 +1821,7 @@ mod tests_long_strangle_delta_size {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_apply_delta_adjustments() {
         let mut strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
@@ -1807,6 +1840,7 @@ mod tests_long_strangle_delta_size {
         assert!(strategy.is_delta_neutral());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos_or_panic!(7450.0);
@@ -1856,6 +1890,7 @@ mod tests_long_strangle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7150.0), pos_or_panic!(7050.0));
@@ -1905,6 +1940,7 @@ mod tests_long_strangle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7445.5), pos_or_panic!(7050.0));
@@ -1920,7 +1956,7 @@ mod tests_long_strangle_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_strangle_position_management {
     use super::*;
     use optionstratlib_core::error::position::PositionValidationErrorKind;
@@ -1930,7 +1966,7 @@ mod tests_strangle_position_management {
     use rust_decimal_macros::dec;
 
     fn create_test_long_strangle() -> LongStrangle {
-        LongStrangle::new(
+        LongStrangle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // call_strike
@@ -1946,6 +1982,7 @@ mod tests_strangle_position_management {
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2031,7 +2068,7 @@ mod tests_strangle_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position_long {
     use super::*;
     use optionstratlib_core::model::types::{OptionStyle, Side};
@@ -2041,7 +2078,7 @@ mod tests_adjust_option_position_long {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> LongStrangle {
-        LongStrangle::new(
+        LongStrangle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // call_strike
@@ -2057,6 +2094,7 @@ mod tests_adjust_option_position_long {
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

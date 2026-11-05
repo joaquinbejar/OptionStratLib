@@ -620,7 +620,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_optimizer {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -659,7 +659,7 @@ mod tests_optimizer {
         Position::new(
             option,
             Positive::TWO,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -753,12 +753,14 @@ mod tests_optimizer {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_optimizer_contract_size {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::types::{OptionStyle, OptionType};
-    use optionstratlib_core::{pos_or_panic, spos};
+    use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::spos;
 
     fn sized_position(side: Side, contract_size: Positive) -> Position {
         let option = optionstratlib_core::model::Options::new(
@@ -779,7 +781,7 @@ mod tests_optimizer_contract_size {
         Position::new(
             option,
             Positive::TWO,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -787,6 +789,7 @@ mod tests_optimizer_contract_size {
         )
     }
 
+    #[cfg(feature = "clock")]
     fn chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
@@ -850,6 +853,7 @@ mod tests_optimizer_contract_size {
         assert_eq!(optimizer.portfolio_contract_size(), Positive::ONE);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_optimizer_contract_size_new_legs_take_the_portfolio_size() {
         let chain = chain();

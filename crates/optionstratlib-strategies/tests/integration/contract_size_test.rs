@@ -10,7 +10,6 @@
 //! re-expressed in contracts by swapping their option leg, since their
 //! constructors still size the option leg one unit per share.
 
-use chrono::Utc;
 use optionstratlib_analytics::pnl::PnLCalculator;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{
@@ -58,7 +57,7 @@ fn in_contracts(leg: &Position) -> Position {
 }
 
 fn covered_call() -> CoveredCall {
-    CoveredCall::new(
+    CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -72,12 +71,13 @@ fn covered_call() -> CoveredCall {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn protective_put() -> ProtectivePut {
-    ProtectivePut::new(
+    ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -91,12 +91,13 @@ fn protective_put() -> ProtectivePut {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn collar() -> Collar {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -114,6 +115,7 @@ fn collar() -> Collar {
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -243,7 +245,7 @@ fn leg(
         )
         .with_contract_size(contract_size),
         pos_or_panic!(premium),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         fee,
         fee,
         None,

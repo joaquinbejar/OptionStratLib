@@ -118,15 +118,19 @@ pub fn reject_unrepresentable_expiration(
     Ok(())
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn pos(value: rust_decimal::Decimal) -> Positive {
         Positive::new_decimal(value).unwrap_or(Positive::ZERO)
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_days_matches_get_date() {
         let expiration = ExpirationDate::Days(pos(dec!(30.0)));
@@ -135,6 +139,7 @@ mod tests {
         assert_eq!(resolved.date_naive(), reference.date_naive());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_datetime_is_returned_unchanged() {
         let instant = Utc::now();
@@ -143,6 +148,7 @@ mod tests {
         assert_eq!(resolved, instant);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_datetime_overflow_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(pos(dec!(1000000000.0))))
@@ -150,6 +156,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_span_overflow_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(pos(dec!(1000000000000000.0))))
@@ -157,6 +164,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_beyond_i64_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(Positive::MAX))
@@ -167,6 +175,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_accepts_ordinary_horizons() {
         for days in [dec!(0.0), dec!(1.0), dec!(30.0), dec!(3650.0)] {
@@ -175,6 +184,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_rejects_billion_days() {
         let error =
@@ -183,6 +193,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_accepts_any_datetime() {
         reject_unrepresentable_expiration(&ExpirationDate::DateTime(Utc::now()))

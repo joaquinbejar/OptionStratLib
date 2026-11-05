@@ -449,11 +449,12 @@ pub fn save_pnl_metrics_with_document(
     Ok(())
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pnl_metrics {
     use super::*;
     use crate::pnl::PnL;
 
+    #[cfg(feature = "clock")]
     use chrono::Utc;
     use num_traits::FromPrimitive;
     use optionstratlib_core::pos_or_panic;
@@ -480,6 +481,7 @@ mod tests_pnl_metrics {
         assert_eq!(metrics_step.delta_adjustments, Positive::ZERO);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_metrics_default() {
         let metrics = PnLMetrics::default();
@@ -823,7 +825,7 @@ mod tests_pnl_metrics {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pnl_metrics_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};
@@ -834,6 +836,7 @@ mod tests_pnl_metrics_serialization {
 
     use crate::pnl::PnL;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_metrics_step_serialization() {
         // Create a sample PnLMetricsStep with all fields populated

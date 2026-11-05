@@ -1257,14 +1257,11 @@ mod tests_display_implementations {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
-    #[cfg(feature = "clock")]
     use crate::strategies::ShortStrangle;
-    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
     use serde_json;
-    #[cfg(feature = "clock")]
     use tracing::info;
 
     #[test]
@@ -1449,10 +1446,9 @@ mod tests_serialization {
         }
     }
 
-    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_response_serialization() {
-        let strategy = ShortStrangle::new(
+        let strategy = ShortStrangle::new_at(
             "CL".to_string(),
             pos_or_panic!(7250.0), // underlying_price
             pos_or_panic!(7450.0), // call_strike
@@ -1469,6 +1465,7 @@ mod tests_serialization {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let delta_info = strategy.delta_neutrality().unwrap();

@@ -565,6 +565,7 @@ mod tests {
     /// contract overflows the product `total_cost` needs. The signature
     /// promises a `Result`, so it has to arrive as one rather than as an
     /// abort inside the raw multiplication `total_margin_required` performs.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_total_cost_reports_a_margin_product_that_overflows() {
         let future = FuturePosition::new(
@@ -583,6 +584,7 @@ mod tests {
         assert!(future.total_cost().is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_position_new() {
         let future = FuturePosition::new(
@@ -605,6 +607,7 @@ mod tests {
         assert_eq!(future.contract_size, pos_or_panic!(50.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_long_convenience() {
         let future = FuturePosition::long(
@@ -620,6 +623,7 @@ mod tests {
         assert_eq!(future.initial_margin_req, pos_or_panic!(15000.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_short_convenience() {
         let future = FuturePosition::short(
@@ -634,6 +638,7 @@ mod tests {
         assert_eq!(future.side, Side::Short);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_notional_value() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
@@ -649,6 +654,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long() {
         let future = FuturePosition::long(
@@ -667,6 +673,7 @@ mod tests {
         assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short() {
         let future = FuturePosition::short(
@@ -685,6 +692,7 @@ mod tests {
         assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_implied_leverage() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
@@ -701,6 +709,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_basis() {
         let future = FuturePosition::long(
@@ -716,6 +725,7 @@ mod tests {
         assert_eq!(basis, Decimal::from(10));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_tick_value() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
@@ -732,6 +742,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_total_margin_required() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
@@ -747,6 +758,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display() {
         let future = FuturePosition::long(
@@ -784,6 +796,7 @@ mod tests {
         )
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_liquidation_price_reachable_is_unchanged()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -859,6 +872,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_days_to_expiration_is_unchanged() {
         let future = future_with_margins(
@@ -902,6 +916,7 @@ mod tests {
         assert!(future.time_to_expiration_years().is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_expiration_timestamp_and_is_expired_are_unchanged() {
         let expiry = Utc::now() + chrono::Duration::days(30);

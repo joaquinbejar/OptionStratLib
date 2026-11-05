@@ -1,4 +1,3 @@
-use chrono::Utc;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{
     ExpirationDate, Options,
@@ -16,7 +15,7 @@ use rust_decimal_macros::dec;
 
 // Helper function to create a Short Call strategy for testing
 fn create_test_short_call() -> ShortCall {
-    let mut short_call = ShortCall::default(); // Using default and then customizing
+    let mut short_call = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH); // Using default and then customizing
 
     short_call.name = "Test Short Call".to_string();
     short_call.description = "Test Short Call Strategy".to_string();
@@ -39,7 +38,7 @@ fn create_test_short_call() -> ShortCall {
     let position = Position::new(
         option,
         Positive::new(2.50).unwrap(), // premium_received
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.65).unwrap(), // open_fee
         Positive::new(0.65).unwrap(), // close_fee
         None,
@@ -195,7 +194,7 @@ fn test_short_call_calculate_profit_at() {
 
 #[test]
 fn test_short_call_add_position() {
-    let mut short_call = ShortCall::default();
+    let mut short_call = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
 
     let valid_option = Options::new(
         OptionType::European,
@@ -214,7 +213,7 @@ fn test_short_call_add_position() {
     let valid_position = Position::new(
         valid_option,
         Positive::new(1.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
         None,
@@ -240,7 +239,7 @@ fn test_short_call_add_position() {
     let invalid_position_put = Position::new(
         invalid_option_put,
         Positive::new(1.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
         None,
@@ -266,7 +265,7 @@ fn test_short_call_add_position() {
     let invalid_position_long = Position::new(
         invalid_option_long,
         Positive::new(1.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
         None,

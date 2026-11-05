@@ -411,10 +411,11 @@ pub fn calculate_price_probability(
     Ok((prob_below_range, prob_in_range, prob_above_range))
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_single_point_probability {
     use super::*;
     use approx::assert_relative_eq;
+    #[cfg(feature = "clock")]
     use chrono::{Duration, Utc};
     use optionstratlib_core::constants::DAYS_IN_A_YEAR;
     use rust_decimal_macros::dec;
@@ -461,6 +462,7 @@ mod tests_single_point_probability {
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_calculation_with_datetime() {
         let current_price = Positive::HUNDRED;
@@ -619,6 +621,7 @@ mod tests_single_point_probability {
         };
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_past_datetime() {
         let past_date = Utc::now() - Duration::days(1);

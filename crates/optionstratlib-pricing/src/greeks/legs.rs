@@ -285,6 +285,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_delta_is_one_per_unit_signed_by_side() {
         assert_eq!(ok(spot_long().delta()), Decimal::from(100));
@@ -357,6 +358,7 @@ mod tests {
         assert!(wide_perp.theta().is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_forwards_to_the_wrapped_position() {
         assert_eq!(ok(Leg::spot(spot_long()).delta()), Decimal::from(100));

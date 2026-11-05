@@ -98,7 +98,7 @@ fn exit_policies() -> Vec<ExitPolicy> {
 }
 
 fn long_call() -> LongCall {
-    LongCall::new(
+    LongCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         ExpirationDate::Days(pos(dec!(30))),
@@ -110,6 +110,7 @@ fn long_call() -> LongCall {
         pos(dec!(4.5)),
         pos(dec!(0.5)),
         pos(dec!(0.5)),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -138,7 +139,7 @@ fn short_put() -> ShortPut {
         None,
         None,
     );
-    let mut strategy = ShortPut::default();
+    let mut strategy = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
     strategy
         .add_position(&position)
         .unwrap_or_else(|e| panic!("{e}"));

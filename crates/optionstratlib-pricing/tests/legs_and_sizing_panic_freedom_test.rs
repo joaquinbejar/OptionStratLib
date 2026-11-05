@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! Property-based tests for panic freedom in the leg Greeks, the
 //! delta-neutral sizing, the lattice and return-path allocations and the
 //! finite-difference Greeks of the pricing crate (#788).
@@ -17,8 +18,6 @@
 //!
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::leg::{FuturePosition, Leg, PerpetualPosition, SpotPosition};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -81,6 +80,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
     /// The Greeks of every linear leg.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_greeks_never_panic(
         quantity in extreme_positive(),
@@ -95,7 +95,7 @@ proptest! {
             quantity,
             price,
             side,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
         );
@@ -108,7 +108,7 @@ proptest! {
             contract_size,
             Positive::ONE,
             Positive::ONE,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
         );
         let perpetual = PerpetualPosition {

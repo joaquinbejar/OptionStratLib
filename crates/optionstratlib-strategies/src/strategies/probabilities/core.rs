@@ -9,7 +9,7 @@
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
 use crate::error::strategies::StrategyError;
@@ -559,7 +559,7 @@ fn resolve_volatility<S: ProbabilityAnalysis + ?Sized>(
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_probability_analysis {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -577,7 +577,7 @@ mod tests_probability_analysis {
     }
 
     fn test_strategy() -> BullCallSpread {
-        BullCallSpread::new(
+        BullCallSpread::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2505.8), // underlying_price
             pos_or_panic!(2460.0), // long_strike_itm
@@ -593,6 +593,7 @@ mod tests_probability_analysis {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -713,7 +714,7 @@ mod tests_probability_analysis {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_expected_value {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -732,7 +733,7 @@ mod tests_expected_value {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BullCallSpread {
-        BullCallSpread::new(
+        BullCallSpread::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2505.8), // underlying_price
             pos_or_panic!(2460.0), // long_strike_itm
@@ -748,6 +749,7 @@ mod tests_expected_value {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -837,7 +839,7 @@ mod tests_expected_value {
     /// spread is worthless, so the answer is minus the net debit, not zero.
     #[test]
     fn test_expected_value_zero_volatility_reports_current_loss() {
-        let strategy = match BullCallSpread::new(
+        let strategy = match BullCallSpread::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2400.0), // underlying_price, below both strikes
             pos_or_panic!(2460.0),
@@ -853,6 +855,7 @@ mod tests_expected_value {
             pos_or_panic!(0.58),
             pos_or_panic!(0.55),
             pos_or_panic!(0.54),
+            chrono::DateTime::UNIX_EPOCH,
         ) {
             Ok(strategy) => strategy,
             Err(e) => panic!("spread constructs: {e}"),
@@ -947,7 +950,7 @@ mod tests_expected_value {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_marginal_probability_inversion {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -956,7 +959,7 @@ mod tests_marginal_probability_inversion {
     use rust_decimal_macros::dec;
 
     fn spread(spot: f64, volatility: f64) -> Result<BullCallSpread, StrategyError> {
-        BullCallSpread::new(
+        BullCallSpread::new_at(
             "PROBE".to_string(),
             Positive::new(spot).expect("the probe spot is positive and finite"),
             Positive::new(spot).expect("the probe spot is positive and finite"),
@@ -972,6 +975,7 @@ mod tests_marginal_probability_inversion {
             pos_or_panic!(0.58),
             pos_or_panic!(0.55),
             pos_or_panic!(0.54),
+            chrono::DateTime::UNIX_EPOCH,
         )
     }
 
@@ -1100,7 +1104,7 @@ mod tests_marginal_probability_inversion {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_reference_volatility {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -1116,7 +1120,7 @@ mod tests_reference_volatility {
         long_iv: Positive,
         short_iv: Positive,
     ) -> BullCallSpread {
-        let mut strategy = match BullCallSpread::new(
+        let mut strategy = match BullCallSpread::new_at(
             "REFVOL".to_string(),
             spot,
             long_strike,
@@ -1132,6 +1136,7 @@ mod tests_reference_volatility {
             pos_or_panic!(0.58),
             pos_or_panic!(0.55),
             pos_or_panic!(0.54),
+            chrono::DateTime::UNIX_EPOCH,
         ) {
             Ok(strategy) => strategy,
             Err(error) => panic!("the probe spread must construct: {error}"),

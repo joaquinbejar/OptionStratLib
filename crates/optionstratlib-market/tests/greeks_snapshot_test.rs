@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -6,8 +7,6 @@
 
 //! Verifies that a chain built through the normal path carries the full
 //! twelve-greek snapshot on every strike, for both option styles.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};
@@ -39,6 +38,7 @@ fn build_params() -> OptionChainBuildParams {
     .with_greek_snapshots(true)
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_built_chain_carries_greek_snapshots_on_every_strike() {
     let chain = match OptionChain::build_chain(&build_params()) {
@@ -80,6 +80,7 @@ fn test_built_chain_carries_greek_snapshots_on_every_strike() {
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_update_greek_snapshots_populates_snapshots_on_an_existing_chain() {
     let mut chain = match OptionChain::build_chain(&build_params()) {
@@ -105,6 +106,7 @@ fn test_update_greek_snapshots_populates_snapshots_on_an_existing_chain() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_update_expiration_date_drops_stale_snapshots() {
     // The expiry is written straight onto each row, bypassing set_extra_params,

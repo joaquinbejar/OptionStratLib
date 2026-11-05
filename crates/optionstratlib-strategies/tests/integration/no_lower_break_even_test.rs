@@ -22,7 +22,7 @@ use rust_decimal_macros::dec;
 #[test]
 fn test_bear_put_spread_profit_area_with_no_lower_break_even() {
     // Debit far above the long strike: the lower break-even is floored to zero.
-    let strategy = BearPutSpread::new(
+    let strategy = BearPutSpread::new_at(
         "TEST".to_string(),
         pos_or_panic!(5.0),
         pos_or_panic!(5.0),
@@ -40,6 +40,7 @@ fn test_bear_put_spread_profit_area_with_no_lower_break_even() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .expect("the spread constructs");
 
@@ -56,7 +57,7 @@ fn test_bear_put_spread_profit_area_with_no_lower_break_even() {
 
 #[test]
 fn test_long_strangle_range_with_no_lower_break_even() {
-    let strategy = LongStrangle::new(
+    let strategy = LongStrangle::new_at(
         "TEST".to_string(),
         pos_or_panic!(5.0),
         pos_or_panic!(6.0),
@@ -72,6 +73,7 @@ fn test_long_strangle_range_with_no_lower_break_even() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .expect("the strangle constructs");
 
@@ -92,7 +94,7 @@ fn test_long_strangle_range_with_no_lower_break_even() {
 
 #[test]
 fn test_short_strangle_range_with_no_lower_break_even() {
-    let strategy = ShortStrangle::new(
+    let strategy = ShortStrangle::new_at(
         "TEST".to_string(),
         pos_or_panic!(5.0),
         pos_or_panic!(6.0),
@@ -109,6 +111,7 @@ fn test_short_strangle_range_with_no_lower_break_even() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .expect("the strangle constructs");
 

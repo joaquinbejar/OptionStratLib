@@ -16,7 +16,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongStraddle strategy
     let underlying_price = pos_or_panic!(7008.5);
 
-    let strategy = LongStraddle::new(
+    let strategy = LongStraddle::new_at(
         "CL".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(7140.0), // put_strike
@@ -31,6 +31,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

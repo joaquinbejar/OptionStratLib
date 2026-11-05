@@ -140,21 +140,28 @@ impl StrategyRequest {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_serialization {
     use super::*;
-    use chrono::{DateTime, NaiveDateTime, Utc};
+    #[cfg(feature = "clock")]
+    use chrono::Utc;
+    #[cfg(feature = "clock")]
+    use chrono::{DateTime, NaiveDateTime};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::OptionStyle;
     use optionstratlib_core::model::Positive;
     use optionstratlib_core::model::Side;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::utils::create_sample_option_with_date;
     use optionstratlib_core::pos_or_panic;
     use serde_json;
 
+    #[cfg(feature = "clock")]
     fn sample_date() -> NaiveDateTime {
         DateTime::from_timestamp(1672531200, 0).unwrap().naive_utc()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_request_serialization() {
         let strategy_request = StrategyRequest {
@@ -328,6 +335,7 @@ mod tests_strategies_build_model {
             .naive_utc()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_request() {
         let strategy_request = StrategyRequest::new(
@@ -381,6 +389,7 @@ mod tests_strategies_build_model {
         assert!(serialized.contains("\"close_fee\":\"1.2\""));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_bull_call_spread() {
         let strategy_request = StrategyRequest::new(
@@ -475,6 +484,7 @@ mod tests_strategies_build_model {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_bear_call_spread() {
         let strategy_request = StrategyRequest::new(
@@ -573,6 +583,7 @@ mod tests_strategies_build_model {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_bear_put_spread() {
         // Textbook legs since #696: long the 910 put, short the 900 put. The
@@ -674,6 +685,7 @@ mod tests_strategies_build_model {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_bull_put_spread() {
         // Textbook legs since #696: long the 900 put, short the 910 put. The
@@ -798,9 +810,10 @@ mod tests_strategies_build_model {
         ExpirationDate::Days(pos_or_panic!(30.0))
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_single_legs_round_trip() {
-        let long_call = LongCall::new(
+        let long_call = LongCall::new_at(
             "TEST".to_string(),
             pos_or_panic!(105.0),
             expiry(),
@@ -812,6 +825,7 @@ mod tests_strategies_build_model {
             pos_or_panic!(3.0),
             Positive::ONE,
             Positive::ONE,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let legs = option_legs(&long_call);
@@ -855,7 +869,7 @@ mod tests_strategies_build_model {
 
     #[test]
     fn test_strategy_covered_round_trip() {
-        let covered_call = CoveredCall::new(
+        let covered_call = CoveredCall::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(110.0),
@@ -869,13 +883,14 @@ mod tests_strategies_build_model {
             Positive::ONE,
             pos_or_panic!(0.01),
             pos_or_panic!(0.01),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let request = StrategyRequest::new(StrategyType::CoveredCall, option_legs(&covered_call))
             .with_spot_leg(covered_call.spot_leg.clone());
         assert_round_trip(&covered_call, request);
 
-        let protective_put = ProtectivePut::new(
+        let protective_put = ProtectivePut::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -889,6 +904,7 @@ mod tests_strategies_build_model {
             Positive::ONE,
             pos_or_panic!(0.01),
             pos_or_panic!(0.01),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let request =
@@ -896,7 +912,7 @@ mod tests_strategies_build_model {
                 .with_spot_leg(protective_put.spot_leg.clone());
         assert_round_trip(&protective_put, request);
 
-        let collar = Collar::new(
+        let collar = Collar::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -914,6 +930,7 @@ mod tests_strategies_build_model {
             pos_or_panic!(0.01),
             pos_or_panic!(0.01),
             pos_or_panic!(0.01),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let request = StrategyRequest::new(StrategyType::Collar, option_legs(&collar))
@@ -944,7 +961,7 @@ mod tests_strategies_build_model {
                 request.strategy_type
             );
         };
-        let covered_call = CoveredCall::new(
+        let covered_call = CoveredCall::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(110.0),
@@ -958,6 +975,7 @@ mod tests_strategies_build_model {
             Positive::ONE,
             pos_or_panic!(0.01),
             pos_or_panic!(0.01),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let short_call = option_legs(&covered_call);

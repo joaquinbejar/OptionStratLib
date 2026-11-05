@@ -526,13 +526,13 @@ where
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod test_support {
     //! Fixtures shared by the four single-leg simulation test modules.
     //! Each strategy is built the way its constructor builds it: the
     //! default strategy plus one position with the test leg.
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::position::Position;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
     use optionstratlib_core::pos_or_panic;
@@ -564,7 +564,7 @@ mod test_support {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -573,7 +573,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_long_call() -> LongCall {
-        LongCall::new(
+        LongCall::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -585,12 +585,13 @@ mod test_support {
             pos_or_panic!(5.0),
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
     pub(super) fn create_test_long_put() -> LongPut {
-        let mut strategy = LongPut::default();
+        let mut strategy = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Long, OptionStyle::Put))
             .unwrap();
@@ -598,7 +599,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_short_call() -> ShortCall {
-        let mut strategy = ShortCall::default();
+        let mut strategy = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Short, OptionStyle::Call))
             .unwrap();
@@ -606,7 +607,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_short_put() -> ShortPut {
-        let mut strategy = ShortPut::default();
+        let mut strategy = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Short, OptionStyle::Put))
             .unwrap();
@@ -634,7 +635,7 @@ mod test_support {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_single_leg_contract {
     use super::test_support::*;
     use super::*;
@@ -776,7 +777,7 @@ mod tests_single_leg_contract {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_simulate_long_call {
     use super::test_support::*;
     use super::*;
@@ -844,7 +845,7 @@ mod tests_simulate_long_call {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_simulate_long_put {
     use super::test_support::*;
     use super::*;
@@ -904,7 +905,7 @@ mod tests_simulate_long_put {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_simulate_short_call {
     use super::test_support::*;
     use super::*;
@@ -964,7 +965,7 @@ mod tests_simulate_short_call {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_simulate_short_put {
     use super::test_support::*;
     use super::*;

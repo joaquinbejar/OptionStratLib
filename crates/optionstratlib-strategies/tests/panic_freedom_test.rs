@@ -285,6 +285,7 @@ proptest! {
     /// cost and fee totals, the display range widened by a strike distance
     /// larger than the spot, and the profit range across an unordered pair of
     /// break-even points.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_bull_call_spread_never_panics(
         underlying in extreme_positive(),
@@ -308,11 +309,12 @@ proptest! {
                 premium, chrono::Utc::now(), fee, fee, None, None,
             )
         };
-        let mut strategy = match BullCallSpread::new(
+        let mut strategy = match BullCallSpread::new_at(
             "PROP".to_string(), underlying, long_strike, short_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -333,6 +335,7 @@ proptest! {
     /// The four single-leg strategies. Their break-even divides the net cost
     /// by the quantity and their profit area reads the first break-even point,
     /// so a zero quantity and a premium above the strike both land here.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_single_leg_strategies_never_panic(
         underlying in extreme_positive(),
@@ -354,10 +357,11 @@ proptest! {
                 premium, chrono::Utc::now(), fee, fee, None, None,
             )
         };
-        let mut strategy = match LongCall::new(
+        let mut strategy = match LongCall::new_at(
             "PROP".to_string(), strike, expiration, volatility, quantity,
             underlying, rate, Positive::ZERO, premium, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -366,10 +370,11 @@ proptest! {
         };
         exercise(&strategy, probe);
         let _ = strategy.update_break_even_points();
-        let mut strategy = match ShortPut::new(
+        let mut strategy = match ShortPut::new_at(
             "PROP".to_string(), strike, expiration, volatility, quantity,
             underlying, rate, Positive::ZERO, premium, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -393,6 +398,7 @@ proptest! {
     /// The three strategies that carry a spot leg. Every per-share figure they
     /// report divides by the size of that leg, and their break-even is a cost
     /// basis net of a credit that the fees can turn into a debit.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_leg_strategies_never_panic(
         // Every monetary argument of this test goes through the spot leg.
@@ -433,11 +439,12 @@ proptest! {
         };
         let contracts = quantity / Positive::HUNDRED;
 
-        let mut strategy = match Collar::new(
+        let mut strategy = match Collar::new_at(
             "PROP".to_string(), underlying, put_strike, call_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -458,10 +465,11 @@ proptest! {
         let _ = strategy.max_loss_potential();
         let _ = strategy.update_break_even_points();
 
-        let mut strategy = match CoveredCall::new(
+        let mut strategy = match CoveredCall::new_at(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -481,10 +489,11 @@ proptest! {
         let _ = strategy.assignment_probability(probe);
         let _ = strategy.update_break_even_points();
 
-        let mut strategy = match ProtectivePut::new(
+        let mut strategy = match ProtectivePut::new_at(
             "PROP".to_string(), underlying, put_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -515,6 +524,7 @@ proptest! {
     /// Its range is centred on the spot and widened by the strike spread, so
     /// strikes further from the spot than the spot itself put the lower edge
     /// below zero.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_strategy_never_panics(
         underlying in walkable_positive(),
@@ -596,6 +606,7 @@ proptest! {
     /// and a strike at the top of the `Decimal` range all land in
     /// `update_break_even_points`; the readers of that point land in
     /// `get_profit_area` and in the probability ranges.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vertical_spread_strategies_never_panic(
         underlying in extreme_positive(),
@@ -620,11 +631,12 @@ proptest! {
         };
         let (low, high) = (or_spot(low_strike, underlying), or_spot(high_strike, underlying));
 
-        let strategy = match BearCallSpread::new(
+        let strategy = match BearCallSpread::new_at(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -636,11 +648,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match BullPutSpread::new(
+        let strategy = match BullPutSpread::new_at(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -652,11 +665,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match BearPutSpread::new(
+        let strategy = match BearPutSpread::new_at(
             "PROP".to_string(), underlying, high_strike, low_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -668,11 +682,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match PoorMansCoveredCall::new(
+        let strategy = match PoorMansCoveredCall::new_at(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -690,6 +705,7 @@ proptest! {
     /// zero) and a pair whose order the strikes invert both reach the
     /// subtraction and the division in `get_profit_area` and
     /// `get_profit_ratio`.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_straddle_and_strangle_strategies_never_panic(
         underlying in extreme_positive(),
@@ -714,10 +730,11 @@ proptest! {
         };
         let straddle_strike = or_spot(call_strike, underlying);
 
-        let strategy = match LongStraddle::new(
+        let strategy = match LongStraddle::new_at(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -729,10 +746,11 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match ShortStraddle::new(
+        let strategy = match ShortStraddle::new_at(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -744,11 +762,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match LongStrangle::new(
+        let strategy = match LongStrangle::new_at(
             "PROP".to_string(), underlying, call_strike, put_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -760,11 +779,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match ShortStrangle::new(
+        let strategy = match ShortStrangle::new_at(
             "PROP".to_string(), underlying, call_strike, put_strike, expiration,
             volatility, volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -782,6 +802,7 @@ proptest! {
     /// one point, or none at all, is an ordinary outcome here rather than a
     /// broken constructor, and the readers of the second point have to say
     /// so instead of indexing past it.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_condor_and_butterfly_strategies_never_panic(
         underlying in extreme_positive(),
@@ -807,11 +828,12 @@ proptest! {
             )
         };
 
-        let strategy = match IronCondor::new(
+        let strategy = match IronCondor::new_at(
             "PROP".to_string(), underlying, high_strike, low_strike, high_strike, low_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, premium, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -825,11 +847,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match IronButterfly::new(
+        let strategy = match IronButterfly::new_at(
             "PROP".to_string(), underlying, middle_strike, high_strike, low_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, premium, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -844,11 +867,12 @@ proptest! {
         exercise_with_and_without_break_evens!(strategy, probe);
 
         // The body goes in first: `add_position` places each wing against it.
-        let strategy = match LongButterflySpread::new(
+        let strategy = match LongButterflySpread::new_at(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -861,11 +885,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
 
-        let strategy = match ShortButterflySpread::new(
+        let strategy = match ShortButterflySpread::new_at(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -878,11 +903,12 @@ proptest! {
         };
         exercise_with_and_without_break_evens!(strategy, probe);
         // The 1x1x1 call ladder that was `CallButterfly` before #706.
-        let strategy = match BullCallLadder::new(
+        let strategy = match BullCallLadder::new_at(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
@@ -900,6 +926,7 @@ proptest! {
     /// neither populated the break-even points, so a butterfly assembled from
     /// positions (the route a chain or a persisted strategy takes) reported
     /// an empty vector on a well-formed structure.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_butterfly_leg_set_construction_never_panics(
         underlying in extreme_positive(),
@@ -993,7 +1020,7 @@ fn plain_leg(style: OptionStyle, side: Side, strike: Positive, quantity: Positiv
             None,
         ),
         Positive::ONE,
-        chrono::Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::ZERO,
         Positive::ZERO,
         None,
@@ -1008,6 +1035,7 @@ proptest! {
     /// default used the panicking `Positive` `+` / `+=` and aborted with
     /// `Positive arithmetic overflow in add` once two legs reached
     /// `Positive::MAX` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_volume_never_panics(
         call_quantity in overflowing_positive(),
@@ -1030,7 +1058,7 @@ proptest! {
             short_put: plain_leg(OptionStyle::Put, Side::Short, low, put_quantity),
             long_call: plain_leg(OptionStyle::Call, Side::Long, pos(dec!(120)), call_quantity),
             long_put: plain_leg(OptionStyle::Put, Side::Long, pos(dec!(80)), put_quantity),
-            ..IronCondor::default()
+            ..IronCondor::blank_at(chrono::DateTime::UNIX_EPOCH)
         };
         let _ = condor.get_volume();
     }
@@ -1047,16 +1075,18 @@ proptest! {
         let (low, middle, high) = (pos(dec!(90)), Positive::HUNDRED, pos(dec!(110)));
         let zero = Positive::ZERO;
         let one = Positive::ONE;
-        let long = LongButterflySpread::new(
+        let long = LongButterflySpread::new_at(
             "PROP".to_string(), Positive::HUNDRED, low, middle, high, expiration,
             pos(dec!(0.2)), dec!(0.05), zero, quantity, one, one, one,
             zero, zero, zero, zero, zero, zero,
-        );
-        let short = ShortButterflySpread::new(
+chrono::DateTime::UNIX_EPOCH
+);
+        let short = ShortButterflySpread::new_at(
             "PROP".to_string(), Positive::HUNDRED, low, middle, high, expiration,
             pos(dec!(0.2)), dec!(0.05), zero, quantity, one, one, one,
             zero, zero, zero, zero, zero, zero,
-        );
+chrono::DateTime::UNIX_EPOCH
+);
         if let Ok(mut long) = long {
             long.long_call_low.option.quantity = wing_quantity;
             let _ = long.validate();
@@ -1092,6 +1122,7 @@ proptest! {
     /// from another. The strikes are `pub` fields (or arrive through
     /// `add_position` / `Deserialize`), so they can be crossed, and the
     /// `Positive` `-` aborted with `result would be non-positive` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strategy_family_widths_never_panic(
         first in extreme_positive(),
@@ -1099,7 +1130,7 @@ proptest! {
         third in extreme_positive(),
         fourth in extreme_positive(),
     ) {
-        let mut condor = IronCondor::default();
+        let mut condor = IronCondor::blank_at(chrono::DateTime::UNIX_EPOCH);
         condor.long_put.option.strike_price = first;
         condor.short_put.option.strike_price = second;
         condor.short_call.option.strike_price = third;
@@ -1109,12 +1140,12 @@ proptest! {
         let _ = condor.put_spread_width();
         let _ = condor.call_spread_width();
 
-        let mut spread = BullCallSpread::default();
+        let mut spread = BullCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH);
         spread.long_call.option.strike_price = first;
         spread.short_call.option.strike_price = second;
         let _ = spread.spread_width();
 
-        let mut butterfly = LongButterflySpread::default();
+        let mut butterfly = LongButterflySpread::blank_at(chrono::DateTime::UNIX_EPOCH);
         butterfly.long_call_low.option.strike_price = third;
         butterfly.long_call_high.option.strike_price = fourth;
         let _ = butterfly.wing_width();

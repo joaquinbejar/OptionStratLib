@@ -332,7 +332,7 @@ where
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -374,6 +374,7 @@ mod tests {
         assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_new_with_datetime_is_normalized_to_days() {
         // `Xstep::new` used to panic on `ExpirationDate::DateTime`. After
@@ -547,7 +548,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_positive {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -567,6 +568,7 @@ mod tests_positive {
         assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_new_with_datetime_is_normalized_to_days() {
         // `Xstep::new` now normalizes `ExpirationDate::DateTime` into

@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -10,8 +11,6 @@
 //! - Volatility Sensitivity Curve and Surface
 //! - Time Decay Profile Curve and Surface
 //! - Price Shock Impact Curve and Surface
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_analytics::metrics::{
     PriceShockCurve, PriceShockSurface, TimeDecayCurve, TimeDecaySurface,
@@ -65,6 +64,7 @@ fn create_empty_chain() -> OptionChain {
 mod volatility_sensitivity_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_volatility_sensitivity_curve_basic() {
         let chain = create_test_chain();
@@ -75,6 +75,7 @@ mod volatility_sensitivity_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_volatility_sensitivity_curve_vega_positive() {
         let chain = create_test_chain();
@@ -86,6 +87,7 @@ mod volatility_sensitivity_curve_tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_volatility_sensitivity_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -115,6 +117,7 @@ mod volatility_sensitivity_curve_tests {
 mod volatility_sensitivity_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_volatility_sensitivity_surface_basic() {
         let chain = create_test_chain();
@@ -129,6 +132,7 @@ mod volatility_sensitivity_surface_tests {
         assert_eq!(surface.points.len(), 121);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_volatility_sensitivity_surface_single_point() {
         let chain = create_test_chain();
@@ -160,6 +164,7 @@ mod volatility_sensitivity_surface_tests {
 mod time_decay_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_curve_basic() {
         let chain = create_test_chain();
@@ -170,6 +175,7 @@ mod time_decay_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_curve_theta_negative() {
         let chain = create_test_chain();
@@ -181,6 +187,7 @@ mod time_decay_curve_tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -210,6 +217,7 @@ mod time_decay_curve_tests {
 mod time_decay_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_surface_basic() {
         let chain = create_test_chain();
@@ -224,6 +232,7 @@ mod time_decay_surface_tests {
         assert_eq!(surface.points.len(), 33);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_surface_single_day() {
         let chain = create_test_chain();
@@ -237,6 +246,7 @@ mod time_decay_surface_tests {
         assert_eq!(surface.points.len(), 11);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_decay_surface_empty_days() {
         let chain = create_test_chain();
@@ -265,6 +275,7 @@ mod time_decay_surface_tests {
 mod price_shock_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_curve_basic() {
         let chain = create_test_chain();
@@ -275,6 +286,7 @@ mod price_shock_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_curve_negative_shock() {
         let chain = create_test_chain();
@@ -288,6 +300,7 @@ mod price_shock_curve_tests {
         assert!(negative_count > points.len() / 2);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_curve_positive_shock() {
         let chain = create_test_chain();
@@ -301,6 +314,7 @@ mod price_shock_curve_tests {
         assert!(positive_count > points.len() / 2);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_curve_zero_shock() {
         let chain = create_test_chain();
@@ -328,6 +342,7 @@ mod price_shock_curve_tests {
 mod price_shock_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_surface_basic() {
         let chain = create_test_chain();
@@ -341,6 +356,7 @@ mod price_shock_surface_tests {
         assert_eq!(surface.points.len(), 121);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_shock_surface_single_point() {
         let chain = create_test_chain();
@@ -372,6 +388,7 @@ mod price_shock_surface_tests {
 mod edge_case_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_extreme_price_shock() {
         let chain = create_test_chain();
@@ -385,6 +402,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_extreme_volatility_range() {
         let chain = create_test_chain();
@@ -395,6 +413,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_near_expiration() {
         let chain = create_test_chain();
@@ -405,6 +424,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_wide_price_range() {
         let chain = create_test_chain();

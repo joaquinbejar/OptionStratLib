@@ -1931,15 +1931,23 @@ mod tests_greeks_snapshot {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_get_position {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use chrono::{Duration, Utc};
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
-    use optionstratlib_core::{assert_pos_relative_eq, pos_or_panic, spos};
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::{pos_or_panic, spos};
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard test option data
+    #[cfg(feature = "clock")]
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             Positive::HUNDRED,                               // strike_price
@@ -1964,6 +1972,7 @@ mod tests_get_position {
     }
 
     // Helper function to create standard price parameters
+    #[cfg(feature = "clock")]
     fn create_test_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
             Some(Box::new(Positive::HUNDRED)),
@@ -1974,6 +1983,7 @@ mod tests_get_position {
         )
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_long_call() {
         let option_data = create_test_option_data();
@@ -2005,6 +2015,7 @@ mod tests_get_position {
         assert_eq!(position.close_fee, Positive::ZERO);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_short_put() {
         let option_data = create_test_option_data();
@@ -2032,6 +2043,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_custom_date() {
         let option_data = create_test_option_data();
@@ -2050,6 +2062,7 @@ mod tests_get_position {
         assert_eq!(position.date, custom_date);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_fees() {
         let option_data = create_test_option_data();
@@ -2075,6 +2088,7 @@ mod tests_get_position {
         assert_eq!(position.close_fee, close_fee);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_in_the_money_call() {
         let mut option_data = create_test_option_data();
@@ -2096,6 +2110,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_all_combinations() {
         let option_data = create_test_option_data();
@@ -2124,6 +2139,7 @@ mod tests_get_position {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_custom_all_params() {
         // This test checks that all custom parameters are correctly applied
@@ -2156,6 +2172,7 @@ mod tests_get_position {
         assert_eq!(position.close_fee, close_fee);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_uses_market_price_long_call() {
         let option_data = create_test_option_data();
@@ -2181,6 +2198,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_uses_market_price_short_call() {
         let option_data = create_test_option_data();
@@ -2206,6 +2224,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_uses_market_price_long_put() {
         let option_data = create_test_option_data();
@@ -2231,6 +2250,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_uses_market_price_short_put() {
         let option_data = create_test_option_data();
@@ -2256,6 +2276,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_fallback_to_black_scholes() {
         // Test with option data that doesn't have market prices
@@ -2306,6 +2327,7 @@ mod tests_get_position {
         assert_pos_relative_eq!(position.premium, bs_price_positive, pos_or_panic!(0.00001));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_custom_date_uses_market_price() {
         let option_data = create_test_option_data();
@@ -2331,6 +2353,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_fees_uses_market_price() {
         let option_data = create_test_option_data();
@@ -2363,6 +2386,7 @@ mod tests_get_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_missing_specific_price() {
         // Test with option data missing just one price

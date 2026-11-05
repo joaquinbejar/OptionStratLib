@@ -167,6 +167,7 @@ mod tests_pnl_calculator {
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_new() {
         let now = Utc::now();
@@ -185,6 +186,7 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.date_time, now);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_with_none_values() {
         let now = Utc::now();
@@ -280,6 +282,7 @@ mod tests_pnl_calculator {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_default_diff_position_pnl_returns_method_error() {
         use optionstratlib_core::model::types::{OptionStyle, Side};

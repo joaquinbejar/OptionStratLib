@@ -1738,10 +1738,11 @@ mod tests_adjust_volatility {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_option_data_price_params {
     use super::*;
 
+    #[cfg(feature = "clock")]
     use num_traits::ToPrimitive;
     use optionstratlib_core::spos;
     use rust_decimal_macros::dec;
@@ -1756,6 +1757,7 @@ mod tests_option_data_price_params {
         )
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_new_price_params() {
         let params = get_params();
@@ -1825,6 +1827,7 @@ mod tests_option_data_price_params {
         assert_eq!(params.get_dividend_yield(), dividend_yield);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_option_data_price_params_getters_with_datetime_expiration() {
         use chrono::{Duration, Utc};

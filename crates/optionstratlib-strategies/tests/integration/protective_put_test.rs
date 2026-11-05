@@ -1,5 +1,4 @@
 use approx::assert_relative_eq;
-use chrono::Utc;
 use num_traits::ToPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{
@@ -17,7 +16,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 fn create_test_protective_put() -> ProtectivePut {
-    ProtectivePut::new(
+    ProtectivePut::new_at(
         "AAPL".to_string(),
         Positive::new(150.0).unwrap(),
         Positive::new(145.0).unwrap(),
@@ -31,6 +30,7 @@ fn create_test_protective_put() -> ProtectivePut {
         Positive::new(1.0).unwrap(),
         Positive::new(0.65).unwrap(),
         Positive::new(0.65).unwrap(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap()
 }
@@ -133,7 +133,7 @@ fn test_protective_put_add_position() {
     let position = Position::new(
         option,
         Positive::new(2.50).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,

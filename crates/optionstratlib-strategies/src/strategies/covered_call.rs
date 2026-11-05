@@ -1180,14 +1180,14 @@ impl std::fmt::Display for CoveredCall {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_covered_call() -> CoveredCall {
-        CoveredCall::new(
+        CoveredCall::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1201,6 +1201,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

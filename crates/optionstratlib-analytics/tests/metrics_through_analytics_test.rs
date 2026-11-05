@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -9,8 +10,6 @@
 //! trait from `analytics` rather than through the legacy `chains` paths.
 //! This is the shape of the cross-crate test that survives the extraction of
 //! `optionstratlib-analytics` (ADR-0001 D4, D5; M1-12).
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_analytics::analytics::{RNDAnalysis, RNDParameters};
 use optionstratlib_analytics::metrics::ImpliedVolatilityCurve;
@@ -61,6 +60,7 @@ fn test_iv_curve_through_metrics_trait_has_one_point_per_strike() {
     assert!(points.iter().all(|p| p.y == dec!(0.17)));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_rnd_through_analytics_trait_normalises_densities() {
     let chain = create_small_chain();

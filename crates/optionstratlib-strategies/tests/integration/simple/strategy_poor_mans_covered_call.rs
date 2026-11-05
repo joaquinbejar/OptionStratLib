@@ -13,7 +13,7 @@ use std::error::Error;
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     let underlying_price = pos_or_panic!(2703.3);
 
-    let strategy = PoorMansCoveredCall::new(
+    let strategy = PoorMansCoveredCall::new_at(
         "GOLD".to_string(),                         // underlying_symbol
         underlying_price,                           // underlying_price
         pos_or_panic!(2600.0),                      // long_call_strike
@@ -30,6 +30,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(1.74),                       // close_fee_short_call
         pos_or_panic!(0.85),                       // open_fee_short_put
         pos_or_panic!(0.85),                       // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

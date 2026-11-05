@@ -373,7 +373,7 @@ mod tests_greek_trait {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_greeks_contract_size {
     use super::*;
     use optionstratlib_core::model::types::{BinaryType, OptionStyle, OptionType, Side};
@@ -494,7 +494,7 @@ mod tests_greeks_contract_size {
         let position = Position::new(
             option.clone(),
             Positive::ONE,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,

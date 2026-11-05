@@ -246,14 +246,13 @@ impl SimulationStats {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::backtesting::results::SimulationStatsResult;
     use optionstratlib_analytics::pnl::PnL;
     use rust_decimal_macros::dec;
 
-    use chrono::Utc;
     use optionstratlib_core::pos_or_panic;
     use std::collections::HashMap;
 
@@ -282,7 +281,7 @@ mod tests {
                 None,
                 pos_or_panic!(10.0),
                 pos_or_panic!(5.0),
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
             ),
             holding_period,
             exit_reason,

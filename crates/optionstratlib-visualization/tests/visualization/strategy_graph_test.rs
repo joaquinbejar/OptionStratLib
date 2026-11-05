@@ -19,7 +19,7 @@ use std::error::Error;
 // Helper function to create a test LongPut strategy
 fn create_test_long_put() -> LongPut {
     // Create an instance of LongPut using Default
-    let mut long_put = LongPut::default();
+    let mut long_put = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
 
     // Customize the strategy for tests
     long_put.name = "Test Long Put".to_string();
@@ -64,7 +64,7 @@ fn create_test_long_put() -> LongPut {
 // Helper function to create a test ShortCall strategy
 fn create_test_short_call() -> ShortCall {
     // Create an instance of ShortCall using Default
-    let mut short_call = ShortCall::default();
+    let mut short_call = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
 
     // Customize the strategy for tests
     short_call.name = "Test Short Call".to_string();

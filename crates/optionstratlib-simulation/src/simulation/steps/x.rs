@@ -354,7 +354,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_serialize {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -537,6 +537,7 @@ mod tests_serialize {
         // panics for DateTime variant, which matches the implementation
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_datetime_constructor_normalizes_to_days() {
         // `Xstep::new` now normalizes `ExpirationDate::DateTime` to

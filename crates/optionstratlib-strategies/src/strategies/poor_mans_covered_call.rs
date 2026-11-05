@@ -1073,7 +1073,7 @@ crate::strategies::macros::test_strategy_traits!(
     test_short_call_implementations
 );
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pmcc_validation {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1084,7 +1084,7 @@ mod tests_pmcc_validation {
     use rust_decimal_macros::dec;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(140.0),
@@ -1101,6 +1101,7 @@ mod tests_pmcc_validation {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1131,7 +1132,7 @@ mod tests_pmcc_validation {
         let position = Position::new(
             option,
             pos_or_panic!(15.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1163,7 +1164,7 @@ mod tests_pmcc_validation {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1195,7 +1196,7 @@ mod tests_pmcc_validation {
         let position = Position::new(
             option,
             pos_or_panic!(15.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1214,7 +1215,7 @@ mod tests_pmcc_validation {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pmcc_optimization {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1255,7 +1256,7 @@ mod tests_pmcc_optimization {
     }
 
     fn create_base_strategy() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(140.0),
@@ -1272,6 +1273,7 @@ mod tests_pmcc_optimization {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1405,7 +1407,7 @@ mod tests_pmcc_optimization {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pmcc_pnl {
     use super::*;
 
@@ -1416,7 +1418,7 @@ mod tests_pmcc_pnl {
     use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(140.0),
@@ -1433,6 +1435,7 @@ mod tests_pmcc_pnl {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1513,7 +1516,7 @@ mod tests_pmcc_best_area {
         .unwrap();
         let underlying_price = option_chain.underlying_price;
 
-        let strategy = PoorMansCoveredCall::new(
+        let strategy = PoorMansCoveredCall::new_at(
             "SP500".to_string(),
             underlying_price,
             pos_or_panic!(5700.0), // long strike ITM
@@ -1530,6 +1533,7 @@ mod tests_pmcc_best_area {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1603,7 +1607,7 @@ mod tests_pmcc_best_ratio {
         .unwrap();
         let underlying_price = option_chain.underlying_price;
 
-        let strategy = PoorMansCoveredCall::new(
+        let strategy = PoorMansCoveredCall::new_at(
             "SP500".to_string(),
             underlying_price,
             pos_or_panic!(5700.0),
@@ -1620,6 +1624,7 @@ mod tests_pmcc_best_ratio {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1674,23 +1679,34 @@ mod tests_pmcc_best_ratio {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_short_straddle_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos_or_panic!(7138.5);
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
@@ -1707,10 +1723,12 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7250.0), pos_or_panic!(7300.0));
@@ -1759,6 +1777,7 @@ mod tests_short_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
@@ -1807,6 +1826,7 @@ mod tests_short_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7379.0), pos_or_panic!(7250.0));
@@ -1822,23 +1842,34 @@ mod tests_short_straddle_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_short_straddle_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos_or_panic!(7138.5);
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
@@ -1855,10 +1886,12 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7250.1), pos_or_panic!(7300.0));
@@ -1907,6 +1940,7 @@ mod tests_short_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
@@ -1955,6 +1989,7 @@ mod tests_short_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7387.5), pos_or_panic!(7255.0));
@@ -1970,7 +2005,7 @@ mod tests_short_straddle_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_poor_mans_covered_call_probability {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1991,7 +2026,7 @@ mod tests_poor_mans_covered_call_probability {
 
     /// Creates a test Poor Man's Covered Call with standard parameters
     fn create_test_pmcc() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "GOLD".to_string(),                         // underlying_symbol
             pos_or_panic!(2703.3),                      // underlying_price
             pos_or_panic!(2600.0),                      // long_call_strike
@@ -2008,6 +2043,7 @@ mod tests_poor_mans_covered_call_probability {
             pos_or_panic!(1.74),                        // close_fee_short_call
             pos_or_panic!(0.85),                        // open_fee_long_call
             pos_or_panic!(0.85),                        // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2199,7 +2235,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_poor_mans_covered_call_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2211,7 +2247,7 @@ mod tests_poor_mans_covered_call_position_management {
     use tracing::error;
 
     fn create_test_short_poor_mans_covered_call() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "GOLD".to_string(),                         // underlying_symbol
             pos_or_panic!(2703.3),                      // underlying_price
             pos_or_panic!(2600.0),                      // long_call_strike
@@ -2228,6 +2264,7 @@ mod tests_poor_mans_covered_call_position_management {
             pos_or_panic!(1.74),                       // close_fee_short_call
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2329,7 +2366,7 @@ mod tests_poor_mans_covered_call_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2340,7 +2377,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
+        PoorMansCoveredCall::new_at(
             "GOLD".to_string(),                         // underlying_symbol
             pos_or_panic!(2703.3),                      // underlying_price
             pos_or_panic!(2600.0),                      // long_call_strike
@@ -2357,6 +2394,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(1.74),                       // close_fee_short_call
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

@@ -190,13 +190,14 @@ impl From<OptionChain> for Positive {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
     use optionstratlib_core::{pos_or_panic, spos};
 
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos_or_panic!(110.0),
@@ -312,9 +313,10 @@ mod tests_update_from_option_data {
         )
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_long_call() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Long;
         position.option.option_style = OptionStyle::Call;
 
@@ -326,9 +328,10 @@ mod tests_update_from_option_data {
         assert_eq!(position.premium, 10.0); // call_ask
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_short_call() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Short;
         position.option.option_style = OptionStyle::Call;
 
@@ -338,9 +341,10 @@ mod tests_update_from_option_data {
         assert_eq!(position.premium, 9.5); // call_bid
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_long_put() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Long;
         position.option.option_style = OptionStyle::Put;
 
@@ -350,9 +354,10 @@ mod tests_update_from_option_data {
         assert_eq!(position.premium, 9.0); // put_ask
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_short_put() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Short;
         position.option.option_style = OptionStyle::Put;
 
@@ -364,7 +369,7 @@ mod tests_update_from_option_data {
 
     #[test]
     fn test_update_wrong_long_call() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Long;
         position.option.option_style = OptionStyle::Call;
 
@@ -376,7 +381,7 @@ mod tests_update_from_option_data {
 
     #[test]
     fn test_update_wrong_long_put() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Long;
         position.option.option_style = OptionStyle::Put;
 
@@ -388,7 +393,7 @@ mod tests_update_from_option_data {
 
     #[test]
     fn test_update_wrong_short_call() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Short;
         position.option.option_style = OptionStyle::Call;
 
@@ -400,7 +405,7 @@ mod tests_update_from_option_data {
 
     #[test]
     fn test_update_wrong_short_put() {
-        let mut position = Position::default();
+        let mut position = Position::blank_at(chrono::DateTime::UNIX_EPOCH);
         position.option.side = Side::Short;
         position.option.option_style = OptionStyle::Put;
 

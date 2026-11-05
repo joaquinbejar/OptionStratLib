@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions;
 use optionstratlib_core::model::types::OptionStyle;
 use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
@@ -9,12 +10,13 @@ use optionstratlib_strategies::strategies::iron_condor::IronCondor;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the IronCondor strategy
     let underlying_price = pos_or_panic!(2646.9);
 
-    let strategy = IronCondor::new(
+    let strategy = IronCondor::new_at(
         "GOLD".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(2725.0), // short_call_strike
@@ -32,6 +34,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(16.8),   // premium_long_put
         pos_or_panic!(0.96),   // open_fee
         pos_or_panic!(0.96),   // close_fee
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let greeks = strategy.greeks().unwrap();

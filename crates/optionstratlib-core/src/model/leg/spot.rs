@@ -359,11 +359,14 @@ impl Default for SpotPosition {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use positive::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_new() {
         let spot = SpotPosition::new(
@@ -384,6 +387,7 @@ mod tests {
         assert_eq!(spot.close_fee, Positive::ONE);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_long_convenience() {
         let spot = SpotPosition::long("BTC".to_string(), Positive::ONE, pos_or_panic!(50000.0));
@@ -395,6 +399,7 @@ mod tests {
         assert_eq!(spot.open_fee, Positive::ZERO);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_short_convenience() {
         let spot = SpotPosition::short(
@@ -409,12 +414,14 @@ mod tests {
         assert_eq!(spot.side, Side::Short);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_initial_value() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.initial_value().ok(), Some(pos_or_panic!(15000.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_market_value() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -424,6 +431,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_long_pnl_profit() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -431,6 +439,7 @@ mod tests {
         assert_eq!(pnl.ok(), Some(Decimal::from(1000))); // (160-150) * 100
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_long_pnl_loss() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -438,6 +447,7 @@ mod tests {
         assert_eq!(pnl.ok(), Some(Decimal::from(-1000))); // (140-150) * 100
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_short_pnl_profit() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -445,6 +455,7 @@ mod tests {
         assert_eq!(pnl.ok(), Some(Decimal::from(1000))); // Short profits when price drops
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_short_pnl_loss() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -452,6 +463,7 @@ mod tests {
         assert_eq!(pnl.ok(), Some(Decimal::from(-1000))); // Short loses when price rises
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_with_fees() {
         let spot = SpotPosition::new(
@@ -471,6 +483,7 @@ mod tests {
     /// price difference the `Decimal` range cannot express. Before #471 the
     /// trait signature had nowhere to say so and the process aborted with
     /// `Subtraction overflowed`.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_pnl_at_price_overflowing_notional_is_reported() {
         let mut spot =
@@ -482,6 +495,7 @@ mod tests {
 
     /// A long spot leg's `total_cost` multiplies size by cost basis before
     /// adding the two fees, so both steps can leave the `Positive` range.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_total_cost_overflowing_notional_is_reported() {
         let mut spot = SpotPosition::long("AAPL".to_string(), Positive::MAX, Positive::MAX);
@@ -491,6 +505,7 @@ mod tests {
     }
 
     /// A short leg pays only the fees, and those still have to sum.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_position_total_cost_overflowing_fees_is_reported() {
         let mut spot =
@@ -502,6 +517,7 @@ mod tests {
         assert!(spot.fees().is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_total_cost_long() {
         let spot = SpotPosition::new(
@@ -516,6 +532,7 @@ mod tests {
         assert_eq!(spot.total_cost().ok(), Some(pos_or_panic!(15020.0))); // 15000 + 20 fees
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_total_cost_short() {
         let spot = SpotPosition::new(
@@ -530,6 +547,7 @@ mod tests {
         assert_eq!(spot.total_cost().ok(), Some(pos_or_panic!(20.0))); // Only fees for short
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_percentage_return_long() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
@@ -537,6 +555,7 @@ mod tests {
         assert_eq!(return_pct.ok(), Some(Decimal::new(1, 1))); // 10% = 0.1
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_percentage_return_short() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
@@ -544,6 +563,7 @@ mod tests {
         assert_eq!(return_pct.ok(), Some(Decimal::new(1, 1))); // 10% profit for short when price drops
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_break_even_long() {
         let spot = SpotPosition::new(
@@ -558,6 +578,7 @@ mod tests {
         assert_eq!(spot.break_even_price().ok(), Some(pos_or_panic!(151.0))); // 150 + (100/100)
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_break_even_short() {
         let spot = SpotPosition::new(
@@ -576,6 +597,7 @@ mod tests {
     // `Positive arithmetic overflow in mul`, the return with `Division
     // overflowed`, the fee per unit with `Positive arithmetic overflow in
     // div` and the `Display` fee total with `... in add`.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_extreme_values_are_errors_not_aborts() {
         let wide = SpotPosition::long("X".to_string(), Positive::MAX, Positive::TWO);
@@ -598,6 +620,7 @@ mod tests {
         assert!(shown.ends_with(&format!("(fees: {} + {})", Positive::MAX, Positive::MAX)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -607,6 +630,7 @@ mod tests {
         assert!(display.contains("100"));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_long_short() {
         let long = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));

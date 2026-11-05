@@ -446,10 +446,10 @@ mod tests_options_pnl_calculator {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_transaction_able_default {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::TradeStatus;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
     use optionstratlib_core::model::utils::create_sample_option_simplest;
@@ -460,7 +460,7 @@ mod tests_transaction_able_default {
         Position::new(
             option,
             pos_or_panic!(5.25),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
             None,
@@ -511,10 +511,10 @@ mod tests_transaction_able_default {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::pos_or_panic;
     use optionstratlib_core::{assert_decimal_eq, model::OptionType};
@@ -539,7 +539,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -752,7 +752,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             Some(epic.to_string()),
@@ -929,7 +929,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             premium,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             Some(epic.to_string()),
@@ -1038,10 +1038,10 @@ mod tests_pnl_calculator {
 /// `Position::calculate_pnl` used to report the unrealized change of one
 /// contract whatever the quantity, and `Options::calculate_pnl_at_expiration`
 /// signed a short's income twice and failed.
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pnl_quantity {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::OptionType;
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::pos_or_panic;
@@ -1072,7 +1072,7 @@ mod tests_pnl_quantity {
         Position::new(
             option(side, style, strike, quantity),
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1211,6 +1211,7 @@ mod tests_pnl_quantity {
         assert_ne!(sum, book_change - body_once);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_calculate_pnl_n_lots_is_n_times_one_lot() {
         for side in SIDES {
@@ -1239,6 +1240,7 @@ mod tests_pnl_quantity {
 
     /// A short option's expiry P&L used to fail: the income was the already
     /// negative short price times the quantity, which no `Positive` holds.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_calculate_pnl_at_expiration_short_reports_positive_income() {
         for style in STYLES {
@@ -1258,10 +1260,10 @@ mod tests_pnl_quantity {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_pnl_contract_size {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::model::utils::create_sample_option_simplest;
     use optionstratlib_core::pos_or_panic;
@@ -1275,7 +1277,7 @@ mod tests_pnl_contract_size {
         Position::new(
             option(side, contract_size),
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1287,6 +1289,7 @@ mod tests_pnl_contract_size {
         (a - b).abs() <= dec!(1e-12)
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_pnl_contract_size_scales_premium_and_change() {
         for side in [Side::Long, Side::Short] {
@@ -1319,6 +1322,7 @@ mod tests_pnl_contract_size {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_pnl_at_expiration_contract_size_scales_payoff() {
         let sized = option(Side::Long, Positive::HUNDRED);

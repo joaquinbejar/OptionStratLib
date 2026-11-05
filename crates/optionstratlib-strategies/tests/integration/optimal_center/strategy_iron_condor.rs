@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate,
@@ -13,12 +14,13 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the IronCondor strategy
     let underlying_price = pos_or_panic!(2646.9);
 
-    let mut strategy = IronCondor::new(
+    let mut strategy = IronCondor::new_at(
         "GOLD".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(2725.0), // short_call_strike
@@ -36,6 +38,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(16.8),   // premium_long_put
         pos_or_panic!(0.96),   // open_fee
         pos_or_panic!(0.96),   // close_fee
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

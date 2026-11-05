@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -10,8 +11,6 @@
 //! - Vanna-Volga Hedge Surface
 //! - Delta-Gamma Profile Curve and Surface
 //! - Smile Dynamics Curve and Surface
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_analytics::metrics::{
     DeltaGammaProfileCurve, DeltaGammaProfileSurface, SmileDynamicsCurve, SmileDynamicsSurface,
@@ -66,6 +65,7 @@ fn create_empty_chain() -> OptionChain {
 mod vanna_volga_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_volga_surface_basic() {
         let chain = create_test_chain();
@@ -80,6 +80,7 @@ mod vanna_volga_tests {
         assert_eq!(surface.points.len(), 121);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_volga_surface_single_point() {
         let chain = create_test_chain();
@@ -93,6 +94,7 @@ mod vanna_volga_tests {
         assert_eq!(surface.points.len(), 1);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_volga_surface_cost_at_atm() {
         let chain = create_test_chain();
@@ -109,6 +111,7 @@ mod vanna_volga_tests {
         assert!(point.z < dec!(1.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_volga_surface_cost_increases_otm() {
         let chain = create_test_chain();
@@ -147,6 +150,7 @@ mod vanna_volga_tests {
 mod delta_gamma_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_curve_basic() {
         let chain = create_test_chain();
@@ -157,6 +161,7 @@ mod delta_gamma_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_curve_values_positive() {
         let chain = create_test_chain();
@@ -178,6 +183,7 @@ mod delta_gamma_curve_tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -199,6 +205,7 @@ mod delta_gamma_curve_tests {
 mod delta_gamma_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_surface_basic() {
         let chain = create_test_chain();
@@ -213,6 +220,7 @@ mod delta_gamma_surface_tests {
         assert_eq!(surface.points.len(), 33);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_surface_single_day() {
         let chain = create_test_chain();
@@ -227,6 +235,7 @@ mod delta_gamma_surface_tests {
         assert_eq!(surface.points.len(), 6);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_surface_empty_days() {
         let chain = create_test_chain();
@@ -237,6 +246,7 @@ mod delta_gamma_surface_tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_gamma_surface_delta_range() {
         let chain = create_test_chain();
@@ -259,6 +269,7 @@ mod delta_gamma_surface_tests {
 mod smile_dynamics_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_curve_basic() {
         let chain = create_test_chain();
@@ -269,6 +280,7 @@ mod smile_dynamics_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_curve_iv_positive() {
         let chain = create_test_chain();
@@ -288,6 +300,7 @@ mod smile_dynamics_curve_tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -309,6 +322,7 @@ mod smile_dynamics_curve_tests {
 mod smile_dynamics_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_surface_basic() {
         let chain = create_test_chain();
@@ -324,6 +338,7 @@ mod smile_dynamics_surface_tests {
         assert_eq!(surface.points.len(), expected_points);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_surface_single_day() {
         let chain = create_test_chain();
@@ -337,6 +352,7 @@ mod smile_dynamics_surface_tests {
         assert_eq!(surface.points.len(), curve.points.len());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_surface_empty_days() {
         let chain = create_test_chain();
@@ -346,6 +362,7 @@ mod smile_dynamics_surface_tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_surface_iv_positive() {
         let chain = create_test_chain();
@@ -359,6 +376,7 @@ mod smile_dynamics_surface_tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_smile_dynamics_surface_skew_steepens() {
         let chain = create_test_chain();
@@ -439,6 +457,7 @@ mod edge_case_tests {
         assert!(vv_result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_extreme_price_range() {
         let chain = create_test_chain();
@@ -456,6 +475,7 @@ mod edge_case_tests {
         assert_eq!(surface.points.len(), 441); // 21 × 21
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_very_short_expiration() {
         let chain = create_test_chain();
@@ -466,6 +486,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_very_long_expiration() {
         let chain = create_test_chain();

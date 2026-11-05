@@ -15,7 +15,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortStrangle strategy
     let underlying_price = pos_or_panic!(7138.5);
 
-    let strategy = ShortStrangle::new(
+    let strategy = ShortStrangle::new_at(
         "CL".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(7450.0), // call_strike
@@ -32,6 +32,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

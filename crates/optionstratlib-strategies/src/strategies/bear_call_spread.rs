@@ -1096,7 +1096,7 @@ impl PnLCalculator for BearCallSpread {
 #[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BearCallSpread, test_short_call_implementations);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_strategies {
     use super::*;
 
@@ -1108,7 +1108,7 @@ mod tests_bear_call_spread_strategies {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
@@ -1124,6 +1124,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),                        // close_fee_short_call
             pos_or_panic!(0.5),                        // open_fee_long_call
             pos_or_panic!(0.5),                        // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1302,7 +1303,7 @@ mod tests_bear_call_spread_strategies {
 
     #[test]
     fn test_with_different_quantities() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1318,6 +1319,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1336,7 +1338,7 @@ mod tests_bear_call_spread_strategies {
 
     #[test]
     fn test_with_different_strikes() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),  // wider spread
@@ -1352,6 +1354,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1406,7 +1409,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_add_short_position() {
-        let mut spread = BearCallSpread::new(
+        let mut spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1422,6 +1425,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1434,7 +1438,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_add_long_position() {
-        let mut spread = BearCallSpread::new(
+        let mut spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1450,6 +1454,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1462,7 +1467,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_get_positions() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1478,6 +1483,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1492,7 +1498,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_add_multiple_positions() {
-        let mut spread = BearCallSpread::new(
+        let mut spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1508,6 +1514,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1523,7 +1530,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_replace_positions() {
-        let mut spread = BearCallSpread::new(
+        let mut spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1539,6 +1546,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1553,7 +1561,7 @@ mod tests_bear_call_spread_positionable {
 
     #[test]
     fn test_positions_integrity() {
-        let mut spread = BearCallSpread::new(
+        let mut spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1569,6 +1577,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1590,7 +1599,7 @@ mod tests_bear_call_spread_positionable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_validable {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1600,7 +1609,7 @@ mod tests_bear_call_spread_validable {
     use rust_decimal_macros::dec;
 
     fn create_valid_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
@@ -1616,6 +1625,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1628,7 +1638,7 @@ mod tests_bear_call_spread_validable {
 
     #[test]
     fn test_invalid_strike_order() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0), // short strike higher than long strike
@@ -1644,6 +1654,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         );
         // `new` rejects the legs since #696 instead of returning them unvalidated.
         assert!(matches!(
@@ -1657,7 +1668,7 @@ mod tests_bear_call_spread_validable {
 
     #[test]
     fn test_equal_strikes() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED, // both strikes equal
@@ -1673,6 +1684,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         );
         // `new` rejects the legs since #696 instead of returning them unvalidated.
         assert!(matches!(
@@ -1703,7 +1715,7 @@ mod tests_bear_call_spread_validable {
     #[test]
     #[should_panic]
     fn test_invalid_expiration_dates() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1719,6 +1731,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert!(!spread.validate());
@@ -1726,7 +1739,7 @@ mod tests_bear_call_spread_validable {
 
     #[test]
     fn test_invalid_underlying_price() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::ZERO, // Invalid underlying price
             pos_or_panic!(95.0),
@@ -1742,6 +1755,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         );
         // `new` rejects the legs since #696 instead of returning them unvalidated.
         assert!(matches!(
@@ -1755,7 +1769,7 @@ mod tests_bear_call_spread_validable {
 
     #[test]
     fn test_strikes_too_close() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(99.999),  // Strikes very close to each other
@@ -1771,6 +1785,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         // Should still be valid as long as strikes are different
@@ -1779,7 +1794,7 @@ mod tests_bear_call_spread_validable {
 
     #[test]
     fn test_validation_with_different_quantities() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1795,6 +1810,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         // Should be valid as quantity > 0
@@ -1802,7 +1818,7 @@ mod tests_bear_call_spread_validable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_profit {
     use super::*;
 
@@ -1815,7 +1831,7 @@ mod tests_bear_call_spread_profit {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
@@ -1831,6 +1847,7 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_long_call
             Positive::ZERO,                            // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1923,7 +1940,7 @@ mod tests_bear_call_spread_profit {
 
     #[test]
     fn test_profit_with_different_quantities() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1939,6 +1956,7 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1963,7 +1981,7 @@ mod tests_bear_call_spread_profit {
 
     #[test]
     fn test_profit_with_fees() {
-        let spread = BearCallSpread::new(
+        let spread = BearCallSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_strike_itm
@@ -1979,6 +1997,7 @@ mod tests_bear_call_spread_profit {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1994,7 +2013,7 @@ mod tests_bear_call_spread_profit {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_optimizable {
     use super::*;
 
@@ -2068,7 +2087,7 @@ mod tests_bear_call_spread_optimizable {
 
     // Helper function to create a basic BearCallSpread for testing
     fn create_test_strategy() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -2084,6 +2103,7 @@ mod tests_bear_call_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2303,7 +2323,7 @@ mod tests_bear_call_spread_optimizable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_graph {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2311,7 +2331,7 @@ mod tests_bear_call_spread_graph {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // short_strike
@@ -2327,6 +2347,7 @@ mod tests_bear_call_spread_graph {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2341,7 +2362,7 @@ mod tests_bear_call_spread_graph {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_probability {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2360,7 +2381,7 @@ mod tests_bear_call_spread_probability {
     }
 
     fn create_test_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_strike_itm
@@ -2376,6 +2397,7 @@ mod tests_bear_call_spread_probability {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2499,27 +2521,38 @@ mod tests_bear_call_spread_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bear_call_spread::BearCallSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(short_strike: Positive, long_strike: Positive) -> BearCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        let mut strategy = BearCallSpread::new(
+        let mut strategy = BearCallSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::ONE,    // short_strike placeholder
@@ -2535,6 +2568,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.short_call.option.strike_price = short_strike;
@@ -2543,6 +2577,7 @@ mod tests_delta {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos_or_panic!(5870.0);
@@ -2592,6 +2627,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos_or_panic!(5820.0);
@@ -2641,6 +2677,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5820.0), pos_or_panic!(5820.0));
@@ -2656,31 +2693,47 @@ mod tests_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_delta_size {
+    #[cfg(feature = "clock")]
     use crate::strategies::base::BreakEvenable;
+    #[cfg(feature = "clock")]
     use crate::strategies::bear_call_spread::BearCallSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Positive;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Side;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(short_strike: Positive, long_strike: Positive) -> BearCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        let mut strategy = BearCallSpread::new(
+        let mut strategy = BearCallSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::ONE,    // short_strike placeholder
@@ -2696,6 +2749,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.short_call.option.strike_price = short_strike;
@@ -2704,6 +2758,7 @@ mod tests_delta_size {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos_or_panic!(5840.4);
@@ -2754,6 +2809,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos_or_panic!(5820.414);
@@ -2802,6 +2858,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5820.0), pos_or_panic!(5820.0));
@@ -2817,7 +2874,7 @@ mod tests_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2829,7 +2886,7 @@ mod tests_bear_call_spread_position_management {
     use tracing::error;
 
     fn create_test_short_bear_call_spread() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // short_call_strike
@@ -2845,6 +2902,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2931,7 +2989,7 @@ mod tests_bear_call_spread_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2942,7 +3000,7 @@ mod tests_adjust_option_position_short {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BearCallSpread {
-        BearCallSpread::new(
+        BearCallSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // short_call_strike
@@ -2958,6 +3016,7 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

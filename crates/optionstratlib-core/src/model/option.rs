@@ -616,12 +616,14 @@ impl Default for Options {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_options {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
 
+    #[cfg(feature = "clock")]
     use approx::assert_relative_eq;
+    #[cfg(feature = "clock")]
     use chrono::{Duration, Utc};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -634,6 +636,7 @@ mod tests_options {
         assert_eq!(option.implied_volatility, 0.2);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);

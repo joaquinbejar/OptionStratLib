@@ -27,7 +27,7 @@ fn option_fee() -> Positive {
 }
 
 fn covered_call() -> CoveredCall {
-    CoveredCall::new(
+    CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -41,12 +41,13 @@ fn covered_call() -> CoveredCall {
         Positive::ONE,
         option_fee(),
         option_fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn protective_put() -> ProtectivePut {
-    ProtectivePut::new(
+    ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -60,12 +61,13 @@ fn protective_put() -> ProtectivePut {
         Positive::ONE,
         option_fee(),
         option_fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn collar() -> Collar {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -83,6 +85,7 @@ fn collar() -> Collar {
         option_fee(),
         option_fee(),
         option_fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }

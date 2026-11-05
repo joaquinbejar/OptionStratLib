@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! Property-based test for panic freedom of the strategy calls that walk a
 //! price range, the payoff chart (`Graph::graph_data`) among them.
 //!
@@ -13,8 +14,6 @@
 //! to `optionstratlib-strategies` and the probability kernel, SPAN margin and
 //! P&L primitive ones to `optionstratlib-analytics`, both as
 //! `tests/panic_freedom_test.rs`.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
@@ -92,6 +91,7 @@ proptest! {
     /// Every call that walks a price range: the display range, the payoff
     /// chart, the expected value integration and the full probability
     /// analysis.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_price_range_walks_never_panic(
         // `expected_value` samples at one percent of the spot over a range set
@@ -111,11 +111,12 @@ proptest! {
         ],
         expiration in extreme_expiration(),
     ) {
-        let strategy = match BullCallSpread::new(
+        let strategy = match BullCallSpread::new_at(
             "PROP".to_string(), underlying, long_strike, short_strike, expiration,
             volatility, dec!(0.05), Positive::ZERO, quantity, premium, premium,
             Positive::ZERO, Positive::ZERO, Positive::ZERO, Positive::ZERO,
-        ) {
+chrono::DateTime::UNIX_EPOCH
+) {
             Ok(strategy) => strategy,
             Err(error) => {
                 // Since #696 `new` rejects the legs that fail `validate`
@@ -141,7 +142,7 @@ proptest! {
                         None, None,
                     )
                 };
-                let mut strategy = BullCallSpread::default();
+                let mut strategy = BullCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH);
                 let _ = strategy.add_position(&leg(Side::Long, long_strike));
                 let _ = strategy.add_position(&leg(Side::Short, short_strike));
                 let _ = strategy.update_break_even_points();
@@ -159,6 +160,7 @@ proptest! {
     /// range, and a range where no price could be scored leaves them at their
     /// `Decimal::MAX` / `Decimal::MIN` seeds; either way `max - min` aborted
     /// with `Subtraction overflowed` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_payoff_chart_extent_never_panics(
         quantity in prop_oneof![Just(Positive::ONE), Just(Positive::MAX)],
@@ -178,7 +180,7 @@ proptest! {
         let mut strategy = BullCallSpread {
             long_call: leg(Side::Long, pos(dec!(90)), quantity, premium),
             short_call: leg(Side::Short, pos(dec!(110)), short_quantity, Positive::ONE),
-            ..BullCallSpread::default()
+            ..BullCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH)
         };
         let _ = strategy.update_break_even_points();
         let _ = strategy.graph_data();
@@ -187,6 +189,7 @@ proptest! {
     /// The payoff chart of a custom strategy whose legs were removed through
     /// the `pub` `positions` field. It read the spot from `positions[0]` and
     /// aborted with `index out of bounds` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_strategy_chart_without_legs_never_panics(
         underlying in prop_oneof![Just(Positive::ONE), Just(Positive::HUNDRED)],

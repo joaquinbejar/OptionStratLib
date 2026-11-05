@@ -17,7 +17,7 @@ production sources. `utils/time.rs` is the one file that may read the clock, wit
 where the same function measures a duration with `.elapsed()`.
 
 Usage:
-    check_no_clock.py               assert the trees, then lint, build and test
+    check_no_clock.py               assert the trees, then lint, build, test and document
     check_no_clock.py --trees       assert the trees only
     check_no_clock.py --self-test   prove the tree assertion
 """
@@ -212,6 +212,13 @@ def build_and_test() -> None:
         cargo("clippy", *flags, "--all-targets", "--", "-D", "warnings")
         cargo("build", *flags)
         cargo("test", *flags)
+        doc = subprocess.run(
+            ["cargo", "doc", "--no-deps", *flags],
+            cwd=ROOT,
+            env=dict(os.environ, RUSTDOCFLAGS="-D warnings"),
+        )
+        if doc.returncode != 0:
+            raise SystemExit(f"cargo doc {' '.join(flags)} failed")
 
 
 def self_test() -> int:
@@ -282,7 +289,7 @@ def main() -> int:
     print("OK: no configuration without `clock` enables `chrono/clock`, and the default builds keep it")
     if "--trees" not in sys.argv:
         build_and_test()
-        print("OK: every configuration without `clock` lints, builds and tests")
+        print("OK: every configuration without `clock` lints, builds, tests and documents")
     return 0
 
 

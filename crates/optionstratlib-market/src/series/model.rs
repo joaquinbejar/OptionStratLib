@@ -559,8 +559,8 @@ mod tests_option_series {
         }
     }
 
-    #[cfg(feature = "clock")]
     mod tests_odte_method {
+        #[cfg(feature = "clock")]
         use super::*;
 
         #[cfg(feature = "clock")]
@@ -594,6 +594,7 @@ mod tests_option_series {
             assert!(odte_chain.is_none());
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_odte_with_empty_chains() {
             let series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);

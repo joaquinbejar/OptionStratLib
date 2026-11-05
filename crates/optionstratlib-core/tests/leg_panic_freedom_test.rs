@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! Property-based tests for panic freedom in the leg, balance, payoff and
 //! time helpers of the core crate (#788).
 //!
@@ -18,8 +19,6 @@
 //!
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::leg::{
     Expirable, Fundable, FuturePosition, Leg, LegAble, Marginable, PerpetualPosition, SpotPosition,
@@ -94,6 +93,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
     /// Every figure the spot leg exposes.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_leg_never_panics(
         quantity in extreme_positive(),
@@ -123,6 +123,7 @@ proptest! {
 
     /// Every figure the future leg exposes, including the margin and
     /// liquidation figures that divide by the quantity.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_future_leg_never_panics(
         quantity in extreme_positive(),
@@ -172,6 +173,7 @@ proptest! {
 
     /// Every figure the perpetual leg exposes, including the funding
     /// payments and the liquidation price of a zero quantity.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_perpetual_leg_never_panics(
         quantity in extreme_positive(),

@@ -25,7 +25,7 @@ fn overflow(leg: &mut Position) {
 
 #[test]
 fn test_covered_call_profit_at_reports_failing_leg() {
-    let mut strategy = CoveredCall::new(
+    let mut strategy = CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -39,6 +39,7 @@ fn test_covered_call_profit_at_reports_failing_leg() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert!(strategy.calculate_profit_at(&Positive::HUNDRED).is_ok());
@@ -49,7 +50,7 @@ fn test_covered_call_profit_at_reports_failing_leg() {
 
 #[test]
 fn test_protective_put_profit_at_reports_failing_leg() {
-    let mut strategy = ProtectivePut::new(
+    let mut strategy = ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -63,6 +64,7 @@ fn test_protective_put_profit_at_reports_failing_leg() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert!(strategy.calculate_profit_at(&Positive::HUNDRED).is_ok());
@@ -72,7 +74,7 @@ fn test_protective_put_profit_at_reports_failing_leg() {
 }
 
 fn collar() -> Collar {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -90,6 +92,7 @@ fn collar() -> Collar {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }

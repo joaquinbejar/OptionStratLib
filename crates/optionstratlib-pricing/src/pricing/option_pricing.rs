@@ -720,17 +720,18 @@ mod tests_time_value {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_calculate_price_binomial {
     use super::*;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
-    use optionstratlib_core::model::utils::{
-        create_sample_option, create_sample_option_simplest, create_sample_option_with_date,
-    };
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::model::utils::create_sample_option_with_date;
+    use optionstratlib_core::model::utils::{create_sample_option, create_sample_option_simplest};
     use optionstratlib_core::model::{ExpirationDate, Options};
     use optionstratlib_core::{model::Positive, pos_or_panic};
     use rust_decimal::Decimal;
 
+    #[cfg(feature = "clock")]
     use chrono::Utc;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -780,6 +781,7 @@ mod tests_calculate_price_binomial {
         // With zero volatility, price should equal discounted intrinsic value
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_zero_time_to_expiry() {
         // Test option at expiration

@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -10,8 +11,6 @@
 //! - VolatilitySkewCurve
 //! - PutCallRatioCurve
 //! - StrikeConcentrationCurve
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_analytics::metrics::{PutCallRatioCurve, VolatilitySkewCurve};
 use optionstratlib_core::model::ExpirationDate;
@@ -93,7 +92,7 @@ fn create_chain_without_bid_ask_mid() -> OptionChain {
     chain
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_volatility_skew_curve {
     use super::*;
 
@@ -129,6 +128,7 @@ mod tests_volatility_skew_curve {
 mod tests_put_call_ratio_curve {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_put_call_ratio_premium_weighted_curve_basic() {
         let chain = create_test_chain();
@@ -141,6 +141,7 @@ mod tests_put_call_ratio_curve {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_put_call_ratio_premium_weighted_curve_values_positive() {
         let chain = create_test_chain();
@@ -163,6 +164,7 @@ mod tests_put_call_ratio_curve {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_put_call_ratio_premium_weighted_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -183,6 +185,7 @@ mod tests_strike_concentration_curve {
 
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strike_concentration_premium_weighted_curve_basic() {
         let chain = create_test_chain();
@@ -195,6 +198,7 @@ mod tests_strike_concentration_curve {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strike_concentration_premium_weighted_curve_values_positive() {
         let chain = create_test_chain();
@@ -217,6 +221,7 @@ mod tests_strike_concentration_curve {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strike_concentration_premium_weighted_curve_strike_ordering() {
         let chain = create_test_chain();

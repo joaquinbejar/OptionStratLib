@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! `create_strategy` keeps the fees of the strategy it rebuilds from (#875).
 //!
 //! The iron condor and the iron butterfly split `get_fees()`, already scaled
@@ -263,7 +264,7 @@ fn four_legs(group: OptionDataGroup<'_>) -> Option<StrategyLegs<'_>> {
 // its wings) changes the total.
 
 fn bull_call_spread(quantity: Positive) -> BullCallSpread {
-    BullCallSpread::new(
+    BullCallSpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5750.0),
@@ -279,12 +280,13 @@ fn bull_call_spread(quantity: Positive) -> BullCallSpread {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the bull call spread fixture builds: {e}"))
 }
 
 fn bear_call_spread(quantity: Positive) -> BearCallSpread {
-    BearCallSpread::new(
+    BearCallSpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5750.0),
@@ -300,12 +302,13 @@ fn bear_call_spread(quantity: Positive) -> BearCallSpread {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the bear call spread fixture builds: {e}"))
 }
 
 fn bull_put_spread(quantity: Positive) -> BullPutSpread {
-    BullPutSpread::new(
+    BullPutSpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5750.0),
@@ -321,12 +324,13 @@ fn bull_put_spread(quantity: Positive) -> BullPutSpread {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the bull put spread fixture builds: {e}"))
 }
 
 fn bear_put_spread(quantity: Positive) -> BearPutSpread {
-    BearPutSpread::new(
+    BearPutSpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5850.0),
@@ -342,12 +346,13 @@ fn bear_put_spread(quantity: Positive) -> BearPutSpread {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the bear put spread fixture builds: {e}"))
 }
 
 fn bull_call_ladder(quantity: Positive) -> BullCallLadder {
-    BullCallLadder::new(
+    BullCallLadder::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5750.0),
@@ -367,12 +372,13 @@ fn bull_call_ladder(quantity: Positive) -> BullCallLadder {
         pos_or_panic!(0.40),
         pos_or_panic!(0.50),
         pos_or_panic!(0.60),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the bull call ladder fixture builds: {e}"))
 }
 
 fn long_butterfly_spread(quantity: Positive) -> LongButterflySpread {
-    LongButterflySpread::new(
+    LongButterflySpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5700.0),
@@ -392,12 +398,13 @@ fn long_butterfly_spread(quantity: Positive) -> LongButterflySpread {
         pos_or_panic!(0.40),
         pos_or_panic!(0.50),
         pos_or_panic!(0.60),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the long butterfly fixture builds: {e}"))
 }
 
 fn short_butterfly_spread(quantity: Positive) -> ShortButterflySpread {
-    ShortButterflySpread::new(
+    ShortButterflySpread::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5700.0),
@@ -417,12 +424,13 @@ fn short_butterfly_spread(quantity: Positive) -> ShortButterflySpread {
         pos_or_panic!(0.40),
         pos_or_panic!(0.50),
         pos_or_panic!(0.60),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the short butterfly fixture builds: {e}"))
 }
 
 fn iron_condor(quantity: Positive) -> IronCondor {
-    IronCondor::new(
+    IronCondor::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5900.0),
@@ -440,12 +448,13 @@ fn iron_condor(quantity: Positive) -> IronCondor {
         pos_or_panic!(33.0),
         pos_or_panic!(0.10),
         pos_or_panic!(0.20),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the iron condor fixture builds: {e}"))
 }
 
 fn iron_butterfly(quantity: Positive) -> IronButterfly {
-    IronButterfly::new(
+    IronButterfly::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5780.0),
@@ -462,12 +471,13 @@ fn iron_butterfly(quantity: Positive) -> IronButterfly {
         pos_or_panic!(45.0),
         pos_or_panic!(0.10),
         pos_or_panic!(0.20),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the iron butterfly fixture builds: {e}"))
 }
 
 fn long_straddle(quantity: Positive) -> LongStraddle {
-    LongStraddle::new(
+    LongStraddle::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5780.0),
@@ -482,12 +492,13 @@ fn long_straddle(quantity: Positive) -> LongStraddle {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the long straddle fixture builds: {e}"))
 }
 
 fn short_straddle(quantity: Positive) -> ShortStraddle {
-    ShortStraddle::new(
+    ShortStraddle::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5780.0),
@@ -502,12 +513,13 @@ fn short_straddle(quantity: Positive) -> ShortStraddle {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the short straddle fixture builds: {e}"))
 }
 
 fn long_strangle(quantity: Positive) -> LongStrangle {
-    LongStrangle::new(
+    LongStrangle::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5950.0),
@@ -523,12 +535,13 @@ fn long_strangle(quantity: Positive) -> LongStrangle {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the long strangle fixture builds: {e}"))
 }
 
 fn short_strangle(quantity: Positive) -> ShortStrangle {
-    ShortStrangle::new(
+    ShortStrangle::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5950.0),
@@ -545,12 +558,13 @@ fn short_strangle(quantity: Positive) -> ShortStrangle {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the short strangle fixture builds: {e}"))
 }
 
 fn poor_mans_covered_call(quantity: Positive) -> PoorMansCoveredCall {
-    PoorMansCoveredCall::new(
+    PoorMansCoveredCall::new_at(
         "SP500".to_string(),
         spot(),
         pos_or_panic!(5600.0),
@@ -567,6 +581,7 @@ fn poor_mans_covered_call(quantity: Positive) -> PoorMansCoveredCall {
         pos_or_panic!(0.20),
         pos_or_panic!(0.30),
         pos_or_panic!(0.40),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("the poor man's covered call fixture builds: {e}"))
 }
@@ -580,6 +595,7 @@ fn at_strike(chain: &OptionChain, strike: Positive) -> &optionstratlib_market::c
         .unwrap_or_else(|| panic!("the chain lists strike {strike}"))
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_create_strategy_keeps_fees_two_leg_spreads() {
     check_create_strategy(bull_call_spread, two_legs, dec!(1.0));
@@ -588,6 +604,7 @@ fn test_create_strategy_keeps_fees_two_leg_spreads() {
     check_create_strategy(bear_put_spread, two_legs, dec!(1.0));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_create_strategy_keeps_fees_straddles_and_strangles() {
     check_create_strategy(long_straddle, one_leg_twice, dec!(1.0));
@@ -596,6 +613,7 @@ fn test_create_strategy_keeps_fees_straddles_and_strangles() {
     check_create_strategy(short_strangle, two_legs, dec!(1.0));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_create_strategy_keeps_fees_three_leg_strategies() {
     // Every leg holds the quantity: 0.3 + 0.7 + 1.1 per unit.
@@ -606,6 +624,7 @@ fn test_create_strategy_keeps_fees_three_leg_strategies() {
     check_create_strategy(short_butterfly_spread, three_legs, dec!(2.4));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_create_strategy_keeps_fees_iron_strategies() {
     // One open and one close fee for each of the four legs: 4 × 0.3 per unit.
@@ -613,6 +632,7 @@ fn test_create_strategy_keeps_fees_iron_strategies() {
     check_create_strategy(iron_butterfly, three_legs_body_twice, dec!(1.2));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_create_strategy_keeps_fees_poor_mans_covered_call() {
     // No combination filter: the legs are picked by strike.
@@ -627,16 +647,19 @@ fn test_create_strategy_keeps_fees_poor_mans_covered_call() {
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_condor_search_keeps_fees_at_quantity_two() {
     check_optimiser(iron_condor, four_legs);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_butterfly_search_keeps_fees_at_quantity_two() {
     check_optimiser(iron_butterfly, three_legs_body_twice);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_two_leg_spread_searches_keep_fees_at_quantity_two() {
     check_optimiser(bull_call_spread, two_legs);
@@ -645,6 +668,7 @@ fn test_two_leg_spread_searches_keep_fees_at_quantity_two() {
     check_optimiser(bear_put_spread, two_legs);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_straddle_and_strangle_searches_keep_fees_at_quantity_two() {
     check_optimiser(long_straddle, one_leg_twice);
@@ -652,6 +676,7 @@ fn test_straddle_and_strangle_searches_keep_fees_at_quantity_two() {
     check_optimiser(long_strangle, two_legs);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_three_leg_searches_keep_fees_at_quantity_two() {
     check_optimiser(bull_call_ladder, three_legs);
@@ -659,6 +684,7 @@ fn test_three_leg_searches_keep_fees_at_quantity_two() {
     check_optimiser(short_butterfly_spread, three_legs);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_short_strangle_search_keeps_fees_at_quantity_two() {
     // The short strangle takes the chain's expiration before its search, so
@@ -677,6 +703,7 @@ fn test_short_strangle_search_keeps_fees_at_quantity_two() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_poor_mans_covered_call_search_keeps_fees_at_quantity_two() {
     let chain = chain();

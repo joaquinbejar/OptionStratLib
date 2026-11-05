@@ -147,7 +147,7 @@ impl SimulationStatsResult {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_simulation::simulation::ExitPolicy;
@@ -169,6 +169,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_path_outcome_round_trips_through_simulation_result() {
         let original = outcome(Some(dec!(-12.0)), 7);
@@ -183,6 +184,7 @@ mod tests {
         assert_eq!(PathOutcome::from(&result), original);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_path_outcome_from_result_uses_total_pnl() {
         let mut result = SimulationResult::from(outcome(Some(dec!(10.0)), 1));
@@ -190,6 +192,7 @@ mod tests {
         assert_eq!(PathOutcome::from(&result).pnl, Some(dec!(12.5)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_from_outcomes_matches_path_statistics() {
         let outcomes = vec![
@@ -220,6 +223,7 @@ mod tests {
         assert_eq!(stats.win_rate, dec!(50.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_from_results_and_from_outcomes_agree() {
         let outcomes = vec![
@@ -241,6 +245,7 @@ mod tests {
         assert_eq!(via_results.average_holding_period, dec!(3));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_from_outcomes_empty_run_is_all_zero() {
         let stats = SimulationStatsResult::from_outcomes(Vec::new()).unwrap();

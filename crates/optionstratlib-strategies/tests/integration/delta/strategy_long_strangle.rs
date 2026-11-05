@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_analytics::pnl::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib_core::assert_decimal_eq;
 use optionstratlib_core::model::ExpirationDate;
@@ -10,12 +11,13 @@ use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongStrangle strategy
     let underlying_price = pos_or_panic!(7140.6);
 
-    let strategy = LongStrangle::new(
+    let strategy = LongStrangle::new_at(
         "CL".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(7450.0), // call_strike
@@ -31,6 +33,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let greeks = strategy.greeks().unwrap();

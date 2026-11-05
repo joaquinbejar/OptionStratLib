@@ -118,7 +118,7 @@ fn assert_zones<S: Profit + ProbabilityAnalysis>(strategy: &S) {
 /// A protective put on 100 shares bought at 100 whose put is `contracts`
 /// contracts of 100 units, with the put fees of 0.01 + 0.01 per contract.
 fn protective_put(strike: f64, premium: f64, contracts: Positive) -> ProtectivePut {
-    let mut strategy = ProtectivePut::new(
+    let mut strategy = ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(strike),
@@ -132,6 +132,7 @@ fn protective_put(strike: f64, premium: f64, contracts: Positive) -> ProtectiveP
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let mut put = strategy.long_put.clone();
@@ -237,7 +238,7 @@ fn test_protective_put_over_hedged_max_loss_at_strike_and_two_zones_of_profit() 
 /// and a call struck at 105 sold at 2.4, whose legs are `put` and `call`
 /// contracts of 100 units with fees of 0.01 + 0.01 per contract.
 fn collar(put: Positive, call: Positive) -> Collar {
-    let mut strategy = Collar::new(
+    let mut strategy = Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -255,6 +256,7 @@ fn collar(put: Positive, call: Positive) -> Collar {
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     for (contracts, style, side) in [
@@ -373,7 +375,7 @@ fn test_collar_over_covered_call_loss_is_unbounded() {
 /// at 2.4, whose call is `contracts` contracts of 100 units with fees of
 /// 0.01 + 0.01 per contract.
 fn covered_call(contracts: Positive) -> CoveredCall {
-    let mut strategy = CoveredCall::new(
+    let mut strategy = CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -387,6 +389,7 @@ fn covered_call(contracts: Positive) -> CoveredCall {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let mut call = strategy.short_call.clone();

@@ -1427,7 +1427,7 @@ impl PnLCalculator for IronCondor {
 #[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(IronCondor, test_short_call_implementations);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor {
     use super::*;
 
@@ -1438,7 +1438,7 @@ mod tests_iron_condor {
     #[test]
     fn test_iron_condor_creation() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1456,6 +1456,7 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1472,7 +1473,7 @@ mod tests_iron_condor {
     #[test]
     fn test_max_loss() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(120.0),
@@ -1490,6 +1491,7 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1499,7 +1501,7 @@ mod tests_iron_condor {
     #[test]
     fn test_max_profit() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1517,6 +1519,7 @@ mod tests_iron_condor {
             pos_or_panic!(2.8),
             pos_or_panic!(0.07),
             pos_or_panic!(0.07),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1530,7 +1533,7 @@ mod tests_iron_condor {
     #[test]
     fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1548,6 +1551,7 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1560,7 +1564,7 @@ mod tests_iron_condor {
     #[test]
     fn test_fees() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1578,6 +1582,7 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1595,7 +1600,7 @@ mod tests_iron_condor {
     #[test]
     fn test_calculate_profit_at() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let iron_condor = IronCondor::new(
+        let iron_condor = IronCondor::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1613,6 +1618,7 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1640,7 +1646,7 @@ mod tests_iron_condor {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_validable {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1671,7 +1677,7 @@ mod tests_iron_condor_validable {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1680,7 +1686,7 @@ mod tests_iron_condor_validable {
     }
 
     fn create_valid_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -1698,6 +1704,7 @@ mod tests_iron_condor_validable {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1792,7 +1799,7 @@ mod tests_iron_condor_validable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_strategies {
     use super::*;
 
@@ -1804,7 +1811,7 @@ mod tests_iron_condor_strategies {
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -1822,6 +1829,7 @@ mod tests_iron_condor_strategies {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1847,7 +1855,7 @@ mod tests_iron_condor_strategies {
                 None,
             ),
             pos_or_panic!(2.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1875,7 +1883,7 @@ mod tests_iron_condor_strategies {
                 None,
             ),
             pos_or_panic!(1.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1905,7 +1913,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_get_break_even_points() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -1923,6 +1931,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let break_even_points = condor.get_break_even_points().unwrap();
@@ -1934,7 +1943,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_max_profit() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -1952,6 +1961,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ZERO,      // open_fee
             Positive::ZERO,      // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let max_profit = condor.get_max_profit().unwrap();
@@ -1960,7 +1970,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_max_profit_bis() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -1978,6 +1988,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             pos_or_panic!(0.09), // open_fee
             pos_or_panic!(0.09), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let max_profit = condor.get_max_profit().unwrap();
@@ -1986,7 +1997,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_max_loss() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2004,6 +2015,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(11.1), // premium_long_put
             pos_or_panic!(0.1),  // open_fee
             pos_or_panic!(0.1),  // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         let max_loss = condor.get_max_loss().unwrap();
@@ -2012,7 +2024,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_max_loss_with_uneven_wings() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2030,6 +2042,7 @@ mod tests_iron_condor_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2052,7 +2065,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_net_premium_received_bis_i() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2070,6 +2083,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ZERO,      // open_fee
             Positive::ZERO,      // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), ZERO);
@@ -2077,7 +2091,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_net_premium_received_bis_ii() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2095,6 +2109,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
@@ -2102,7 +2117,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_net_premium_received_bis_iii() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2120,6 +2135,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
@@ -2127,7 +2143,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_net_premium_received_bis_iv() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2145,6 +2161,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 2.0);
@@ -2152,7 +2169,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_net_premium_received_bis_v() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2170,6 +2187,7 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(20.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
@@ -2199,7 +2217,7 @@ mod tests_iron_condor_strategies {
 
     #[test]
     fn test_with_multiple_contracts() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2217,6 +2235,7 @@ mod tests_iron_condor_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2237,7 +2256,7 @@ mod tests_iron_condor_strategies {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_optimizable {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2249,7 +2268,7 @@ mod tests_iron_condor_optimizable {
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2267,6 +2286,7 @@ mod tests_iron_condor_optimizable {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2394,6 +2414,7 @@ mod tests_iron_condor_optimizable {
         assert!(condor.get_profit_area().unwrap() >= initial_area);
     }
 
+    #[cfg(feature = "clock")]
     /// The strikes of `condor`: long put, short put, short call, long call.
     fn condor_strikes(condor: &IronCondor) -> [Positive; 4] {
         [
@@ -2404,6 +2425,7 @@ mod tests_iron_condor_optimizable {
         ]
     }
 
+    #[cfg(feature = "clock")]
     /// Runs the search on the priced chain, which has valid iron condors,
     /// and checks the legs moved off the seed in the condor's strike order.
     fn search_priced_chain(side: FindOptimalSide, criteria: OptimizationCriteria) -> [Positive; 4] {
@@ -2421,18 +2443,21 @@ mod tests_iron_condor_optimizable {
         strikes
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_condor_find_optimal_priced_chain_lower_side_below_spot() {
         let strikes = search_priced_chain(FindOptimalSide::Lower, OptimizationCriteria::Ratio);
         assert!(strikes.iter().all(|k| *k <= Positive::HUNDRED));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_condor_find_optimal_priced_chain_upper_side_above_spot() {
         let strikes = search_priced_chain(FindOptimalSide::Upper, OptimizationCriteria::Ratio);
         assert!(strikes.iter().all(|k| *k >= Positive::HUNDRED));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_condor_find_optimal_priced_chain_range_within_bounds() {
         // Four legs paying 1.0 of fees each need wings wider than the 95 to
@@ -2446,6 +2471,7 @@ mod tests_iron_condor_optimizable {
         assert!(strikes[3] <= pos_or_panic!(110.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_condor_find_optimal_priced_chain_by_area_moves_legs() {
         search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Area);
@@ -2575,7 +2601,7 @@ mod tests_iron_condor_optimizable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_profit {
     use super::*;
 
@@ -2586,7 +2612,7 @@ mod tests_iron_condor_profit {
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // short_call_strike
@@ -2604,6 +2630,7 @@ mod tests_iron_condor_profit {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2724,7 +2751,7 @@ mod tests_iron_condor_profit {
 
     #[test]
     fn test_profit_with_fees() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2742,6 +2769,7 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2757,7 +2785,7 @@ mod tests_iron_condor_profit {
 
     #[test]
     fn test_profit_with_fees_qty() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2775,6 +2803,7 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2789,7 +2818,7 @@ mod tests_iron_condor_profit {
 
     #[test]
     fn test_profit_with_multiple_contracts() {
-        let condor = IronCondor::new(
+        let condor = IronCondor::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2807,6 +2836,7 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2843,19 +2873,27 @@ mod tests_iron_condor_profit {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "GOLD".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -2873,10 +2911,12 @@ mod tests_iron_condor_delta {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2800.0));
@@ -2950,6 +2990,7 @@ mod tests_iron_condor_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2500.0));
@@ -3023,6 +3064,7 @@ mod tests_iron_condor_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2100.0));
@@ -3038,22 +3080,33 @@ mod tests_iron_condor_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::iron_condor::IronCondor;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "GOLD".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3071,10 +3124,12 @@ mod tests_iron_condor_delta_size {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2800.9));
@@ -3147,6 +3202,7 @@ mod tests_iron_condor_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2500.9));
@@ -3220,6 +3276,7 @@ mod tests_iron_condor_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2100.0));
@@ -3235,7 +3292,7 @@ mod tests_iron_condor_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_probability {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -3256,7 +3313,7 @@ mod tests_iron_condor_probability {
 
     /// Creates a test Iron Condor with standard parameters
     fn create_test_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3274,6 +3331,7 @@ mod tests_iron_condor_probability {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3448,7 +3506,7 @@ mod tests_iron_condor_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_iron_condor_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3459,7 +3517,7 @@ mod tests_iron_condor_position_management {
     use rust_decimal_macros::dec;
 
     fn create_test_iron_condor() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3477,6 +3535,7 @@ mod tests_iron_condor_position_management {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3644,7 +3703,7 @@ mod tests_iron_condor_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3655,7 +3714,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> IronCondor {
-        IronCondor::new(
+        IronCondor::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3673,6 +3732,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

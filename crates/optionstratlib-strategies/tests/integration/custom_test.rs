@@ -1,4 +1,3 @@
-use chrono::Utc;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{
     ExpirationDate, Options,
@@ -37,7 +36,7 @@ fn create_test_custom_strategy() -> CustomStrategy {
     let long_call_position = Position::new(
         long_call_option,
         Positive::new(5.0).unwrap(), // Premium
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(), // Open fee
         Positive::new(0.5).unwrap(), // Close fee
         None,
@@ -63,7 +62,7 @@ fn create_test_custom_strategy() -> CustomStrategy {
     let short_put_position = Position::new(
         short_put_option,
         Positive::new(3.0).unwrap(), // Premium received
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(), // Open fee
         Positive::new(0.5).unwrap(), // Close fee
         None,
@@ -112,7 +111,7 @@ fn create_complex_custom_strategy() -> CustomStrategy {
     positions.push(Position::new(
         long_put_option,
         Positive::new(2.5).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -138,7 +137,7 @@ fn create_complex_custom_strategy() -> CustomStrategy {
     positions.push(Position::new(
         short_put_option,
         Positive::new(4.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -164,7 +163,7 @@ fn create_complex_custom_strategy() -> CustomStrategy {
     positions.push(Position::new(
         short_call_option,
         Positive::new(3.5).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -190,7 +189,7 @@ fn create_complex_custom_strategy() -> CustomStrategy {
     positions.push(Position::new(
         long_call_option,
         Positive::new(2.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -332,7 +331,7 @@ mod tests {
         let new_position = Position::new(
             new_option,
             Positive::new(7.0).unwrap(),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::new(0.5).unwrap(),
             Positive::new(0.5).unwrap(),
             None,
@@ -380,7 +379,7 @@ mod tests {
         let modified_position = Position::new(
             modified_option,
             Positive::new(8.0).unwrap(),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::new(0.5).unwrap(),
             Positive::new(0.5).unwrap(),
             None,
@@ -596,7 +595,7 @@ mod tests {
         let dummy_position = Position::new(
             dummy_option,
             Positive::new(5.0).unwrap(),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::new(0.5).unwrap(),
             Positive::new(0.5).unwrap(),
             None,

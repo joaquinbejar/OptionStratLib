@@ -211,6 +211,7 @@ mod tests_generator_optionseries {
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::utils::TimeFrame;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::convert_time_frame;
     use optionstratlib_simulation::error::SimulationError;
     use optionstratlib_simulation::simulation::steps::{Step, Xstep, Ystep};
@@ -266,6 +267,7 @@ mod tests_generator_optionseries {
         OptionSeries::build_series(&series_params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_generator_optionseries_basic() -> Result<(), Box<dyn std::error::Error>> {
         // Setup

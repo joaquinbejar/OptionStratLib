@@ -195,7 +195,7 @@ pub struct SimulationStatsResult {
 impl_json_debug_pretty!(SimulationStatsResult);
 impl_json_display!(SimulationStatsResult);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_analytics::pnl::PnL;
@@ -226,7 +226,7 @@ mod tests {
                 None,
                 pos_or_panic!(10.0),
                 pos_or_panic!(5.0),
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
             ),
             holding_period,
             exit_reason: ExitPolicy::Expiration,

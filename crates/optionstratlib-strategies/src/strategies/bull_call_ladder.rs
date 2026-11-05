@@ -30,7 +30,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 use optionstratlib_core::spos;
 use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
@@ -1319,7 +1319,7 @@ impl PnLCalculator for BullCallLadder {
 #[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BullCallLadder, test_short_call_implementations);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder {
     use super::*;
 
@@ -1328,7 +1328,7 @@ mod tests_bull_call_ladder {
     use rust_decimal_macros::dec;
 
     fn setup() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1348,6 +1348,7 @@ mod tests_bull_call_ladder {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1404,7 +1405,7 @@ mod tests_bull_call_ladder {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_validation {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1412,7 +1413,7 @@ mod tests_bull_call_ladder_validation {
     use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -1432,6 +1433,7 @@ mod tests_bull_call_ladder_validation {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1450,22 +1452,33 @@ mod tests_bull_call_ladder_validation {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_call_ladder::BullCallLadder;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
@@ -1485,10 +1498,12 @@ mod tests_bull_call_ladder_delta {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5901.88));
@@ -1537,6 +1552,7 @@ mod tests_bull_call_ladder_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5781.88));
@@ -1615,6 +1631,7 @@ mod tests_bull_call_ladder_delta {
         assert_decimal_eq!(delta, Decimal::ZERO, DELTA_THRESHOLD);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5794.4));
@@ -1630,22 +1647,33 @@ mod tests_bull_call_ladder_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_call_ladder::BullCallLadder;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
@@ -1665,10 +1693,12 @@ mod tests_bull_call_ladder_delta_size {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5881.88));
@@ -1717,6 +1747,7 @@ mod tests_bull_call_ladder_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5781.88));
@@ -1796,6 +1827,7 @@ mod tests_bull_call_ladder_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5794.4));
@@ -1811,7 +1843,7 @@ mod tests_bull_call_ladder_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_optimizable {
     use super::*;
 
@@ -1878,7 +1910,7 @@ mod tests_bull_call_ladder_optimizable {
     }
 
     fn setup_test_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1898,6 +1930,7 @@ mod tests_bull_call_ladder_optimizable {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2009,7 +2042,7 @@ mod tests_bull_call_ladder_optimizable {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_probability {
     use super::*;
 
@@ -2031,7 +2064,7 @@ mod tests_bull_call_ladder_probability {
 
     /// Creates a test Bull Call Ladder with standard parameters based on SP500
     fn create_test_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2051,6 +2084,7 @@ mod tests_bull_call_ladder_probability {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2269,7 +2303,7 @@ mod tests_bull_call_ladder_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_call_ladder_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2280,7 +2314,7 @@ mod tests_bull_call_ladder_position_management {
     use rust_decimal_macros::dec;
 
     fn create_test_bull_call_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2300,6 +2334,7 @@ mod tests_bull_call_ladder_position_management {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2450,7 +2485,7 @@ mod tests_bull_call_ladder_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2461,7 +2496,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2481,6 +2516,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2714,7 +2750,7 @@ mod tests_strategy_constructor {
             [Positive::HUNDRED, pos_or_panic!(105.0)],
             [pos_or_panic!(105.0), Positive::HUNDRED],
         ] {
-            let mut ladder = BullCallLadder::default();
+            let mut ladder = BullCallLadder::blank_at(chrono::DateTime::UNIX_EPOCH);
             ladder
                 .add_position(&call(Side::Long, pos_or_panic!(95.0)))
                 .unwrap();
@@ -2759,7 +2795,7 @@ mod tests_bull_call_ladder_pnl {
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -2779,6 +2815,7 @@ mod tests_bull_call_ladder_pnl {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

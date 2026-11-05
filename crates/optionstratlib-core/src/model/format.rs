@@ -443,14 +443,18 @@ mod tests_options {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_expiration_date {
 
-    use chrono::{Duration, NaiveDate, TimeZone, Utc};
+    #[cfg(feature = "clock")]
+    use chrono::Duration;
+    use chrono::{NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;
     use positive::pos_or_panic;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display_days() {
         let expiration = ExpirationDate::Days(pos_or_panic!(30.5));
@@ -458,6 +462,7 @@ mod tests_expiration_date {
         assert!(display_string.contains("UTC"));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display_datetime() {
         let future_date = Utc::now() + Duration::days(15) + Duration::minutes(1);
@@ -488,6 +493,7 @@ mod tests_expiration_date {
         assert_eq!(debug_string, "DateTime(2023-12-31T23:59:59Z)");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display_past_date() {
         let past_date = Utc::now() - Duration::days(5);
@@ -497,6 +503,7 @@ mod tests_expiration_date {
         assert!(display_string.contains(&past_date.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display_today() {
         let today = Utc::now();

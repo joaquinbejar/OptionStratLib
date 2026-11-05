@@ -1401,14 +1401,14 @@ impl std::fmt::Display for Collar {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_collar() -> Collar {
-        Collar::new(
+        Collar::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0), // underlying price
             pos_or_panic!(145.0), // put strike
@@ -1426,6 +1426,7 @@ mod tests {
             pos_or_panic!(0.65), // put close fee
             pos_or_panic!(0.65), // call open fee
             pos_or_panic!(0.65), // call close fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

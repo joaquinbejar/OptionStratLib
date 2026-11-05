@@ -14,7 +14,7 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the BearPutSpread strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = BearPutSpread::new(
+    let strategy = BearPutSpread::new_at(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5850.0), // long_strike
@@ -30,6 +30,7 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

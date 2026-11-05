@@ -1,9 +1,8 @@
+#![cfg(feature = "clock")]
 //! The imports a core consumer writes, compiled and exercised (#518).
 //!
 //! `optionstratlib-core` has no prelude by decision; these paths are its
 //! intended entry points. A test here breaks when one of them moves.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::leg::{Leg, LegAble, SpotPosition};
 use optionstratlib_core::model::{
@@ -35,7 +34,7 @@ fn test_domain_types_from_model_root() {
     let position = Position::new(
         sample_option(),
         pos_or_panic!(2.5),
-        chrono::Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::ONE,
         Positive::ONE,
         None,
@@ -45,6 +44,7 @@ fn test_domain_types_from_model_root() {
     let _trade_type_is_reachable: Option<Trade> = None;
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_leg_types_from_model_leg() {
     let leg = Leg::Spot(SpotPosition::long(

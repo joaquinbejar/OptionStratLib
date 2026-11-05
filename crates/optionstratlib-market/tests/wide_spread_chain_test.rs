@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -12,8 +13,6 @@
 //! strikes once both wings come back without prices, so a wide spread
 //! truncated the chain: the cheap out-of-the-money wings — the long legs of
 //! every defined-risk structure — disappeared exactly as they decayed.
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};
@@ -53,6 +52,7 @@ fn build(spread: Positive) -> OptionChain {
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_wide_spread_keeps_every_strike() {
     let tight = build(pos_or_panic!(0.02));
@@ -73,6 +73,7 @@ fn test_wide_spread_keeps_every_strike() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_wide_spread_leaves_every_strike_quoted() {
     let chain = build(pos_or_panic!(2.0));

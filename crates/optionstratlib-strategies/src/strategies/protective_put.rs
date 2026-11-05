@@ -1000,14 +1000,14 @@ impl std::fmt::Display for ProtectivePut {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_protective_put() -> ProtectivePut {
-        ProtectivePut::new(
+        ProtectivePut::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -1021,6 +1021,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -11,8 +12,6 @@
 //! - HorizonVolatilitySurface
 //! - RiskReversalCurve
 //! - DollarGammaCurve
-
-#![cfg(feature = "clock")]
 
 use optionstratlib_analytics::metrics::{
     DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve, RiskReversalCurve,
@@ -63,6 +62,7 @@ fn create_empty_chain() -> OptionChain {
 mod tests_implied_volatility_curve {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iv_curve_basic() {
         let chain = create_test_chain();
@@ -78,6 +78,7 @@ mod tests_implied_volatility_curve {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iv_curve_x_range() {
         let chain = create_test_chain();
@@ -96,6 +97,7 @@ mod tests_implied_volatility_curve {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iv_curve_values_positive() {
         let chain = create_test_chain();
@@ -124,6 +126,7 @@ mod tests_implied_volatility_curve {
 mod tests_horizon_volatility_surface {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_horizon_volatility_surface_basic() {
         let chain = create_test_chain();
@@ -139,6 +142,7 @@ mod tests_horizon_volatility_surface {
         assert_eq!(surface.points.len(), expected_points);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_horizon_volatility_surface_single_day() {
         let chain = create_test_chain();
@@ -153,6 +157,7 @@ mod tests_horizon_volatility_surface {
         assert_eq!(surface.points.len(), iv_curve.points.len());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_horizon_volatility_surface_empty_days() {
         let chain = create_test_chain();
@@ -162,6 +167,7 @@ mod tests_horizon_volatility_surface {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_horizon_volatility_surface_time_scaling() {
         let chain = create_test_chain();
@@ -230,6 +236,7 @@ mod tests_horizon_volatility_surface {
 mod tests_risk_reversal_curve {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_risk_reversal_basic() {
         let chain = create_test_chain();
@@ -243,6 +250,7 @@ mod tests_risk_reversal_curve {
         assert_eq!(curve.points.len(), iv_curve.points.len());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_risk_reversal_atm_near_zero() {
         let chain = create_test_chain();
@@ -280,6 +288,7 @@ mod tests_risk_reversal_curve {
 mod tests_dollar_gamma_curve {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_dollar_gamma_call_basic() {
         let chain = create_test_chain();
@@ -292,6 +301,7 @@ mod tests_dollar_gamma_curve {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_dollar_gamma_put_basic() {
         let chain = create_test_chain();
@@ -304,6 +314,7 @@ mod tests_dollar_gamma_curve {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_dollar_gamma_values_positive() {
         let chain = create_test_chain();
@@ -319,6 +330,7 @@ mod tests_dollar_gamma_curve {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_dollar_gamma_atm_highest() {
         let chain = create_test_chain();
@@ -356,6 +368,7 @@ mod tests_dollar_gamma_curve {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_dollar_gamma_call_equals_put() {
         let chain = create_test_chain();
@@ -427,6 +440,7 @@ mod tests_edge_cases {
         assert!(rr_result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_high_volatility_environment() {
         let params = OptionChainBuildParams::new(
@@ -456,6 +470,7 @@ mod tests_edge_cases {
         assert!(chain.dollar_gamma_curve(&OptionStyle::Call).is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_low_volatility_environment() {
         let params = OptionChainBuildParams::new(
@@ -485,6 +500,7 @@ mod tests_edge_cases {
         assert!(chain.dollar_gamma_curve(&OptionStyle::Call).is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_extreme_skew() {
         let params = OptionChainBuildParams::new(

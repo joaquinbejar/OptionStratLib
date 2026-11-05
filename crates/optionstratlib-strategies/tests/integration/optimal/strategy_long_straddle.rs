@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     approx::assert_relative_eq,
@@ -11,12 +12,13 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongStraddle strategy
     let underlying_price = pos_or_panic!(7008.5);
 
-    let mut strategy = LongStraddle::new(
+    let mut strategy = LongStraddle::new_at(
         "CL".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(7140.0), // put_strike
@@ -31,6 +33,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

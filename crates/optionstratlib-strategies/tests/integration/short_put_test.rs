@@ -1,4 +1,3 @@
-use chrono::Utc;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{
     ExpirationDate, Options,
@@ -17,7 +16,7 @@ use rust_decimal_macros::dec;
 // Helper function to create a Short Put strategy for testing
 fn create_test_short_put() -> ShortPut {
     // Create an instance of ShortPut using Default
-    let mut short_put = ShortPut::default();
+    let mut short_put = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
 
     // Customize the strategy for tests
     short_put.name = "Test Short Put".to_string();
@@ -43,7 +42,7 @@ fn create_test_short_put() -> ShortPut {
     let position = Position::new(
         option,
         Positive::new(5.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -259,7 +258,7 @@ fn test_short_put_add_position() {
     let valid_position = Position::new(
         valid_option,
         Positive::new(1.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
         None,
@@ -288,7 +287,7 @@ fn test_short_put_add_position() {
     let invalid_position = Position::new(
         invalid_option,
         Positive::new(1.0).unwrap(),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
         None,

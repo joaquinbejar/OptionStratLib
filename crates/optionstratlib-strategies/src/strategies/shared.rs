@@ -808,7 +808,7 @@ pub(crate) fn covered_spot_leg<'a>(
     Ok(spot_leg)
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_shared {
     use super::*;
     use rust_decimal_macros::dec;
@@ -888,7 +888,7 @@ mod tests_shared {
             open_fee: Positive::MAX,
             close_fee: Positive::ONE,
             premium: Positive::MAX,
-            ..Position::default()
+            ..Position::blank_at(chrono::DateTime::UNIX_EPOCH)
         };
         assert!(aggregate_fees(&[&position]).is_err());
         assert!(aggregate_premiums(&[&position, &position]).is_err());

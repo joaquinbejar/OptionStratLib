@@ -1036,18 +1036,26 @@ impl TradeStatusAble for Position {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_position {
+    #[cfg(feature = "clock")]
     use super::*;
 
+    #[cfg(feature = "clock")]
     use crate::constants::ZERO;
+    #[cfg(feature = "clock")]
     use crate::model::types::{OptionStyle, OptionType, Side};
 
+    #[cfg(feature = "clock")]
     use chrono::Duration;
+    #[cfg(feature = "clock")]
     use num_traits::ToPrimitive;
+    #[cfg(feature = "clock")]
     use positive::pos_or_panic;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn setup_option(
         side: Side,
         option_style: OptionStyle,
@@ -1073,6 +1081,7 @@ mod tests_position {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost() {
         let option = setup_option(
@@ -1099,6 +1108,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_size() {
         let option = setup_option(
@@ -1125,6 +1135,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_short() {
         let option = setup_option(
@@ -1151,6 +1162,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_short_size() {
         let option = setup_option(
@@ -1177,6 +1189,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_check_negative_premium() {
         let option = setup_option(
@@ -1203,6 +1216,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_call_itm() {
         let option = setup_option(
@@ -1229,6 +1243,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_call_itm_quantity() {
         let option = setup_option(
@@ -1255,6 +1270,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_call_itm() {
         let option = setup_option(
@@ -1281,6 +1297,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_call_itm_quantity() {
         let option = setup_option(
@@ -1307,6 +1324,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_put_itm() {
         let option = setup_option(
@@ -1333,6 +1351,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_put_itm_quantity() {
         let option = setup_option(
@@ -1359,6 +1378,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm() {
         let option = setup_option(
@@ -1385,6 +1405,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_quantity() {
         let option = setup_option(
@@ -1411,6 +1432,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_winning() {
         let option = setup_option(
@@ -1437,6 +1459,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_quantity_winning() {
         let option = setup_option(
@@ -1463,6 +1486,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
@@ -1491,6 +1515,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long_call_quantity() {
         let option = setup_option(
@@ -1521,6 +1546,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
@@ -1551,6 +1577,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short_call_bis() {
         let option = setup_option(
@@ -1581,6 +1608,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_days_held() {
         let option = setup_option(
@@ -1608,6 +1636,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_days_to_expiration() {
         let option = setup_option(
@@ -1634,6 +1663,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_long_position() {
         let option = setup_option(
@@ -1663,6 +1693,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_short_position() {
         let option = setup_option(
@@ -1772,7 +1803,7 @@ mod tests_valid_position {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_position_break_even {
     use super::*;
 
@@ -1819,7 +1850,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1841,7 +1872,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1863,7 +1894,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1885,7 +1916,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1907,7 +1938,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1929,7 +1960,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1951,7 +1982,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1973,7 +2004,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1995,7 +2026,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2005,7 +2036,7 @@ mod tests_position_break_even {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
 
@@ -2053,7 +2084,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2076,7 +2107,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2099,7 +2130,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2126,7 +2157,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2153,7 +2184,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2176,7 +2207,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2199,7 +2230,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2226,7 +2257,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2241,7 +2272,7 @@ mod tests_position_max_loss_profit {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_premium {
     use super::*;
     use positive::pos_or_panic;
@@ -2256,7 +2287,7 @@ mod tests_premium {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2300,7 +2331,7 @@ mod tests_premium {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2578,7 +2609,7 @@ mod tests_position_tradestatusable_trait {
             Position::new(
                 create_sample_option_simplest(OptionStyle::Call, Side::Long),
                 premium,
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
                 pos_or_panic!(0.01),
                 pos_or_panic!(0.01),
                 None,
@@ -2603,7 +2634,7 @@ mod tests_position_tradestatusable_trait {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_position_contract_size {
     use super::*;
     use crate::model::leg::{Leg, LegAble};
@@ -2626,7 +2657,7 @@ mod tests_position_contract_size {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -2738,6 +2769,7 @@ mod tests_position_contract_size {
         assert_eq!(default.total_cost().ok(), Some(pos_or_panic!(12.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_carries_contract_size() {
         let long = sized_call(Side::Long, Positive::HUNDRED);
@@ -2763,6 +2795,7 @@ mod tests_position_contract_size {
         assert_eq!(sold.cost().unwrap(), pos_or_panic!(1002.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_matches_unit_lots() {
         // One trade of 2 contracts × 100 units derives the same totals as a
@@ -2778,6 +2811,7 @@ mod tests_position_contract_size {
         assert_eq!(sized.net().unwrap(), lots.net().unwrap());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_serde_round_trip() {
         let Ok(trade) = sized_call(Side::Long, Positive::HUNDRED).trade() else {

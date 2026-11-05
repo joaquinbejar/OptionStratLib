@@ -365,7 +365,6 @@ mod tests {
     use crate::model::types::OptionStyle;
     use crate::model::utils::create_sample_option_simplest;
 
-    use chrono::Utc;
     use positive::pos_or_panic;
 
     fn create_test_option_position() -> Position {
@@ -373,7 +372,7 @@ mod tests {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -530,6 +529,7 @@ mod tests {
         assert_eq!(leg.get_symbol(), "BTC-USDT-PERP");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_get_quantity() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -537,6 +537,7 @@ mod tests {
         assert_eq!(leg.get_quantity(), Positive::HUNDRED);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_get_side() {
         let long_spot =
@@ -550,6 +551,7 @@ mod tests {
         assert_eq!(leg.get_side(), Side::Short);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_pnl_spot() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -590,7 +592,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
@@ -605,7 +607,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(10.0),
             pos_or_panic!(15.0),
         );

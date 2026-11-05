@@ -11,7 +11,7 @@ use std::error::Error;
 
 #[test]
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
-    let strategy = BullCallSpread::new(
+    let strategy = BullCallSpread::new_at(
         "GOLD".to_string(),
         pos_or_panic!(2505.8), // underlying_price
         pos_or_panic!(2460.0), // long_strike_itm
@@ -27,6 +27,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.58),  // close_fee_long
         pos_or_panic!(0.55),  // close_fee_short
         pos_or_panic!(0.54),  // open_fee_short
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Validate strategy properties

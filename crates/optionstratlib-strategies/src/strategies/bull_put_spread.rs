@@ -48,7 +48,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
@@ -1200,11 +1200,11 @@ impl PnLCalculator for BullPutSpread {
 #[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BullPutSpread, test_short_call_implementations);
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 fn bull_put_spread_test() -> BullPutSpread {
     use rust_decimal_macros::dec;
     let underlying_price = pos_or_panic!(5781.88);
-    BullPutSpread::new(
+    BullPutSpread::new_at(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5750.0), // long_strike_itm
@@ -1220,11 +1220,12 @@ fn bull_put_spread_test() -> BullPutSpread {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap()
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_strategy {
     use super::*;
 
@@ -1290,7 +1291,7 @@ mod tests_bull_put_spread_strategy {
                 None,
             ),
             pos_or_panic!(1.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1376,7 +1377,7 @@ mod tests_bull_put_spread_strategy {
         long_strike: Positive,
         short_strike: Positive,
     ) -> Result<BullPutSpread, StrategyError> {
-        BullPutSpread::new(
+        BullPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             long_strike,
@@ -1392,6 +1393,7 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
     }
 
@@ -1433,13 +1435,12 @@ mod tests_bull_put_spread_strategy {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_validation {
     use super::*;
 
     use optionstratlib_core::model::ExpirationDate;
 
-    use chrono::Utc;
     use rust_decimal_macros::dec;
 
     fn create_valid_position(
@@ -1463,7 +1464,7 @@ mod tests_bull_put_spread_validation {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1624,7 +1625,7 @@ mod tests_bull_put_spread_validation {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_optimization {
     use super::*;
 
@@ -1723,7 +1724,7 @@ mod tests_bull_put_spread_optimization {
     }
 
     fn create_base_spread() -> BullPutSpread {
-        BullPutSpread::new(
+        BullPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1739,6 +1740,7 @@ mod tests_bull_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1967,7 +1969,7 @@ mod tests_bull_put_spread_optimization {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_profit {
     use super::*;
 
@@ -2057,7 +2059,7 @@ mod tests_bull_put_spread_profit {
 
     #[test]
     fn test_profit_with_multiple_contracts() {
-        let spread = BullPutSpread::new(
+        let spread = BullPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -2073,6 +2075,7 @@ mod tests_bull_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2103,7 +2106,7 @@ mod tests_bull_put_spread_profit {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_graph {
     use super::*;
 
@@ -2117,7 +2120,7 @@ mod tests_bull_put_spread_graph {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bull_put_spread_probability {
     use super::*;
 
@@ -2135,7 +2138,7 @@ mod tests_bull_put_spread_probability {
     }
 
     fn bull_put_spread_test() -> BullPutSpread {
-        BullPutSpread::new(
+        BullPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(90.0),                       // long_strike
@@ -2151,6 +2154,7 @@ mod tests_bull_put_spread_probability {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2274,26 +2278,36 @@ mod tests_bull_put_spread_probability {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_put_spread::BullPutSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos_or_panic!(5801.88);
-        let mut strategy = BullPutSpread::new(
+        let mut strategy = BullPutSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::ONE,    // long_strike placeholder
@@ -2309,6 +2323,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.long_put.option.strike_price = long_strike;
@@ -2317,6 +2332,7 @@ mod tests_delta {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5750.0), pos_or_panic!(5920.0));
@@ -2366,6 +2382,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5840.0), pos_or_panic!(5750.0));
@@ -2413,6 +2430,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5830.0), pos_or_panic!(5830.0));
@@ -2427,26 +2445,36 @@ mod tests_delta {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_put_spread::BullPutSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        let mut strategy = BullPutSpread::new(
+        let mut strategy = BullPutSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::ONE,    // long_strike placeholder
@@ -2462,6 +2490,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.long_put.option.strike_price = long_strike;
@@ -2470,6 +2499,7 @@ mod tests_delta_size {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5750.0), pos_or_panic!(5820.9));
@@ -2518,6 +2548,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5840.0), pos_or_panic!(5750.0));
@@ -2565,6 +2596,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5840.0), pos_or_panic!(5840.0));
@@ -2580,7 +2612,7 @@ mod tests_delta_size {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_bear_call_spread_position_management {
     use super::*;
 
@@ -2591,7 +2623,7 @@ mod tests_bear_call_spread_position_management {
     use tracing::error;
 
     fn create_test_short_bull_put_spread() -> BullPutSpread {
-        BullPutSpread::new(
+        BullPutSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             // Textbook legs: long the lower strike, short the higher (#696).
@@ -2608,6 +2640,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2694,7 +2727,7 @@ mod tests_bear_call_spread_position_management {
     }
 }
 
-#[cfg(all(test, feature = "clock"))]
+#[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
 
@@ -2704,7 +2737,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BullPutSpread {
-        BullPutSpread::new(
+        BullPutSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             // Textbook legs: long the lower strike, short the higher (#696).
@@ -2721,6 +2754,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

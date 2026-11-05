@@ -5,9 +5,6 @@
 //! the pricing error, and runs against `optionstratlib-analytics` alone,
 //! which depends on no strategy code (#529).
 
-#![cfg(feature = "clock")]
-
-use chrono::Utc;
 use optionstratlib_analytics::pnl::{DeltaAdjustment, DeltaAdjustmentSameSize, PnL, PnLCalculator};
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, Side};
 use optionstratlib_core::{model::Positive, pos_or_panic};
@@ -31,7 +28,7 @@ impl PnLCalculator for FlatAdjustmentPnl {
             None,
             Positive::ZERO,
             Positive::ZERO,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         ))
     }
 
@@ -44,7 +41,7 @@ impl PnLCalculator for FlatAdjustmentPnl {
             None,
             Positive::ZERO,
             Positive::ZERO,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         ))
     }
 
@@ -72,7 +69,7 @@ impl PnLCalculator for FlatAdjustmentPnl {
             None,
             Positive::ZERO,
             Positive::ZERO,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         ))
     }
 }

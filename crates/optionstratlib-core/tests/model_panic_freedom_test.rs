@@ -132,7 +132,7 @@ proptest! {
                 None,
             ),
             premium,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             open_fee,
             close_fee,
             None,
