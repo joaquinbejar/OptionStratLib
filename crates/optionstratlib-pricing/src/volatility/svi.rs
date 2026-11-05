@@ -313,19 +313,22 @@ impl SviParameters {
     ///
     /// The ratio is taken after dividing `k - m` and `sigma` by the larger of
     /// the two, so it keeps its precision however small `sigma` is, where
-    /// [`SviParameters::total_variance`] rounds the radicand as it stands.
+    /// [`SviParameters::total_variance`] rounds the radicand as it stands. `b` enters
+    /// before that division, so a large `b` keeps a ratio far below one.
     ///
     /// # Errors
     ///
-    /// Returns [`SviError::Decimal`] if a step leaves the `Decimal` range.
+    /// Returns [`SviError::Decimal`] if `k - m` or the slope leaves the `Decimal` range.
     pub fn total_variance_slope(&self, k: Decimal) -> Result<Decimal, SviError> {
         const OP: &str = "svi::total_variance_slope";
-        let shape = unit_shape(d_sub(k, self.m, OP)?, self.sigma)?;
-        Ok(d_mul(
-            self.b,
-            d_add(self.rho, shape.shift_over_root, OP)?,
+        let x = d_sub(k, self.m, OP)?;
+        let shape = unit_shape(x, self.sigma)?;
+        let shift = d_div(
+            product_over_powers(self.b, x, shape.scale, 1)?,
+            shape.unit_root,
             OP,
-        )?)
+        )?;
+        Ok(d_add(d_mul(self.b, self.rho, OP)?, shift, OP)?)
     }
 
     /// Second derivative of total variance in log moneyness at `k`:
@@ -341,7 +344,9 @@ impl SviParameters {
     ///
     /// # Errors
     ///
-    /// Returns [`SviError::Decimal`] if the curvature leaves the `Decimal` range.
+    /// Returns [`SviError::Decimal`] if the curvature leaves the `Decimal` range, or
+    /// a step on the way does at the edge of it. A value is never rounded away instead:
+    /// `b` stays in the computation through the divisions.
     pub fn total_variance_curvature(&self, k: Decimal) -> Result<Decimal, SviError> {
         const OP: &str = "svi::total_variance_curvature";
         let shape = unit_shape(d_sub(k, self.m, OP)?, self.sigma)?;
@@ -355,22 +360,27 @@ impl SviParameters {
         else {
             return Ok(Decimal::ZERO);
         };
-        // `1 / R` is taken through its parts: rounding `R` itself would cost a tiny
-        // `R` its relative precision.
-        let one_over_root = d_div(d_div(Decimal::ONE, shape.scale, OP)?, shape.unit_root, OP)?;
-        let shrink = |value: Decimal| -> Result<Decimal, SviError> {
-            Ok(d_div(
+        // `b / R` is taken through the parts of `R`: rounding `R` itself would cost a
+        // tiny `R` its relative precision, and `1 / R` times `b` a large `R` its own.
+        let over_root = self
+            .b
+            .checked_div(shape.scale)
+            .and_then(|value| value.checked_div(shape.unit_root));
+        match over_root {
+            Some(value) => Ok(d_div(
                 d_div(value, root_over_sigma, OP)?,
                 root_over_sigma,
                 OP,
-            )?)
-        };
-        // `b` first: the divisions round at 28 places, which a large `b` would then
-        // multiply. Only if `b / R` leaves the range, while the curvature may not,
-        // the value is large enough to keep its digits through the divisions alone.
-        match self.b.checked_mul(one_over_root) {
-            Some(scaled) => shrink(scaled),
-            None => Ok(d_mul(self.b, shrink(one_over_root)?, OP)?),
+            )?),
+            // `R` is below one here, or `b / R` would fit, so `1 / R` keeps its digits.
+            // The larger of `b` and `1 / R` then keeps them over `R / sigma`, which is
+            // at most `1e28 * R`, since their product does not fit.
+            None => product_over_powers(
+                self.b,
+                d_div(d_div(Decimal::ONE, shape.scale, OP)?, shape.unit_root, OP)?,
+                root_over_sigma,
+                2,
+            ),
         }
     }
 
@@ -444,11 +454,9 @@ fn rounding_band(a: Decimal, b: Decimal, hypotenuse: Decimal) -> Result<Decimal,
     )?)
 }
 
-/// `x / R` for the slope, with `R = sqrt(x^2 + sigma^2)` kept apart as
-/// `scale * unit_root` for the curvature.
+/// `R = sqrt(x^2 + sigma^2)` kept apart as `scale * unit_root`.
 #[derive(Debug, Clone, Copy)]
 struct UnitShape {
-    shift_over_root: Decimal,
     scale: Decimal,
     unit_root: Decimal,
 }
@@ -469,11 +477,52 @@ fn unit_shape(x: Decimal, sigma: Decimal) -> Result<UnitShape, SviError> {
         )?,
         OP,
     )?;
-    Ok(UnitShape {
-        shift_over_root: d_div(unit_x, unit_root, OP)?,
-        scale,
-        unit_root,
-    })
+    Ok(UnitShape { scale, unit_root })
+}
+
+/// `first * second / divisor^divisions`, without an intermediate leaving the range or
+/// rounding away what the other factor would have brought back.
+///
+/// Every step rounds at 28 places, and any factor applied after it multiplies that
+/// rounding, so the next step is whichever keeps the largest intermediate: the product,
+/// or either factor over the divisor. A product of two small factors keeps few digits,
+/// and so does a quotient of a small one, where another order may keep all of them.
+///
+/// # Errors
+///
+/// Returns [`SviError::Decimal`] if neither factor can be divided and their product
+/// does not fit: the partial result is out of range.
+fn product_over_powers(
+    first: Decimal,
+    second: Decimal,
+    divisor: Decimal,
+    divisions: u32,
+) -> Result<Decimal, SviError> {
+    const OP: &str = "svi::product_over_powers";
+    let size = |value: Option<Decimal>| value.map(|inner| inner.abs());
+    let (mut one, mut other) = (first, second);
+    let mut left = divisions;
+    while let Some(after) = left.checked_sub(1) {
+        let product = size(one.checked_mul(other));
+        let one_over = one.checked_div(divisor);
+        let other_over = other.checked_div(divisor);
+        // `None` orders below any size, so a step that overflows is never chosen.
+        let largest_quotient = size(one_over).max(size(other_over));
+        if product >= largest_quotient {
+            break;
+        }
+        match (one_over, other_over) {
+            (Some(quotient), _) if size(Some(quotient)) == largest_quotient => one = quotient,
+            (_, Some(quotient)) => other = quotient,
+            _ => break,
+        }
+        left = after;
+    }
+    let mut value = d_mul(one, other, OP)?;
+    for _ in 0..left {
+        value = d_div(value, divisor, OP)?;
+    }
+    Ok(value)
 }
 
 /// `b * sigma * sqrt(1 - rho^2)`: the distance from `a` to the minimum of `w`.
@@ -1943,6 +1992,131 @@ mod tests {
                 .total_variance_curvature(dec!(10000000000))
                 .unwrap(),
             dec!(0)
+        );
+    }
+
+    #[test]
+    fn test_total_variance_curvature_at_a_large_b_is_not_rounded_away() {
+        // x = 1e-9, sigma = 1e-28, b = 1e20: b / R is 1e29, out of range, and both
+        // divisions by R / sigma = 1e19 before b would leave 1e-29, which rounds to
+        // zero. The true w'' = b * sigma^2 / R^3 is 1e-9.
+        let parameters = SviParameters::try_new(
+            dec!(0),
+            dec!(100000000000000000000),
+            dec!(0),
+            dec!(0),
+            dec!(0.0000000000000000000000000001),
+        )
+        .unwrap();
+        let curvature = parameters
+            .total_variance_curvature(dec!(0.000000001))
+            .unwrap();
+        assert!(curvature > dec!(0.0000000009), "{curvature}");
+        assert!(curvature < dec!(0.0000000011), "{curvature}");
+    }
+
+    #[test]
+    fn test_total_variance_curvature_at_a_large_b_keeps_a_large_root_precise() {
+        // b / R at R = sigma = 3e5 and b = 1e20: taking 1 / R first would multiply its
+        // rounding at 28 places by b. At k = m, w'' = b / sigma.
+        let parameters = SviParameters::try_new(
+            dec!(0),
+            dec!(100000000000000000000),
+            dec!(0),
+            dec!(0),
+            dec!(300000),
+        )
+        .unwrap();
+        let curvature = parameters.total_variance_curvature(dec!(0)).unwrap();
+        let error = (curvature - dec!(333333333333333.3333333333333)).abs();
+        assert!(error < dec!(0.000000000001), "{error}");
+    }
+
+    #[test]
+    fn test_total_variance_slope_at_a_large_b_is_not_rounded_away() {
+        // x = 3e-28, sigma = 7, b = 1e20: x / sigma is below the last place and rounds
+        // to zero, while the true slope is b * x / R = 3e-8 / 7 = 4.2857...e-9.
+        let parameters = SviParameters::try_new(
+            dec!(1),
+            dec!(100000000000000000000),
+            dec!(0),
+            dec!(0),
+            dec!(7),
+        )
+        .unwrap();
+        let slope = parameters
+            .total_variance_slope(dec!(0.0000000000000000000000000003))
+            .unwrap();
+        assert_eq!(slope, dec!(0.0000000042857142857142857143));
+    }
+
+    #[test]
+    fn test_total_variance_slope_at_a_tiny_root_with_a_moderate_b_keeps_its_digits() {
+        // x = 3e-28, sigma = 7e-28, b = 99.37: b / sigma is out of range and b * x keeps
+        // 3 digits, while x / sigma keeps all of them. Reference from the same script.
+        let parameters = SviParameters::try_new(
+            dec!(0),
+            dec!(99.37),
+            dec!(0.5),
+            dec!(0),
+            dec!(0.0000000000000000000000000007),
+        )
+        .unwrap();
+        let slope = parameters
+            .total_variance_slope(dec!(0.0000000000000000000000000003))
+            .unwrap();
+        let error = (slope - dec!(88.8287606998118913627331593)).abs();
+        assert!(error < dec!(0.0000000000000000000000001), "{error}");
+    }
+
+    #[test]
+    fn test_total_variance_slope_keeps_a_product_larger_than_its_quotients() {
+        // b = x = 1e7, sigma = 3e14: b / sigma keeps 20 digits and b * x all of them, so
+        // the product comes first. The true slope is about 1 / 3.
+        let parameters = SviParameters::try_new(
+            dec!(1),
+            dec!(10000000),
+            dec!(0),
+            dec!(0),
+            dec!(300000000000000),
+        )
+        .unwrap();
+        let slope = parameters.total_variance_slope(dec!(10000000)).unwrap();
+        let error = (slope - dec!(0.3333333333333331481481481481)).abs();
+        assert!(error < dec!(0.000000000000000000000001), "{error}");
+    }
+
+    #[test]
+    fn test_total_variance_slope_past_b_times_x_keeps_its_value() {
+        // b * x = 1e30 is out of range and the slope is about b = 1e20.
+        let parameters = SviParameters::try_new(
+            dec!(1),
+            dec!(100000000000000000000),
+            dec!(0),
+            dec!(0),
+            dec!(0.000001),
+        )
+        .unwrap();
+        let slope = parameters.total_variance_slope(dec!(10000000000)).unwrap();
+        assert_eq!(slope, dec!(100000000000000000000));
+    }
+
+    #[test]
+    fn test_product_over_powers_out_of_range_is_a_typed_error() {
+        // Nothing can bring 1e28 * 1e28 back with one division by 1.
+        assert!(matches!(
+            product_over_powers(
+                dec!(10000000000000000000000000000),
+                dec!(10000000000000000000000000000),
+                dec!(1),
+                1
+            ),
+            Err(SviError::Decimal(_))
+        ));
+        assert_eq!(
+            product_over_powers(dec!(10000000000000000000000000000), dec!(10), dec!(100), 2)
+                .unwrap(),
+            dec!(10000000000000000000000000)
         );
     }
 

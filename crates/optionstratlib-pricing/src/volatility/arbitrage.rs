@@ -130,11 +130,15 @@
 //!   At a raw SVI point of ordinary size this is about `1e-23`. Where `w` is barely
 //!   resolved, `r` is `1e-12` and the band is `2e-12` times the size of the terms.
 //!
-//! These bounds were compared with a 150-digit reference on about 200000 random raw
-//! SVI points: `b` from `1e-6` to `1e10`, `sigma` from `1e-27` to `100`, `|rho|` up
-//! to `0.999999`, `|m|` up to `2`, `a` from the floor to about `9 * b`, and `k` up to
-//! about `9e9` from the vertex. No evaluated `g` was outside its band and no `w`
-//! outside its rounding. Outside that range only the argument above stands.
+//! These bounds were compared with a 150-digit reference on about 250000 random raw
+//! SVI points: `b` from `1e-6` to `1e21`, `sigma` from `1e-28` to `100`, `|rho|` up to
+//! `0.999999`, `|m|` up to `2`, `a` from the floor to about `9 * b`, and `k` up to
+//! about `9e9` from the vertex; and on about 98000 random slices declaring no rounding,
+//! with `w`, `|w'|` and `|w''|` from `1e-28` to `1e28` and `|k|` up to `1e21`. No
+//! evaluated `g` was outside its band, and no `w` or `w'` of a raw SVI point outside
+//! its rounding. Much of that range, at a large `b` or `w'`, comes back as a typed
+//! overflow rather than a value, since `w'^2` alone leaves the range of a `Decimal`.
+//! Outside that range only the argument above stands.
 //!
 //! # Failure
 //!
@@ -194,6 +198,9 @@ const MAX_RELATIVE_ROUNDING: Decimal = Decimal::from_parts(1, 0, 0, false, 12);
 /// Rounding of the arithmetic of `g` itself, relative to the size of its terms:
 /// 100 units in the last place of a `Decimal`, for its handful of operations.
 const G_ARITHMETIC_ROUNDING: Decimal = Decimal::from_parts(1, 0, 0, false, 26);
+
+/// The 4 in `w' * (w' / w) / 4` and in `w' / 4`.
+const FOUR: Decimal = Decimal::from_parts(4, 0, 0, false, 0);
 
 /// A slice of total implied variance, one expiry of a surface, as the static
 /// arbitrage checks read it.
@@ -684,14 +691,23 @@ struct DensityFactor {
 
 /// Evaluates `g` at a point whose `w` is positive and resolved.
 ///
-/// `r = w' / (2 * w)` comes first, and `w'^2 / (4 * w)` is taken as `r * w' / 2`:
-/// squaring a small `w'` first would lose it below the 28th place. The band is
-/// the module docs': a relative rounding of `w`, called `rounding` here, moves
-/// `q = k * r` by up to `(|q| + |k| / 2) * rounding`, since it also bounds that
-/// of `w'`, which gives the first term of `magnitude`; and `|w'| / 2` is at most
-/// `1 + w'^2 / 16` by the arithmetic-geometric mean, so the `w'` rounding of
-/// `w'^2 / (4 * w)` is within it too. `w'^2 / 16` has no `1 / w` to put its `w'`
-/// rounding in terms of `r`, so that one is added on its own.
+/// `w'` is never halved before it is used: a value near the last place would round
+/// away, and `w' / w` can be large however small `w'` is. So `p = w' / w` comes
+/// first, `q = k * p / 2`, and `w'^2 / (4 * w)` is `w' * p / 4`.
+///
+/// Each step then rounds by at most about one unit in the last place, or one part
+/// in `1e28` of a larger value. `p` being that far off moves `q` by `|k|` units and
+/// `w' * p / 4` by `|w'|` units plus a part in `1e28` of itself, and a term that
+/// rounds to zero was below one unit. So all of it is within `1e-26`, 100 units, of
+/// the first term of `magnitude`, which is never below one, using that `|w'| / 2` is
+/// at most `1 + w'^2 / 16` by the arithmetic-geometric mean.
+///
+/// The rounding the slice declares comes on top. Relative to `w`, called `r` here,
+/// it moves `q` by up to `(|q| + |k| / 2) * r`, since it also bounds that of `w'`,
+/// which gives the first term of `magnitude` again, and it is within `magnitude` for
+/// `w' * p / 4` by the same mean. `w'^2 / 16` has no `1 / w` to put its `w'` rounding
+/// in terms of `r`, so that one is added on its own. Any product here that rounds to
+/// zero is below one unit, which is within the `1e-26` too.
 fn density_factor(
     k: Decimal,
     w: Decimal,
@@ -700,13 +716,12 @@ fn density_factor(
     rounding: Decimal,
 ) -> Result<DensityFactor, StaticArbitrageError> {
     const OP: &str = "arbitrage::g";
-    let half_slope = d_div(slope, Decimal::TWO, OP)?;
-    let ratio = d_div(half_slope, w, OP)?;
-    let q = d_mul(k, ratio, OP)?;
+    let ratio = d_div(slope, w, OP)?;
+    let q = d_div(d_mul(k, ratio, OP)?, Decimal::TWO, OP)?;
     let one_minus_q = d_sub(Decimal::ONE, q, OP)?;
     let first = d_mul(one_minus_q, one_minus_q, OP)?;
-    let over_w = d_mul(ratio, half_slope, OP)?;
-    let quarter_slope = d_div(half_slope, Decimal::TWO, OP)?;
+    let over_w = d_div(d_mul(slope, ratio, OP)?, FOUR, OP)?;
+    let quarter_slope = d_div(slope, FOUR, OP)?;
     let over_four = d_mul(quarter_slope, quarter_slope, OP)?;
     let half_curvature = d_div(curvature, Decimal::TWO, OP)?;
     let g = d_add(
@@ -1072,6 +1087,32 @@ mod tests {
         let factor = factor_of(&slice, dec!(0.662699978302572854858704983));
         let difference = (factor.g - dec!(535.7811679546582669017279115)).abs();
         assert!(difference <= factor.band, "{difference} vs {}", factor.band);
+    }
+
+    #[test]
+    fn test_butterfly_slope_at_the_last_place_is_not_lost_to_a_false_pass() {
+        // Halving w' = 1e-28 rounds to zero, while w' / (2 * w) is 0.5 at w = 1e-28,
+        // so k = 1 gives g = 0.25 - 0.5 = -0.25 and not 0.5.
+        let last_place = Decimal::new(1, 28);
+        let exact = Fixed::new(last_place, last_place, dec!(-1), dec!(0));
+        let report = check_butterfly(&exact, &[Decimal::ONE]).unwrap();
+        assert!(!report.passed(), "{report:?}");
+        assert!(report.unevaluated().is_empty(), "{report:?}");
+        match report.violations() {
+            [violation] => assert_eq!(violation.size(), pos(dec!(0.25))),
+            other => panic!("expected one violation, got {other:?}"),
+        }
+
+        // An odd last place at the same w, whose half would round to an even one.
+        let factor = density_factor(
+            Decimal::ONE,
+            last_place,
+            dec!(0.0000000000000000000000000003),
+            dec!(0),
+            dec!(0),
+        )
+        .unwrap();
+        assert_eq!(factor.g, dec!(0.25) - dec!(0.0000000000000000000000000002));
     }
 
     #[test]
