@@ -25,15 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   enforced on the boundary, under a Nelder-Mead on `(m, ln sigma)` from a fixed
   grid of starts. On noiseless quotes from a known slice the tests recover the
   parameters within `1e-6` and the implied volatility within `1e-8`, wings
-  included. A fit never falls back to a flat smile: a fit above `max_rmse`
-  (default two volatility points) is an error naming both values. A calibrated
-  slice is not claimed free of arbitrage. Failures are a new
-  `#[non_exhaustive]` `SviError`: invalid parameters, too few observations or
-  distinct strikes, zero total weight, no convergence, no feasible point, RMSE
-  above the limit and non-finite kernel values. The aggregate
-  `optionstratlib::error::Error` has no variant for it yet, since adding one to
-  that exhaustive enum is breaking; it lands with the 0.24.0 bump. Runnable
-  example: `svi_calibration` in `examples_pricing`.
+  included. A fit never falls back to a flat smile: the least squares can land
+  on `b = 0` by itself, since a raw SVI slice is convex in `k`, and that result
+  is only returned for observations whose total variance is flat within `0.1%`
+  of its mean; otherwise it is `DegenerateFit`, whatever its error. A fit above
+  `max_rmse` (default two volatility points) is an error naming both values;
+  that limit is absolute, so it says little about a slice whose volatility is of
+  the same size or lower. A calibrated slice is not claimed free of arbitrage.
+  Failures are a new `#[non_exhaustive]` `SviError`: invalid parameters or
+  configuration, too few observations or distinct strikes, zero total weight, no
+  convergence, no feasible point, RMSE above the limit, a degenerate fit and
+  non-finite kernel values. The aggregate `optionstratlib::error::Error` has no
+  variant for it yet, since adding one to that exhaustive enum is breaking; #944
+  adds it with the 0.24.0 bump. Runnable example: `svi_calibration` in
+  `examples_pricing`.
 
 ### Changed — breaking
 

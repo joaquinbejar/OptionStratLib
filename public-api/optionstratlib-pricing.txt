@@ -155,9 +155,17 @@ impl core::convert::From<optionstratlib_pricing::error::PricingError> for option
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::PricingError) -> Self
 #[non_exhaustive] pub enum optionstratlib_pricing::error::SviError
 pub optionstratlib_pricing::error::SviError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::SviError::DegenerateFit
+pub optionstratlib_pricing::error::SviError::DegenerateFit::fitted_dispersion: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::DegenerateFit::observed_dispersion: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::DegenerateFit::rmse: positive::positive::Positive
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::distinct: usize
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::required: usize
+pub optionstratlib_pricing::error::SviError::InvalidConfig
+pub optionstratlib_pricing::error::SviError::InvalidConfig::parameter: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidConfig::reason: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidConfig::value: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::error::SviError::InvalidObservation
 pub optionstratlib_pricing::error::SviError::InvalidObservation::index: usize
 pub optionstratlib_pricing::error::SviError::InvalidObservation::reason: &'static str

@@ -9,11 +9,13 @@
 //! `Decimal::MAX` and at the smallest representable scale, whose ratios and
 //! squares leave the range), the shape of the sample (empty, too short, all
 //! weights zero, repeated strikes) and the limits of the configuration (one
-//! iteration, a tolerance of zero, an RMSE limit of zero). A calibration that
-//! succeeds must also keep its promises: the error it reports is within the
-//! limit, and every observation has a residual.
+//! iteration, a tolerance of zero or above its bound, an RMSE limit of zero). A
+//! calibration that succeeds must also keep its promises: the error it reports
+//! is within the limit, every observation has a residual, and a fit is not flat
+//! over observations that are not.
 
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::decimal_to_f64;
 use optionstratlib_pricing::volatility::{
     SviCalibrationConfig, SviObservation, SviParameters, SviSlice, calibrate_svi,
 };
@@ -82,10 +84,11 @@ fn config() -> impl Strategy<Value = SviCalibrationConfig> {
     (
         1_u64..40,
         prop_oneof![
-            Just(Positive::ZERO),
-            Just(positive(dec!(0.000000001))),
-            Just(Positive::ONE),
-            Just(positive(Decimal::MAX)),
+            3 => Just(Positive::ZERO),
+            3 => Just(positive(dec!(0.000000001))),
+            3 => Just(positive(dec!(0.001))),
+            1 => Just(Positive::ONE),
+            1 => Just(positive(Decimal::MAX)),
         ],
         prop_oneof![
             Just(Positive::ZERO),
@@ -115,7 +118,67 @@ fn extreme_decimal() -> impl Strategy<Value = Decimal> {
     ]
 }
 
+/// The relative weighted standard deviation of `values` and the same deviation
+/// of `fitted` over the mean of `values`, with equal weights.
+fn dispersions(values: &[f64], fitted: &[f64]) -> (f64, f64) {
+    let deviation = |series: &[f64]| {
+        let mean = series.iter().sum::<f64>() / series.len() as f64;
+        let variance = series
+            .iter()
+            .map(|value| (value - mean) * (value - mean))
+            .sum::<f64>()
+            / series.len() as f64;
+        (mean, variance.sqrt())
+    };
+    let (mean, observed) = deviation(values);
+    let (_, fit) = deviation(fitted);
+    (observed / mean, fit / mean)
+}
+
 proptest! {
+    #[test]
+    fn calibrate_svi_is_never_flat_over_observations_that_are_not(
+        volatilities in prop::collection::vec(1_u32..80, 7..16),
+    ) {
+        let observations: Vec<SviObservation> = volatilities
+            .iter()
+            .enumerate()
+            .map(|(index, &points)| SviObservation {
+                strike: positive(dec!(60) + Decimal::from(index) * dec!(7)),
+                implied_volatility: positive(Decimal::from(points) * dec!(0.01)),
+                weight: Positive::ONE,
+            })
+            .collect();
+        let config = SviCalibrationConfig {
+            max_rmse: positive(Decimal::MAX),
+            ..SviCalibrationConfig::default()
+        };
+        if let Ok(fit) = calibrate_svi(&observations, Positive::HUNDRED, Positive::ONE, &config) {
+            let mut observed = Vec::with_capacity(observations.len());
+            let mut fitted = Vec::with_capacity(observations.len());
+            for (observation, residual) in observations.iter().zip(fit.residuals()) {
+                let volatility = decimal_to_f64(observation.implied_volatility.to_dec()).unwrap();
+                observed.push(volatility * volatility);
+                fitted.push(
+                    decimal_to_f64(
+                        fit.slice()
+                            .total_variance(residual.log_moneyness)
+                            .unwrap()
+                            .to_dec(),
+                    )
+                    .unwrap(),
+                );
+            }
+            let (observed_dispersion, fitted_dispersion) = dispersions(&observed, &fitted);
+            prop_assert!(
+                observed_dispersion <= 1e-3 || fitted_dispersion > 0.09 * observed_dispersion,
+                "observed {} fitted {}",
+                observed_dispersion,
+                fitted_dispersion
+            );
+        }
+    }
+
     #[test]
     fn calibrate_svi_does_not_panic_on_extreme_input(
         observations in prop::collection::vec(observation(), 0..14),

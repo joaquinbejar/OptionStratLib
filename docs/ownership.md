@@ -117,7 +117,8 @@ and `optionstratlib::error::OperationErrorKind`.
 | `Error` (aggregate over the errors above) | `optionstratlib` (facade) | `optionstratlib::error::Error` | `optionstratlib::error::Error` | visualization | — |
 
 The aggregate `Error` has no variant for `SviError` yet: `Error` is an
-exhaustive enum, so adding one is breaking, and it lands with the 0.24.0 bump.
+exhaustive enum, so adding one is breaking, and #944 adds it with the 0.24.0
+bump.
 
 The `...Result<T>` aliases sit next to their error, flat: `DecimalResult`,
 `OptionsResult`, `CurvesResult`, `PricingResult`, `GreeksResult`,

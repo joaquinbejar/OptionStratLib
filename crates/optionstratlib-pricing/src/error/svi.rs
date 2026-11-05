@@ -16,7 +16,8 @@ use thiserror::Error;
 /// Raised by [`SviParameters::try_new`](crate::volatility::SviParameters::try_new),
 /// [`SviSlice`](crate::volatility::SviSlice) and
 /// [`calibrate_svi`](crate::volatility::calibrate_svi). A failed calibration
-/// always comes back as one of these: it never degrades to a flat smile.
+/// always comes back as one of these: a flat fit of observations that are not
+/// flat is [`SviError::DegenerateFit`], whatever its error.
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum SviError {
@@ -55,15 +56,27 @@ pub enum SviError {
         strike: Positive,
     },
 
-    /// Evaluating the slice gave a negative total variance beyond rounding,
-    /// which valid parameters only reach at the far end of the `Decimal`
-    /// range.
+    /// Evaluating the slice gave a negative total variance larger than the
+    /// rounding of that evaluation can explain. Valid parameters are not
+    /// expected to reach this, at their minimum or elsewhere: it guards the
+    /// arithmetic rather than a known input.
     #[error("svi total variance {total_variance} at log moneyness {log_moneyness} is negative")]
     NegativeTotalVariance {
         /// The log moneyness the slice was evaluated at.
         log_moneyness: Decimal,
         /// The value computed there.
         total_variance: Decimal,
+    },
+
+    /// A field of the calibration configuration is outside its domain.
+    #[error("invalid svi calibration config {parameter} = {value}: {reason}")]
+    InvalidConfig {
+        /// The rejected field: `tolerance`.
+        parameter: &'static str,
+        /// The rejected value.
+        value: Decimal,
+        /// The condition the value breaks.
+        reason: &'static str,
     },
 
     /// An observation cannot enter a calibration.
@@ -129,6 +142,27 @@ pub enum SviError {
         limit: Positive,
     },
 
+    /// The best fit is flat, or close to it, over observations that are not.
+    ///
+    /// A raw SVI slice is convex in log moneyness, so quotes shaped like a
+    /// frown or alternating around a level have no better slice than a flat
+    /// one. Such a fit can have a small RMSE and still has explained nothing,
+    /// so it is rejected. Both dispersions are weighted standard deviations of
+    /// total variance over the observed strikes, relative to the observed
+    /// weighted mean.
+    #[error(
+        "svi fit is flat over observations that are not: rmse {rmse}, relative dispersion {fitted_dispersion} fitted against {observed_dispersion} observed"
+    )]
+    DegenerateFit {
+        /// The weighted root mean square error of the fit, in implied
+        /// volatility.
+        rmse: Positive,
+        /// The relative dispersion of the observed total variance.
+        observed_dispersion: Positive,
+        /// The relative dispersion of the fitted total variance.
+        fitted_dispersion: Positive,
+    },
+
     /// A step of the `f64` kernel produced a non-finite value.
     #[error("svi non-finite {context}: {value}")]
     NonFinite {
@@ -172,6 +206,29 @@ mod tests_svi_error {
         let message = error.to_string();
         assert!(message.contains("0.15"), "{message}");
         assert!(message.contains("0.02"), "{message}");
+    }
+
+    #[test]
+    fn test_svi_error_degenerate_fit_names_rmse_and_both_dispersions() {
+        let message = SviError::DegenerateFit {
+            rmse: Positive::new_decimal(dec!(0.0173)).unwrap(),
+            observed_dispersion: Positive::new_decimal(dec!(0.25)).unwrap(),
+            fitted_dispersion: Positive::ZERO,
+        }
+        .to_string();
+        assert!(message.contains("0.0173"), "{message}");
+        assert!(message.contains("0.25"), "{message}");
+    }
+
+    #[test]
+    fn test_svi_error_invalid_config_names_the_field_and_value() {
+        let message = SviError::InvalidConfig {
+            parameter: "tolerance",
+            value: dec!(1),
+            reason: "must not exceed 0.001",
+        }
+        .to_string();
+        assert!(message.contains("tolerance = 1"), "{message}");
     }
 
     #[test]

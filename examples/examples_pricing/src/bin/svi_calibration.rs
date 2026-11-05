@@ -9,13 +9,14 @@
 //! Fits a raw SVI slice (Gatheral and Jacquier, arXiv:1204.0646) to weighted
 //! implied volatility quotes of one expiry, reads the smile back by strike and
 //! by log moneyness, and shows the typed errors a caller handles: too few
-//! quotes, and a smile SVI cannot follow, which is rejected instead of being
-//! returned flat. A calibrated slice is not claimed free of arbitrage.
+//! quotes, a smile SVI cannot follow, and a frown whose closest slice is flat,
+//! which is rejected instead of being returned. A calibrated slice is not
+//! claimed free of arbitrage.
 
 use optionstratlib::error::SviError;
 use optionstratlib::volatility::{SviCalibrationConfig, SviObservation, calibrate_svi};
 use positive::Positive;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use tracing::info;
 
@@ -111,8 +112,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         other => return Err(format!("expected too few observations, got {other:?}").into()),
     }
 
-    // Alternating levels, which no slice can follow. The closest slice is
-    // nearly flat, and it is rejected rather than handed back as a result.
+    // Alternating levels, which no slice can follow, with an error above the
+    // limit.
     let zigzag: Vec<Quote> = QUOTES
         .iter()
         .enumerate()
@@ -128,6 +129,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match calibrate_svi(&observations(&zigzag)?, forward, time_to_expiry, &config) {
         Err(error @ SviError::RmseAboveLimit { .. }) => info!(%error, "unfittable smile"),
         other => return Err(format!("expected a rejected fit, got {other:?}").into()),
+    }
+
+    // A frown: a slice is convex in log moneyness, so the closest one is flat.
+    // Its error is within the limit, and it is still no fit of these quotes.
+    let frown: Vec<Quote> = (0_u32..=12)
+        .map(|node| {
+            let k = dec!(-0.5) + Decimal::from(node) / dec!(12);
+            (
+                forward.to_dec() * k.exp(),
+                dec!(0.2) - dec!(0.2) * k * k,
+                dec!(1),
+            )
+        })
+        .collect();
+    match calibrate_svi(&observations(&frown)?, forward, time_to_expiry, &config) {
+        Err(error @ SviError::DegenerateFit { .. }) => info!(%error, "frown"),
+        other => return Err(format!("expected a degenerate fit, got {other:?}").into()),
     }
 
     Ok(())

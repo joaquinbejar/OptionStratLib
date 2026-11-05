@@ -51,10 +51,23 @@
 //!
 //! # Failure
 //!
-//! A fit never falls back to a flat smile. A flat result only comes from flat
-//! observations, as the optimum of the same least squares. A fit whose error
-//! is above [`SviCalibrationConfig::max_rmse`] is rejected with
-//! [`SviError::RmseAboveLimit`].
+//! A fit never falls back to a flat smile. The least squares can land on
+//! `b = 0` by itself, because a raw SVI slice is convex in `k`: quotes shaped
+//! like a frown, or alternating around a level, have no better slice than a
+//! flat one. That result is only returned when the observations are flat too.
+//! Observations count as flat when the weighted standard deviation of their
+//! total variance is within `0.1%` of its weighted mean, which at a volatility
+//! of 20% is about one basis point of volatility. Otherwise, a fit whose total
+//! variance over the observed strikes varies by no more than a tenth of the
+//! observations' is rejected with [`SviError::DegenerateFit`], whatever its
+//! error. Quotes that are flat but noisier than that tolerance can be rejected
+//! the same way, since noise has no slice to explain it.
+//!
+//! A fit whose error is above [`SviCalibrationConfig::max_rmse`] is rejected
+//! with [`SviError::RmseAboveLimit`]. That limit is absolute, in implied
+//! volatility, so it says little about a slice whose volatility is of the same
+//! size or lower: at a volatility of 2%, the default of two volatility points
+//! accepts any fit. Lower it for such a slice.
 //!
 //! # Out of scope
 //!
@@ -95,13 +108,14 @@
 //! ```
 
 use crate::error::SviError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
+    d_add, d_div, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64, f64_to_decimal,
 };
 use rust_decimal::Decimal;
 use std::num::NonZeroU64;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 
 /// Observations needed to fix the five raw SVI parameters.
 const MIN_OBSERVATIONS: usize = 5;
@@ -112,9 +126,33 @@ const MIN_OBSERVATIONS: usize = 5;
 const TOTAL_VARIANCE_ROUNDING_BAND: Decimal = Decimal::from_parts(1, 0, 0, false, 24);
 
 /// How far below the boundary `a + b * sigma * sqrt(1 - rho^2) = 0` a rounded
-/// solution may land and still be moved onto it, relative to the `a` it needs.
-/// Each value crosses from `f64` to `Decimal` with a rounding far below this.
+/// solution may land and still be moved onto it, relative to the `a` it needs
+/// and before the amplification [`parameters_from_kernel`] applies. Each value
+/// crosses from `f64` to `Decimal` with a rounding far below this.
 const ROUNDING_REPAIR_BAND: Decimal = Decimal::from_parts(1, 0, 0, false, 12);
+
+/// The same band as an absolute floor, for a slice so small that the rounding
+/// of `Decimal` at 28 places is what remains.
+const ROUNDING_REPAIR_FLOOR: Decimal = Decimal::from_parts(1, 0, 0, false, 26);
+
+/// Rounding of the radicand `(k - m)^2 + sigma^2` at the 28 places of a
+/// `Decimal`. It reaches the root divided by about twice the root, so it
+/// matters at a small root: see [`SviParameters::total_variance`].
+const RADICAND_ROUNDING: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
+
+/// Largest [`SviCalibrationConfig::tolerance`]. Above it a start stops before
+/// the search has done any real work and returns a wrong fit as a success.
+const MAX_TOLERANCE: Decimal = Decimal::from_parts(1, 0, 0, false, 3);
+
+/// Observations whose total variance has a weighted standard deviation within
+/// this fraction of its weighted mean count as flat. At a volatility of 20%
+/// this is about one basis point of volatility.
+const FLAT_VARIANCE_TOLERANCE: f64 = 1e-3;
+
+/// A fit whose total variance varies over the observed strikes by no more than
+/// this fraction of what the observations do has explained nothing: the share
+/// of the observations' variance it accounts for is about the square of this.
+const DEGENERATE_EXPLAINED_RATIO: f64 = 0.1;
 
 /// Default [`SviCalibrationConfig::max_iterations`], for each search start.
 /// Generous: the searches of the calibration tests stop well before it.
@@ -243,10 +281,12 @@ impl SviParameters {
     ///
     /// Returns [`SviError::Decimal`] if a step leaves the `Decimal` range and
     /// [`SviError::NegativeTotalVariance`] if the sum is negative by more than
-    /// rounding.
+    /// its rounding can explain. A negative sum within that rounding is zero,
+    /// so valid parameters evaluate at their minimum without an error, however
+    /// small `sigma` is.
     pub fn total_variance(&self, k: Decimal) -> Result<Positive, SviError> {
         let x = d_sub(k, self.m, "svi::total_variance::shift")?;
-        let hypotenuse = d_sqrt(
+        let root = d_sqrt(
             d_add(
                 d_mul(x, x, "svi::total_variance::shift_squared")?,
                 d_mul(self.sigma, self.sigma, "svi::total_variance::sigma_squared")?,
@@ -254,6 +294,9 @@ impl SviParameters {
             )?,
             "svi::total_variance::root",
         )?;
+        // The true root is at least `sigma` and at least `|x|`. Rounding the
+        // radicand can leave it below both, down to zero for a tiny `sigma`.
+        let hypotenuse = root.max(x.abs()).max(self.sigma);
         let shape = d_add(
             d_mul(self.rho, x, "svi::total_variance::skew")?,
             hypotenuse,
@@ -262,26 +305,37 @@ impl SviParameters {
         let scaled = d_mul(self.b, shape, "svi::total_variance::scaled")?;
         let variance = d_add(self.a, scaled, "svi::total_variance::sum")?;
         if variance.is_sign_negative() && !variance.is_zero() {
-            let magnitude = d_add(
-                self.a.abs(),
-                d_mul(self.b, hypotenuse, "svi::total_variance::magnitude")?,
-                "svi::total_variance::magnitude",
-            )?;
-            let band = d_mul(
-                TOTAL_VARIANCE_ROUNDING_BAND,
-                magnitude,
-                "svi::total_variance::band",
-            )?;
-            if variance.abs() > band {
-                return Err(SviError::NegativeTotalVariance {
-                    log_moneyness: k,
-                    total_variance: variance,
-                });
-            }
+            check_negative_within_rounding(variance, k, self.a, self.b, hypotenuse)?;
             return Ok(Positive::ZERO);
         }
         Ok(Positive::new_decimal(variance)?)
     }
+}
+
+/// Checks that a negative total variance is rounding: the terms summed carry a
+/// relative rounding, and the radicand's rounding reaches the root divided by
+/// about twice the root, which `b` then scales. `hypotenuse` is positive, since
+/// it is at least `sigma`.
+#[cold]
+#[inline(never)]
+fn check_negative_within_rounding(
+    variance: Decimal,
+    k: Decimal,
+    a: Decimal,
+    b: Decimal,
+    hypotenuse: Decimal,
+) -> Result<(), SviError> {
+    const OP: &str = "svi::total_variance::band";
+    let magnitude = d_add(a.abs(), d_mul(b, hypotenuse, OP)?, OP)?;
+    let relative = d_mul(TOTAL_VARIANCE_ROUNDING_BAND, magnitude, OP)?;
+    let radicand = d_mul(d_div(RADICAND_ROUNDING, hypotenuse, OP)?, b, OP)?;
+    if variance.abs() > d_add(relative, radicand, OP)? {
+        return Err(SviError::NegativeTotalVariance {
+            log_moneyness: k,
+            total_variance: variance,
+        });
+    }
+    Ok(())
 }
 
 /// `b * sigma * sqrt(1 - rho^2)`: the distance from `a` to the minimum of `w`.
@@ -449,10 +503,14 @@ pub struct SviCalibrationConfig {
     /// in total variance over its weighted mean) are at or below this value.
     /// A start whose whole simplex fits the observations to the precision of
     /// the arithmetic has also converged. A smaller value takes more iterations
-    /// and recovers the parameters more closely.
+    /// and recovers the parameters more closely. At most `1e-3`: above it a
+    /// start stops before the search has done any real work.
     pub tolerance: Positive,
     /// The largest weighted RMSE of the fit, in implied volatility (`0.02` is
-    /// two volatility points). A fit above it is an error.
+    /// two volatility points). A fit above it is an error. The limit is
+    /// absolute, so it is weak for a slice whose volatility is of the same size
+    /// or lower, and it does not excuse a flat fit of observations that are
+    /// not flat: see [`SviError::DegenerateFit`].
     pub max_rmse: Positive,
 }
 
@@ -539,6 +597,7 @@ impl SviFit {
 /// # Errors
 ///
 /// - [`SviError::ZeroForward`], [`SviError::ZeroTimeToExpiry`]: a zero input.
+/// - [`SviError::InvalidConfig`]: a tolerance above `1e-3`.
 /// - [`SviError::TooFewObservations`]: fewer than five observations with a
 ///   positive weight.
 /// - [`SviError::InvalidObservation`]: a zero strike or a zero implied
@@ -550,6 +609,9 @@ impl SviFit {
 /// - [`SviError::NoFeasibleFit`]: the optimum is not valid once rounded.
 /// - [`SviError::RmseAboveLimit`]: the best fit is worse than
 ///   [`SviCalibrationConfig::max_rmse`].
+/// - [`SviError::DegenerateFit`]: the best fit is flat, or close to it, over
+///   observations that are not, as the module docs define. It is checked after
+///   the limit and no limit excuses it.
 /// - [`SviError::NonFinite`]: the `f64` kernel produced a non-finite value.
 /// - [`SviError::Decimal`], [`SviError::Positive`]: an input or a result is
 ///   outside the range of its type.
@@ -565,6 +627,13 @@ pub fn calibrate_svi(
     }
     if time_to_expiry.is_zero() {
         return Err(SviError::ZeroTimeToExpiry);
+    }
+    if config.tolerance.to_dec() > MAX_TOLERANCE {
+        return Err(SviError::InvalidConfig {
+            parameter: "tolerance",
+            value: config.tolerance.to_dec(),
+            reason: "must not exceed 0.001",
+        });
     }
     if observations.len() < MIN_OBSERVATIONS {
         return Err(SviError::TooFewObservations {
@@ -617,7 +686,12 @@ pub fn calibrate_svi(
         &raw_points,
         config.max_iterations,
         decimal_to_f64(config.tolerance.to_dec())?,
-    )?;
+    )
+    .inspect_err(|error| {
+        if let SviError::NoConvergence { iterations, limit } = error {
+            warn!(iterations, limit, "svi calibration did not converge");
+        }
+    })?;
     let parameters = parameters_from_kernel(&solution)?;
     let slice = SviSlice::try_new(parameters, forward, time_to_expiry)?;
 
@@ -642,14 +716,34 @@ pub fn calibrate_svi(
         });
     }
     let rmse_f64 = kernel::root(weighted_squares / total_weight);
-    let rmse = finite_decimal(rmse_f64)
-        .ok_or_else(|| SviError::non_finite("svi::calibrate::rmse", rmse_f64))?;
-    let rmse = Positive::new_decimal(rmse)?;
+    let rmse = Positive::new_decimal(kernel_value(rmse_f64, "svi::calibrate::rmse")?)?;
 
     if rmse > config.max_rmse {
+        warn!(rmse = %rmse, limit = %config.max_rmse, "svi fit rejected: rmse above the limit");
         return Err(SviError::RmseAboveLimit {
             rmse,
             limit: config.max_rmse,
+        });
+    }
+    if is_degenerate(solution.observed_dispersion, solution.fitted_dispersion) {
+        let observed_dispersion = Positive::new_decimal(kernel_value(
+            solution.observed_dispersion,
+            "svi::calibrate::observed_dispersion",
+        )?)?;
+        let fitted_dispersion = Positive::new_decimal(kernel_value(
+            solution.fitted_dispersion,
+            "svi::calibrate::fitted_dispersion",
+        )?)?;
+        warn!(
+            rmse = %rmse,
+            observed_dispersion = %observed_dispersion,
+            fitted_dispersion = %fitted_dispersion,
+            "svi fit rejected: flat over observations that are not"
+        );
+        return Err(SviError::DegenerateFit {
+            rmse,
+            observed_dispersion,
+            fitted_dispersion,
         });
     }
 
@@ -662,32 +756,65 @@ pub fn calibrate_svi(
     })
 }
 
+/// Whether a fit is flat over observations that are not, from the relative
+/// weighted standard deviations of the observed and the fitted total variance.
+#[must_use]
+#[inline]
+fn is_degenerate(observed_dispersion: f64, fitted_dispersion: f64) -> bool {
+    observed_dispersion > FLAT_VARIANCE_TOLERANCE
+        && fitted_dispersion <= DEGENERATE_EXPLAINED_RATIO * observed_dispersion
+}
+
+/// Brings a value of the kernel to a `Decimal`: a non-finite value is
+/// [`SviError::NonFinite`], and a finite one outside the `Decimal` range is
+/// [`SviError::Decimal`].
+fn kernel_value(value: f64, context: &'static str) -> Result<Decimal, SviError> {
+    if !value.is_finite() {
+        return Err(SviError::non_finite(context, value));
+    }
+    Ok(f64_to_decimal(value)?)
+}
+
 /// Rounds a kernel solution to validated `Decimal` parameters.
 ///
 /// A solution on the boundary `a + b * sigma * sqrt(1 - rho^2) = 0` can land
 /// just below it when each value is rounded to `Decimal` on its own. Only
 /// that rounding is repaired, by moving `a` to the boundary; anything further
-/// away is reported as infeasible.
+/// away is reported as infeasible. A relative rounding of `rho` reaches
+/// `sqrt(1 - rho^2)` multiplied by `rho^2 / (1 - rho^2)`, so the band grows
+/// with `1 / (1 - rho^2)` as `|rho|` nears one.
 fn parameters_from_kernel(solution: &kernel::Solution) -> Result<SviParameters, SviError> {
-    let convert = |value: f64, context: &'static str| {
-        finite_decimal(value).ok_or_else(|| SviError::non_finite(context, value))
-    };
-    let a = convert(solution.a, "svi::calibrate::a")?;
-    let b = convert(solution.b, "svi::calibrate::b")?;
-    let rho = convert(solution.rho, "svi::calibrate::rho")?;
-    let m = convert(solution.m, "svi::calibrate::m")?;
-    let sigma = convert(solution.sigma, "svi::calibrate::sigma")?;
+    let a = kernel_value(solution.a, "svi::calibrate::a")?;
+    let b = kernel_value(solution.b, "svi::calibrate::b")?;
+    let rho = kernel_value(solution.rho, "svi::calibrate::rho")?;
+    let m = kernel_value(solution.m, "svi::calibrate::m")?;
+    let sigma = kernel_value(solution.sigma, "svi::calibrate::sigma")?;
 
+    const OP: &str = "svi::calibrate::repair";
     let infeasible = |error: SviError| SviError::NoFeasibleFit {
         reason: error.to_string(),
     };
+    let decimal_infeasible = |error: DecimalError| infeasible(error.into());
     let above_level = minimum_above_level(b, rho, sigma).map_err(infeasible)?;
-    let gap =
-        d_add(a, above_level, "svi::calibrate::gap").map_err(|error| infeasible(error.into()))?;
-    let band = d_mul(ROUNDING_REPAIR_BAND, above_level, "svi::calibrate::band")
-        .map_err(|error| infeasible(error.into()))?;
-    let repaired = if gap.is_sign_negative() && gap.abs() <= band {
-        -above_level
+    let gap = d_add(a, above_level, OP).map_err(decimal_infeasible)?;
+    let repaired = if gap.is_sign_negative() && !gap.is_zero() {
+        let rho_room = d_sub(
+            Decimal::ONE,
+            d_mul(rho, rho, OP).map_err(decimal_infeasible)?,
+            OP,
+        )
+        .map_err(decimal_infeasible)?;
+        let amplified = d_div(
+            d_mul(ROUNDING_REPAIR_BAND, above_level, OP).map_err(decimal_infeasible)?,
+            rho_room,
+            OP,
+        )
+        .map_err(decimal_infeasible)?;
+        if gap.abs() <= amplified.max(ROUNDING_REPAIR_FLOOR) {
+            -above_level
+        } else {
+            a
+        }
     } else {
         a
     };
@@ -802,6 +929,12 @@ mod kernel {
         pub(super) m: f64,
         pub(super) sigma: f64,
         pub(super) iterations: u64,
+        /// Weighted standard deviation of the observed total variance, over
+        /// its weighted mean.
+        pub(super) observed_dispersion: f64,
+        /// Weighted standard deviation of the fitted total variance at the
+        /// observed strikes, over the same mean.
+        pub(super) fitted_dispersion: f64,
     }
 
     /// The solution of the linear problem at one `(m, sigma)`, with its
@@ -826,6 +959,7 @@ mod kernel {
         xy: f64,
         xv: f64,
         yv: f64,
+        vv: f64,
     }
 
     /// A vertex of the search simplex.
@@ -928,13 +1062,18 @@ mod kernel {
             limit: limit.get(),
         })?;
 
+        let sigma = exponential(best.log_sigma);
+        let final_moments = moments(&normalized, best.m, sigma);
         Ok(Solution {
             a: best.fit.a * mean_variance,
             b: best.fit.b * mean_variance / span,
             rho: best.fit.rho,
             m: centre + best.m * span,
-            sigma: exponential(best.log_sigma) * span,
+            sigma: sigma * span,
             iterations,
+            observed_dispersion: root(final_moments.vv),
+            fitted_dispersion: best.fit.b
+                * root(shape_variance(&final_moments, best.fit.rho).max(0.0)),
         })
     }
 
@@ -1112,6 +1251,7 @@ mod kernel {
             moments.xy += point.weight * dx * dy;
             moments.xv += point.weight * dx * dv;
             moments.yv += point.weight * dy * dv;
+            moments.vv += point.weight * dv * dv;
         }
         moments
     }
@@ -1195,10 +1335,16 @@ mod kernel {
         })
     }
 
+    /// The weighted variance of the shape `rho * x + y`.
+    #[inline]
+    fn shape_variance(moments: &Moments, rho: f64) -> f64 {
+        rho * rho * moments.xx + 2.0 * rho * moments.xy + moments.yy
+    }
+
     /// The face `rho = +-RHO_LIMIT`: the least squares in `(a, b)`, if its
     /// solution is feasible, as `(a, b)`.
     fn extreme_skew(moments: &Moments, sigma: f64, rho: f64) -> Option<(f64, f64)> {
-        let column_variance = rho * rho * moments.xx + 2.0 * rho * moments.xy + moments.yy;
+        let column_variance = shape_variance(moments, rho);
         if column_variance <= 0.0 {
             return None;
         }
@@ -1520,6 +1666,19 @@ mod tests {
         Positive::new_decimal(value).unwrap()
     }
 
+    fn kernel_solution(a: f64, b: f64, rho: f64, sigma: f64) -> kernel::Solution {
+        kernel::Solution {
+            a,
+            b,
+            rho,
+            m: 0.1,
+            sigma,
+            iterations: 1,
+            observed_dispersion: 0.0,
+            fitted_dispersion: 0.0,
+        }
+    }
+
     fn sample() -> SviParameters {
         SviParameters::try_new(dec!(0.04), dec!(0.2), dec!(-0.4), dec!(0.05), dec!(0.3)).unwrap()
     }
@@ -1699,14 +1858,7 @@ mod tests {
 
     #[test]
     fn test_parameters_from_kernel_repairs_only_rounding() {
-        let solution = |a: f64| kernel::Solution {
-            a,
-            b: 0.8,
-            rho: -0.5,
-            m: 0.1,
-            sigma: 0.2,
-            iterations: 1,
-        };
+        let solution = |a: f64| kernel_solution(a, 0.8, -0.5, 0.2);
         let floor = -0.8 * 0.2 * 0.75_f64.sqrt();
         // Below the floor by rounding: `a` moves to the boundary.
         let repaired = parameters_from_kernel(&solution(floor * (1.0 + 1e-15))).unwrap();
@@ -1722,20 +1874,117 @@ mod tests {
 
     #[test]
     fn test_parameters_from_kernel_non_finite_is_a_typed_error() {
-        let solution = kernel::Solution {
-            a: f64::NAN,
-            b: 0.1,
-            rho: 0.0,
-            m: 0.0,
-            sigma: 0.1,
-            iterations: 1,
-        };
+        let solution = kernel_solution(f64::NAN, 0.1, 0.0, 0.1);
         assert!(matches!(
             parameters_from_kernel(&solution),
             Err(SviError::NonFinite {
                 context: "svi::calibrate::a",
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn test_parameters_from_kernel_finite_out_of_range_is_a_decimal_error() {
+        let solution = kernel_solution(1e40, 0.1, 0.0, 0.1);
+        assert!(matches!(
+            parameters_from_kernel(&solution),
+            Err(SviError::Decimal(_))
+        ));
+    }
+
+    #[test]
+    fn test_parameters_from_kernel_repairs_rounding_near_the_rho_limit() {
+        // Rounding `rho` moves sqrt(1 - rho^2) by far more than it moves `rho`:
+        // about 1 / (1 - rho^2) times more, so 5000 times at -0.9999.
+        for rho in [-0.9999_f64, 0.9999, -0.999_999] {
+            let (b, sigma) = (0.3_f64, 0.2_f64);
+            let floor = -b * sigma * ((1.0 - rho) * (1.0 + rho)).sqrt();
+            let below = floor * (1.0 + 1e-11);
+            let repaired = parameters_from_kernel(&kernel_solution(below, b, rho, sigma)).unwrap();
+            let minimum = repaired.a()
+                + minimum_above_level(repaired.b(), repaired.rho(), repaired.sigma()).unwrap();
+            assert_eq!(minimum, dec!(0), "rho {rho}");
+            // A real violation stays one.
+            assert!(
+                matches!(
+                    parameters_from_kernel(&kernel_solution(floor * 1.5, b, rho, sigma)),
+                    Err(SviError::NoFeasibleFit { .. })
+                ),
+                "rho {rho}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parameters_from_kernel_repairs_rounding_of_a_tiny_slice() {
+        // Here the 28 places of a Decimal are what rounds, not the 15 or so
+        // digits that survive the f64.
+        let (b, rho, sigma) = (1e-20_f64, -0.5_f64, 0.2_f64);
+        let floor = -b * sigma * ((1.0 - rho) * (1.0 + rho)).sqrt();
+        assert!(parameters_from_kernel(&kernel_solution(floor - 5e-27, b, rho, sigma)).is_ok());
+    }
+
+    #[test]
+    fn test_is_degenerate_needs_observations_that_are_not_flat_and_a_fit_that_is() {
+        // Flat observations may fit flat, up to and including the tolerance.
+        assert!(!is_degenerate(0.0, 0.0));
+        assert!(!is_degenerate(FLAT_VARIANCE_TOLERANCE, 0.0));
+        // Observations that are not flat may not.
+        assert!(is_degenerate(FLAT_VARIANCE_TOLERANCE * 1.01, 0.0));
+        assert!(is_degenerate(0.5, 0.0));
+        assert!(is_degenerate(0.5, 0.5 * DEGENERATE_EXPLAINED_RATIO));
+        assert!(!is_degenerate(0.5, 0.5 * DEGENERATE_EXPLAINED_RATIO * 1.01));
+    }
+
+    #[test]
+    fn test_svi_total_variance_at_the_vertex_of_a_small_sigma_is_zero_not_an_error() {
+        // The minimum of each slice is exactly zero. Rounding the radicand
+        // moves the root by about 1e-28 / (2 * root), which grows as `sigma`
+        // shrinks; below 1e-14 the radicand rounds to zero altogether.
+        for sigma in [
+            dec!(0.00123456789012345),
+            dec!(0.000000123456789),
+            dec!(0.00000000001),
+            dec!(0.00000000000001),
+            dec!(0.000000000000001),
+            dec!(0.00000000000000000001),
+            dec!(0.0000000000000000000000000001),
+        ] {
+            for rho in [dec!(0), dec!(-0.5), dec!(0.9), dec!(-0.9999)] {
+                for b in [dec!(1), dec!(0.3), dec!(1000)] {
+                    let root = d_sqrt(dec!(1) - rho * rho, "test").unwrap();
+                    let a = -(b * sigma * root);
+                    let parameters = SviParameters::try_new(a, b, rho, dec!(0.1), sigma).unwrap();
+                    let vertex = dec!(0.1) - rho * sigma / root;
+                    let variance = parameters.total_variance(vertex);
+                    assert!(
+                        variance.is_ok(),
+                        "sigma {sigma} rho {rho} b {b}: {variance:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_svi_total_variance_negative_beyond_rounding_is_a_typed_error() {
+        // Valid parameters do not reach this: it guards the arithmetic. The
+        // check itself must still tell rounding from a real negative value.
+        assert!(
+            check_negative_within_rounding(
+                dec!(-1e-26),
+                dec!(0),
+                dec!(-0.001),
+                dec!(1),
+                dec!(0.001)
+            )
+            .is_ok()
+        );
+        assert!(matches!(
+            check_negative_within_rounding(dec!(-0.5), dec!(0.1), dec!(-1), dec!(1), dec!(0.5)),
+            Err(SviError::NegativeTotalVariance { log_moneyness, total_variance })
+                if log_moneyness == dec!(0.1) && total_variance == dec!(-0.5)
         ));
     }
 }
