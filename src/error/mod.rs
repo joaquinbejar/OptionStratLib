@@ -20,6 +20,7 @@
 //! ### Trading and Analysis
 //! * `ChainError` - Option chain operations and data management
 //! * `TradeError` - Trade position opening and status management
+//! * `SettlementError` - Expiry, exercise and assignment obligations
 //! * `PositionError` - Position management and trading operations
 //! * `StrategyError` - Trading strategy validation and execution
 //! * `ProbabilityError` - Statistical analysis and probability calculations
@@ -166,10 +167,10 @@
 mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
-/// contracts, positions and trades.
+/// contracts, positions, trades and settlements.
 pub use optionstratlib_core::error::{
     DecimalError, DecimalResult, OperationErrorKind, OptionsError, OptionsResult, PositionError,
-    TradeError, position,
+    SettlementError, TradeError, position,
 };
 
 /// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and

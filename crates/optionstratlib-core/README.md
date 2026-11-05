@@ -6,8 +6,8 @@ market data, strategy or presentation code.
 
 | Module      | Contents                                                                 |
 |-------------|--------------------------------------------------------------------------|
-| `model`     | `Options`, `Position`, `Leg` and its spot, future and perpetual legs, `Trade`, payoff contracts, checked `Decimal` helpers |
-| `error`     | `DecimalError`, `OptionsError`, `PositionError`, `TradeError`, `OperationErrorKind` |
+| `model`     | `Options`, `Position`, `Leg` and its spot, future and perpetual legs, `Trade`, payoff contracts, settlement obligations, checked `Decimal` helpers |
+| `error`     | `DecimalError`, `OptionsError`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` |
 | `utils`     | `TimeFrame` and date helpers, deterministic RNG, numeric helpers, `Len`  |
 | `constants` | Library-wide numeric constants, market conventions and time units        |
 

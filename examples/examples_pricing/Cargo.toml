@@ -5,6 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
+chrono = { workspace = true }
 optionstratlib = { workspace = true, default-features = false, features = ["pricing"] }
 osl-example-support = { path = "../support" }
 rust_decimal = { workspace = true }
@@ -32,3 +33,7 @@ path = "src/bin/garman_kohlhagen_greeks.rs"
 [[bin]]
 name = "svi_calibration"
 path = "src/bin/svi_calibration.rs"
+
+[[bin]]
+name = "settlement_obligations"
+path = "src/bin/settlement_obligations.rs"

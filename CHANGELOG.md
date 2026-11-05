@@ -42,6 +42,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adds it with the 0.24.0 bump. Runnable example: `svi_calibration` in
   `examples_pricing`.
 
+- **`settlement_obligation`: what expiry, exercise or assignment obliges an
+  option position to pay, receive or deliver** (#949). A pure function in
+  `optionstratlib_core::model` (also `optionstratlib::model`), with no clock
+  and no ledger: it takes an `Options` and `SettlementTerms` (`SettlementType`,
+  `SettlementEvent`, an optional `SettlementPrice` with its source and
+  observation time, a cutoff and a `CashRounding`) and returns a
+  `SettlementObligation`: the extinguished contracts, plus signed cash and
+  underlying where positive means received. At expiry an in-the-money position
+  executes and any other extinguishes with no flows; an explicit exercise (long
+  only) or assignment (short only) also executes at the money. Physical
+  settlement moves `q·m` of underlying against `K·q·m` of cash; cash settlement
+  moves only the intrinsic value. Cash is rounded to the given scale with
+  `MidpointNearestEven`. European and American are the supported styles.
+  Failures are a new `#[non_exhaustive]` `SettlementError`: unsupported style,
+  missing price, price observed after the cutoff, event incompatible with the
+  side, and arithmetic overflow. The aggregate `optionstratlib::error::Error`
+  has no variant for it yet, since adding one to that exhaustive enum is
+  breaking. Runnable example: `settlement_obligations` in `examples_pricing`.
+
 ### Changed — breaking
 
 - **`ImpliedVolatilitySurface::iv_surface` is now

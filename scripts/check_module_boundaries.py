@@ -115,6 +115,7 @@ ERROR_FILE_LAYER = {
     "decimal": "core",
     "options": "core",
     "position": "core",
+    "settlement": "core",
     "trade": "core",
     "interpolation": "math",
     "curves": "math",

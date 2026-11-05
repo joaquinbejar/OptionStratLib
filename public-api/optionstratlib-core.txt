@@ -159,6 +159,21 @@ pub fn optionstratlib_core::error::position::PositionError::invalid_position_typ
 pub fn optionstratlib_core::error::position::PositionError::invalid_position_update(alloc::string::String, alloc::string::String) -> Self
 pub fn optionstratlib_core::error::position::PositionError::strategy_full(&str, usize) -> Self
 pub fn optionstratlib_core::error::position::PositionError::unsupported_operation(&str, &str) -> Self
+#[non_exhaustive] pub enum optionstratlib_core::error::SettlementError
+pub optionstratlib_core::error::SettlementError::ArithmeticOverflow
+pub optionstratlib_core::error::SettlementError::ArithmeticOverflow::operation: &'static str
+pub optionstratlib_core::error::SettlementError::ArithmeticOverflow::reason: alloc::string::String
+pub optionstratlib_core::error::SettlementError::EventSideMismatch
+pub optionstratlib_core::error::SettlementError::EventSideMismatch::event: optionstratlib_core::model::SettlementEvent
+pub optionstratlib_core::error::SettlementError::EventSideMismatch::side: financial_types::Side
+pub optionstratlib_core::error::SettlementError::MissingPrice
+pub optionstratlib_core::error::SettlementError::MissingPrice::event: optionstratlib_core::model::SettlementEvent
+pub optionstratlib_core::error::SettlementError::MissingPrice::settlement_type: optionstratlib_core::model::SettlementType
+pub optionstratlib_core::error::SettlementError::PriceAfterCutoff
+pub optionstratlib_core::error::SettlementError::PriceAfterCutoff::cutoff: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::error::SettlementError::PriceAfterCutoff::observed_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::error::SettlementError::UnsupportedStyle
+pub optionstratlib_core::error::SettlementError::UnsupportedStyle::style: option_type::option_type::OptionType
 pub enum optionstratlib_core::error::TradeError
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow::operation: &'static str
@@ -781,6 +796,23 @@ pub optionstratlib_core::model::BasicAxisTypes::Volatility
 pub optionstratlib_core::model::BasicAxisTypes::Vomma
 impl optionstratlib_core::model::BasicAxisTypes
 pub fn optionstratlib_core::model::BasicAxisTypes::iter() -> optionstratlib_core::model::axis::BasicAxisTypesIter
+#[repr(u8)] pub enum optionstratlib_core::model::SettlementEvent
+pub optionstratlib_core::model::SettlementEvent::Assignment
+pub optionstratlib_core::model::SettlementEvent::Exercise
+pub optionstratlib_core::model::SettlementEvent::Expiry
+impl utoipa::ToSchema for optionstratlib_core::model::SettlementEvent
+pub fn optionstratlib_core::model::SettlementEvent::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::SettlementEvent::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::SettlementEvent
+pub fn optionstratlib_core::model::SettlementEvent::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+#[repr(u8)] pub enum optionstratlib_core::model::SettlementType
+pub optionstratlib_core::model::SettlementType::Cash
+pub optionstratlib_core::model::SettlementType::Physical
+impl utoipa::ToSchema for optionstratlib_core::model::SettlementType
+pub fn optionstratlib_core::model::SettlementType::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::SettlementType::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::SettlementType
+pub fn optionstratlib_core::model::SettlementType::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub enum optionstratlib_core::model::TradeStatus
 pub optionstratlib_core::model::TradeStatus::Assigned
 pub optionstratlib_core::model::TradeStatus::Closed
@@ -818,6 +850,13 @@ pub fn optionstratlib_core::model::Balance::name() -> alloc::borrow::Cow<'static
 pub fn optionstratlib_core::model::Balance::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::Balance
 pub fn optionstratlib_core::model::Balance::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::CashRounding
+pub optionstratlib_core::model::CashRounding::scale: u32
+impl utoipa::ToSchema for optionstratlib_core::model::CashRounding
+pub fn optionstratlib_core::model::CashRounding::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::CashRounding::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::CashRounding
+pub fn optionstratlib_core::model::CashRounding::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::DisplayMoney(pub rust_decimal::decimal::Decimal)
 impl core::convert::From<positive::positive::Positive> for optionstratlib_core::model::DisplayMoney
 pub fn optionstratlib_core::model::DisplayMoney::from(positive::positive::Positive) -> Self
@@ -949,6 +988,35 @@ pub fn optionstratlib_core::model::position::Position::name() -> alloc::borrow::
 pub fn optionstratlib_core::model::position::Position::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::SettlementObligation
+pub optionstratlib_core::model::SettlementObligation::cash: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::SettlementObligation::extinguished_quantity: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::SettlementObligation::underlying: rust_decimal::decimal::Decimal
+impl utoipa::ToSchema for optionstratlib_core::model::SettlementObligation
+pub fn optionstratlib_core::model::SettlementObligation::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::SettlementObligation::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::SettlementObligation
+pub fn optionstratlib_core::model::SettlementObligation::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::SettlementPrice
+pub optionstratlib_core::model::SettlementPrice::observed_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::SettlementPrice::price: positive::positive::Positive
+pub optionstratlib_core::model::SettlementPrice::source: alloc::string::String
+impl utoipa::ToSchema for optionstratlib_core::model::SettlementPrice
+pub fn optionstratlib_core::model::SettlementPrice::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::SettlementPrice::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::SettlementPrice
+pub fn optionstratlib_core::model::SettlementPrice::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::SettlementTerms
+pub optionstratlib_core::model::SettlementTerms::cutoff: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::SettlementTerms::event: optionstratlib_core::model::SettlementEvent
+pub optionstratlib_core::model::SettlementTerms::price: core::option::Option<optionstratlib_core::model::SettlementPrice>
+pub optionstratlib_core::model::SettlementTerms::rounding: optionstratlib_core::model::CashRounding
+pub optionstratlib_core::model::SettlementTerms::settlement_type: optionstratlib_core::model::SettlementType
+impl utoipa::ToSchema for optionstratlib_core::model::SettlementTerms
+pub fn optionstratlib_core::model::SettlementTerms::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::SettlementTerms::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::SettlementTerms
+pub fn optionstratlib_core::model::SettlementTerms::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::Trade
 pub optionstratlib_core::model::Trade::action: financial_types::Action
 pub optionstratlib_core::model::Trade::contract_size: positive::positive::Positive
@@ -1012,6 +1080,7 @@ pub fn optionstratlib_core::model::position::Position::status_other(&self) -> co
 pub fn optionstratlib_core::model::reject_unrepresentable_expiration(&expiration_date::ExpirationDate) -> core::result::Result<(), expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::save_trades(&[optionstratlib_core::model::Trade], &str) -> core::io::error::Result<()>
+pub fn optionstratlib_core::model::settlement_obligation(&optionstratlib_core::model::option::Options, &optionstratlib_core::model::SettlementTerms) -> core::result::Result<optionstratlib_core::model::SettlementObligation, optionstratlib_core::error::SettlementError>
 pub fn optionstratlib_core::model::unlimited_label(rust_decimal::decimal::Decimal) -> core::option::Option<&'static str>
 pub mod optionstratlib_core::utils
 pub mod optionstratlib_core::utils::json_format
