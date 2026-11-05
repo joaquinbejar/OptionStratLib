@@ -1098,12 +1098,13 @@ and facade combination. What changes:
   same decimal in every build.
 - **A `DateTime` expiration needs a time to measure from**: the thread's
   reference datetime, from `ExpirationDate::set_reference_datetime`. With
-  none, a time to expiry is an error (`InvalidDateTime` in the crate's error,
-  for example `PricingError::Options`), never a made-up instant. The
+  none, a time to expiry is an error (`ExpirationDateError::InvalidDateTime`
+  inside the crate's error, for example `PricingError::Options`), never a made-up
+  instant. The
   reference datetime belongs to one thread and is not seen by `rayon` workers.
 - **The `*_at` forms take the time as an argument** and exist in every build:
   `Trade::new_at`, `Position::days_held_at`, `days_to_expiration_at` and
-  `trade_at`, `new_at` on the strategies with a public `new`,
+  `trade_at`, `OptionSeries::odte_at`, `new_at` on the strategies with a public `new`,
   `SimulationResult::from_outcome_at`, and on `ExpirationDate` itself
   `get_years_at`, `get_days_at`, `get_date_at` and `cmp_at`.
 - **`optionstratlib::utils::time`** has `now()`, which is `ClockError` without
@@ -1111,17 +1112,25 @@ and facade combination. What changes:
   `expiration_date_string`, the replacements for `ExpirationDate::get_years`,
   `get_days` and `get_date_string`, which exist only with the clock.
 - **Constructors that return a `Result` stay and return an error**: `Trade::new`
-  and each strategy's `new`. `get_strategy` works and keeps the date each leg
+  and each strategy's `new`, as `TradeError::Clock` and `StrategyError::Clock`;
+  `PositionError`, `ChainError` and `TransactionError` have the same variant. `get_strategy` works and keeps the date each leg
   already carries.
 - **What cannot report an error needs the feature**: the `Default` of
   `Position`, of the strategies, of `TradeRecord` and `PnLMetrics`;
   `long` and `short` on the spot, future and perpetual legs (`new` takes the
   date); `create_sample_position`, `get_today_formatted` and
-  `get_today_or_tomorrow_formatted`; and `From<PathOutcome> for SimulationResult`.
+  `get_today_or_tomorrow_formatted`; `From<PathOutcome> for SimulationResult`.
+  So do the methods whose fallback would read as an answer: `OptionSeries::odte`
+  (use `odte_at`), `is_delta_neutral` and `meets_greek_targets` (use `delta` and
+  `portfolio_greeks`).
+- **The two builds can differ on purpose** in two places, both documented where
+  they are defined: `now_or` stamps a record with the time of the call or, without
+  the clock, the time it already carries; `evaluation_time` measures a `DateTime`
+  from the wall clock or, without it, from the reference datetime. For the same
+  answer in every build, use the `*_at` forms.
 
 Features unify across a build: if any crate in the final graph enables `clock`,
-this build has it. `OptionSeries::odte` returns `None` for a `DateTime` expiration
-when there is no time to measure from.
+this build has it.
 
 **Combinations that do not exist.** The implications are the whole
 dependency story, so some builds cannot be asked for:
