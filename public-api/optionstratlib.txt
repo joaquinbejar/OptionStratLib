@@ -55,6 +55,7 @@ pub use optionstratlib::error::ProbabilityError
 pub use optionstratlib::error::ProbabilityResult
 pub use optionstratlib::error::ProjectionError
 pub use optionstratlib::error::RNDError
+pub use optionstratlib::error::SettlementError
 pub use optionstratlib::error::SimulationError
 pub use optionstratlib::error::SimulationResult
 pub use optionstratlib::error::StrategyError

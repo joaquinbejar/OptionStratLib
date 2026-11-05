@@ -2,7 +2,7 @@
 //!
 //! Each file here belongs to `optionstratlib-core` because the failure it
 //! describes is raised by a core type: a decimal operation, an option
-//! contract, a position or a trade. Errors raised by higher layers (pricing,
+//! contract, a position, a trade or a settlement. Errors raised by higher layers (pricing,
 //! market, analytics, strategies, …) live with those layers, so core never
 //! names an error it cannot raise.
 //!
@@ -64,6 +64,14 @@ mod options;
 /// * Option style/side compatibility
 pub mod position;
 
+/// ### Settlement Errors (`SettlementError`)
+/// Covers:
+/// * Unsupported option styles
+/// * Missing or late settlement prices
+/// * Events incompatible with the position side
+/// * Obligation arithmetic overflow
+mod settlement;
+
 /// ### Trade Errors (`TradeError`)
 /// Covers:
 /// * Trade execution issues
@@ -74,4 +82,5 @@ pub use common::OperationErrorKind;
 pub use decimal::{DecimalError, DecimalResult};
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
+pub use settlement::SettlementError;
 pub use trade::TradeError;

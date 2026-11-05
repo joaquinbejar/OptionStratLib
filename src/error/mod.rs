@@ -20,6 +20,7 @@
 //! ### Trading and Analysis
 //! * `ChainError` - Option chain operations and data management
 //! * `TradeError` - Trade position opening and status management
+//! * `SettlementError` - Expiry, exercise and assignment obligations
 //! * `PositionError` - Position management and trading operations
 //! * `StrategyError` - Trading strategy validation and execution
 //! * `ProbabilityError` - Statistical analysis and probability calculations
@@ -141,7 +142,7 @@
 //!
 //! | Target crate | Files |
 //! | --- | --- |
-//! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs`, now in `optionstratlib-core` |
+//! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `settlement.rs`, `trade.rs`, now in `optionstratlib-core` |
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, `svi.rs`, now in `optionstratlib-pricing` |
 //! | simulation | `simulation.rs`, now in `optionstratlib-simulation` |
@@ -166,10 +167,10 @@
 mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
-/// contracts, positions and trades.
+/// contracts, positions, trades and settlements.
 pub use optionstratlib_core::error::{
     DecimalError, DecimalResult, OperationErrorKind, OptionsError, OptionsResult, PositionError,
-    TradeError, position,
+    SettlementError, TradeError, position,
 };
 
 /// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and

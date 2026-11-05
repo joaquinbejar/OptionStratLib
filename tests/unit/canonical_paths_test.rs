@@ -57,6 +57,10 @@ fn test_canonical_module_paths_are_component_modules() {
         optionstratlib_core::model::types::Action
     );
     same!(
+        optionstratlib::model::SettlementObligation,
+        optionstratlib_core::model::SettlementObligation
+    );
+    same!(
         optionstratlib::utils::TimeFrame,
         optionstratlib_core::utils::TimeFrame
     );
@@ -163,6 +167,10 @@ fn test_canonical_error_paths_are_component_errors() {
     same!(
         facade::PositionError,
         optionstratlib_core::error::PositionError
+    );
+    same!(
+        facade::SettlementError,
+        optionstratlib_core::error::SettlementError
     );
     same!(facade::TradeError, optionstratlib_core::error::TradeError);
     same!(

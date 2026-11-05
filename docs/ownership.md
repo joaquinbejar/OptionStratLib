@@ -40,7 +40,7 @@ the tables with the code; the check names the row that drifted.
 
 | Concept group | Defining module | Facade path | Example item | Facade feature | 0.22 status |
 | --- | --- | --- | --- | --- | --- |
-| Domain model: options, positions, trades, legs, payoffs, decimal helpers | `optionstratlib_core::model` | `optionstratlib::model` | `Position` | always | public |
+| Domain model: options, positions, trades, legs, payoffs, settlement obligations, decimal helpers | `optionstratlib_core::model` | `optionstratlib::model` | `Position` | always | public |
 | Utilities: time frames, RNG seeding, numeric helpers, `Len` | `optionstratlib_core::utils` | `optionstratlib::utils` | `TimeFrame` | always | public |
 | Constants | `optionstratlib_core::constants` | `optionstratlib::constants` | `PI` | always | public |
 | Curves (2D containers, interpolation, statistics) | `optionstratlib_math::curves` | `optionstratlib::curves` | `Curve` | math | public |
@@ -95,6 +95,7 @@ and `optionstratlib::error::OperationErrorKind`.
 | `OptionsError` | `optionstratlib-core` | `optionstratlib_core::error::OptionsError` | `optionstratlib::error::OptionsError` | always | — |
 | `PositionError` | `optionstratlib-core` | `optionstratlib_core::error::PositionError` | `optionstratlib::error::PositionError` | always | `position` |
 | `TradeError` | `optionstratlib-core` | `optionstratlib_core::error::TradeError` | `optionstratlib::error::TradeError` | always | — |
+| `SettlementError` | `optionstratlib-core` | `optionstratlib_core::error::SettlementError` | `optionstratlib::error::SettlementError` | always | — |
 | `CurveError` | `optionstratlib-math` | `optionstratlib_math::error::CurveError` | `optionstratlib::error::CurveError` | math | — |
 | `SurfaceError` | `optionstratlib-math` | `optionstratlib_math::error::SurfaceError` | `optionstratlib::error::SurfaceError` | math | — |
 | `InterpolationError` | `optionstratlib-math` | `optionstratlib_math::error::InterpolationError` | `optionstratlib::error::InterpolationError` | math | — |
@@ -116,9 +117,9 @@ and `optionstratlib::error::OperationErrorKind`.
 | `GraphError` | `optionstratlib-visualization` | `optionstratlib_visualization::error::GraphError` | `optionstratlib::error::GraphError` | visualization | — |
 | `Error` (aggregate over the errors above) | `optionstratlib` (facade) | `optionstratlib::error::Error` | `optionstratlib::error::Error` | visualization | — |
 
-The aggregate `Error` has no variant for `SviError` yet: `Error` is an
-exhaustive enum, so adding one is breaking, and #944 adds it with the 0.24.0
-bump.
+The aggregate `Error` has no variant for `SviError` or `SettlementError` yet:
+`Error` is an exhaustive enum, so adding one is breaking, and #944 adds them
+with the 0.24.0 bump.
 
 The `...Result<T>` aliases sit next to their error, flat: `DecimalResult`,
 `OptionsResult`, `CurvesResult`, `PricingResult`, `GreeksResult`,

@@ -7,7 +7,8 @@
 //! # Model Module
 //!
 //! The core data structures of financial options modeling: option contracts,
-//! positions, legs, trades, payoffs at expiry and checked `Decimal` helpers.
+//! positions, legs, trades, payoffs at expiry, settlement obligations and
+//! checked `Decimal` helpers.
 //! Pricing models, Greeks, probabilities and risk metrics are built on these
 //! types by the layers above; none of them lives here.
 //!
@@ -15,6 +16,7 @@
 //!
 //! * `option` - Implementation of the core Options structure and related functionality
 //! * `position` - Management of financial positions and their properties
+//! * `settlement` - What expiry, exercise or assignment obliges a position to pay, receive or deliver
 //! * `types` - Essential type definitions and enums
 //! * `utils` - Utility functions for model operations and calculations
 //! * `format` - Display and Debug implementations for model types
@@ -118,6 +120,8 @@ mod balance;
 mod expiration;
 /// Components for different types of trading legs (spot, futures, perpetuals).
 pub mod leg;
+/// What expiry, exercise or assignment obliges an option position to do.
+mod settlement;
 mod trade;
 
 pub use axis::BasicAxisTypes;
@@ -128,6 +132,10 @@ pub use expiration::{reject_unrepresentable_expiration, resolve_expiration_date}
 pub use format::{DisplayMoney, UNLIMITED, unlimited_label};
 pub use option::Options;
 pub use position::Position;
+pub use settlement::{
+    CashRounding, SettlementEvent, SettlementObligation, SettlementPrice, SettlementTerms,
+    SettlementType, settlement_obligation,
+};
 pub use trade::{Trade, TradeAble, TradeStatus, TradeStatusAble, save_trades};
 pub use types::{OptionStyle, OptionType, RainbowType, Side};
 
