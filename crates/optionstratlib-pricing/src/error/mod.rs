@@ -43,6 +43,12 @@ pub mod greeks;
 /// * Generic pricing-related errors
 mod pricing;
 
+/// ### Static Arbitrage Errors (`StaticArbitrageError`)
+/// Handles:
+/// * A butterfly or calendar check that cannot be evaluated: an empty grid, too
+///   few slices, slices sharing an expiry, or a failed evaluation at a grid point
+mod arbitrage;
+
 /// ### SVI Errors (`SviError`)
 /// Handles:
 /// * Raw SVI parameter validation
@@ -57,6 +63,7 @@ mod svi;
 /// * Volatility model parameter validation
 mod volatility;
 
+pub use arbitrage::StaticArbitrageError;
 pub use greeks::{GreeksError, GreeksResult};
 pub use pricing::{PricingError, PricingResult};
 pub use svi::SviError;

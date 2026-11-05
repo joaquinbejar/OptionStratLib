@@ -218,6 +218,10 @@ fn test_canonical_error_paths_are_component_errors() {
     );
     same!(facade::SviError, optionstratlib_pricing::error::SviError);
     same!(
+        facade::StaticArbitrageError,
+        optionstratlib_pricing::error::StaticArbitrageError
+    );
+    same!(
         facade::GreeksResult<()>,
         optionstratlib_pricing::error::GreeksResult<()>
     );

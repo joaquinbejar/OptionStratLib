@@ -45,9 +45,11 @@
 //! - [`greeks`]: first and higher-order Greeks, the [`greeks::Greeks`]
 //!   trait, model-specific Greeks and the Greeks of the leg types.
 //! - [`volatility`]: implied-volatility solvers, volatility models and traits,
-//!   and raw SVI slices with their weighted calibration.
+//!   raw SVI slices with their weighted calibration, and butterfly and calendar
+//!   checks on a grid.
 //! - [`error`]: [`error::PricingError`], [`error::GreeksError`],
-//!   [`error::VolatilityError`] and [`error::SviError`].
+//!   [`error::VolatilityError`], [`error::SviError`] and
+//!   [`error::StaticArbitrageError`].
 //!
 //! ## Numerical boundary
 //!
