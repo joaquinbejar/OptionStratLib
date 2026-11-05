@@ -142,8 +142,10 @@ mod without_clock {
             Positive::ZERO,
             Positive::ZERO,
         );
-        let error = result.err().unwrap().to_string();
-        assert!(error.contains("wall clock is unavailable"), "{error}");
+        assert!(matches!(
+            result,
+            Err(StrategyError::Clock(ClockError::Unavailable))
+        ));
     }
 
     /// Rebuilding from positions keeps the date each leg already carries.

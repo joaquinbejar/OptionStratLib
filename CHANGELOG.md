@@ -25,10 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the time: `Trade::new_at`, `Position::blank_at`, `days_held_at`,
   `days_to_expiration_at` and `trade_at`, `OptionSeries::odte_at`, `new_at` on every
   strategy with a public `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
-  `ClockError` in `optionstratlib_core::error`, also at `optionstratlib::error`: the
-  exhaustive error enums carry it through `ExpirationDateError::InvalidDateTime` or
-  an existing variant, so no variant is added until the 0.24.0 bump (#947). See
-  "Building without the clock" in the crate documentation.
+  `ClockError` in `optionstratlib_core::error`, also at `optionstratlib::error`. A
+  time to expiry carries it through `ExpirationDateError::InvalidDateTime`, since
+  that error belongs to another crate; see below for the variants. See "Building
+  without the clock" in the crate documentation.
 - **Raw SVI volatility slice with weighted calibration** (#945), following
   Gatheral and Jacquier, "Arbitrage-free SVI volatility surfaces"
   (arXiv:1204.0646). In `optionstratlib_pricing::volatility` (also
@@ -149,6 +149,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). A single-leg
   simulation whose steps cannot read their days returns the error instead of
   reporting the path as expired.
+- **`TradeError`, `PositionError`, `ChainError`, `StrategyError` and
+  `TransactionError` gain a `Clock(ClockError)` variant** (#944). Breaking, since
+  they are exhaustive, and released with the 0.24.0 bump (#947). The aggregate
+  `optionstratlib::error::Error` gains its variant there too.
 - `Strategy::new` opens all the legs of one call at one instant rather than reading
   the clock once per leg, and `SimulationStatsResult::from_outcomes` stamps all its
   results with one instant (#944).

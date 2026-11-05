@@ -43,6 +43,10 @@ pub enum TransactionError {
         /// Human-readable description of the failure.
         reason: String,
     },
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] optionstratlib_core::error::ClockError),
 }
 
 impl TransactionError {
@@ -84,14 +88,6 @@ impl TransactionError {
         TransactionError::Other {
             reason: reason.into(),
         }
-    }
-}
-
-impl From<optionstratlib_core::error::ClockError> for TransactionError {
-    #[cold]
-    #[inline(never)]
-    fn from(err: optionstratlib_core::error::ClockError) -> Self {
-        Self::other(err.to_string())
     }
 }
 

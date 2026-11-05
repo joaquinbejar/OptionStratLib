@@ -165,6 +165,10 @@ pub enum PositionError {
     /// layer's (roadmap M1-10).
     #[error(transparent)]
     Options(#[from] crate::error::OptionsError),
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] crate::error::ClockError),
 }
 
 /// Specific errors that can occur in strategy operations
@@ -530,14 +534,6 @@ impl PositionError {
             field,
             reason,
         })
-    }
-}
-
-impl From<crate::error::ClockError> for PositionError {
-    #[cold]
-    #[inline(never)]
-    fn from(err: crate::error::ClockError) -> Self {
-        Self::Options(err.into())
     }
 }
 

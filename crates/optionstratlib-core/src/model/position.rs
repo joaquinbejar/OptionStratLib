@@ -547,8 +547,8 @@ impl Position {
     /// Returns [`PositionError`] wrapping a
     /// `PositionValidationErrorKind::InvalidPositionSize` if the elapsed
     /// day-count is negative (future-dated open date) or cannot be
-    /// represented as a `Positive`, and the clock error in a build with neither
-    /// the `clock` feature nor a reference datetime on this thread: see
+    /// represented as a `Positive`, and [`PositionError::Clock`] in a build with
+    /// neither the `clock` feature nor a reference datetime on this thread: see
     /// [`Position::days_held_at`].
     pub fn days_held(&self) -> Result<Positive, PositionError> {
         self.days_held_at(evaluation_time()?)
@@ -595,9 +595,9 @@ impl Position {
     /// [`expiration_date::error::ExpirationDateError`] when the expiration
     /// cannot be converted (e.g. a past datetime that would produce a
     /// negative day count). In a build with neither the `clock` feature nor a
-    /// reference datetime on this thread a `DateTime` expiration returns the
-    /// clock error: see [`Position::days_to_expiration_at`]. A `Days` needs no
-    /// clock.
+    /// reference datetime on this thread a `DateTime` expiration returns
+    /// [`PositionError::Clock`]: see [`Position::days_to_expiration_at`]. A `Days`
+    /// needs no clock.
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),

@@ -232,7 +232,7 @@ impl Trade {
     /// # Errors
     /// Returns [`TradeError::ArithmeticOverflow`] when the current time in nanoseconds since the
     /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds, and
-    /// [`TradeError::InvalidTrade`] in a build without the `clock` feature: use [`Trade::new_at`].
+    /// [`TradeError::Clock`] in a build without the `clock` feature: use [`Trade::new_at`].
     ///
     /// # Remarks
     /// - Ensure all `Positive` values are validated and created using the appropriate constructors.

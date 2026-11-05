@@ -170,21 +170,21 @@ mod without_clock {
             None,
             TradeStatus::Open,
         );
-        assert!(matches!(trade, Err(TradeError::InvalidTrade { .. })));
+        assert!(matches!(
+            trade,
+            Err(TradeError::Clock(ClockError::Unavailable))
+        ));
     }
 
     #[test]
     fn test_position_clock_forms_are_typed_errors() {
         let dated = position(ExpirationDate::DateTime(at()));
-        assert!(matches!(dated.days_held(), Err(PositionError::Options(_))));
+        assert!(matches!(dated.days_held(), Err(PositionError::Clock(_))));
         assert!(matches!(
             dated.days_to_expiration(),
-            Err(PositionError::Options(_))
+            Err(PositionError::Clock(_))
         ));
-        assert!(matches!(
-            dated.trade(),
-            Err(TradeError::InvalidTrade { .. })
-        ));
+        assert!(matches!(dated.trade(), Err(TradeError::Clock(_))));
     }
 
     #[test]

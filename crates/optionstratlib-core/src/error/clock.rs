@@ -9,13 +9,16 @@ use thiserror::Error;
 
 /// The current time was asked for and this build cannot provide it.
 ///
-/// The exhaustive error enums of this library carry it through their existing
-/// variants. In particular [`ExpirationDateError::InvalidDateTime`] holds its
-/// message, so a time-to-expiry that fails for lack of a clock arrives as
-/// `PricingError::ExpirationDate`, `GreeksError::ExpirationDate` and so on.
+/// [`crate::utils::time::now`], [`crate::utils::time::evaluation_time`] and
+/// [`crate::utils::time::resolution_base`] return it as such, and
+/// `TradeError`, `PositionError`, `ChainError`, `StrategyError` and
+/// `TransactionError` have a `Clock` variant for it.
 ///
-/// Only [`crate::utils::time::now`], [`crate::utils::time::evaluation_time`]
-/// and [`crate::utils::time::resolution_base`] return it as such.
+/// A time to expiry is different. `years_to_expiration` and its siblings return
+/// the `expiration_date` crate's own error, which cannot name this one, so
+/// [`ExpirationDateError::InvalidDateTime`] holds its message, and it arrives as
+/// `OptionsError::ExpirationDate`, `PricingError::Options`, `GreeksError::ExpirationDate`
+/// and so on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum ClockError {

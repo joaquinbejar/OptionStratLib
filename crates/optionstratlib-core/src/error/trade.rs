@@ -50,6 +50,10 @@ pub enum TradeError {
         /// The underlying arithmetic error.
         reason: String,
     },
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] crate::error::ClockError),
 }
 
 /// Helper methods for creating trading-related errors
@@ -131,16 +135,6 @@ impl From<&str> for TradeError {
 impl From<String> for TradeError {
     fn from(s: String) -> Self {
         TradeError::InvalidTrade { reason: s }
-    }
-}
-
-impl From<crate::error::ClockError> for TradeError {
-    #[cold]
-    #[inline(never)]
-    fn from(err: crate::error::ClockError) -> Self {
-        Self::InvalidTrade {
-            reason: err.to_string(),
-        }
     }
 }
 

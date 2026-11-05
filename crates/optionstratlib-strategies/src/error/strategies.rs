@@ -198,6 +198,10 @@ pub enum StrategyError {
         /// The strategy whose search found no candidate.
         strategy: StrategyType,
     },
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] optionstratlib_core::error::ClockError),
 }
 
 /// Represents different types of errors that can occur during price-related operations.
@@ -598,6 +602,7 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::NotImplemented => reason("Strategy not implemented".to_string()),
             StrategyError::GreeksError(err) => reason(err.to_string()),
             StrategyError::PositiveError(err) => reason(err.to_string()),
+            StrategyError::Clock(err) => reason(err.to_string()),
             StrategyError::NumericConversion { value } => reason(format!(
                 "numeric conversion failed: {value} is not a finite Decimal"
             )),
@@ -613,14 +618,6 @@ impl From<StrategyError> for ProbabilityError {
                 "no valid {strategy} candidate found by find_optimal"
             )),
         }
-    }
-}
-
-impl From<optionstratlib_core::error::ClockError> for StrategyError {
-    #[cold]
-    #[inline(never)]
-    fn from(err: optionstratlib_core::error::ClockError) -> Self {
-        OptionsError::from(err).into()
     }
 }
 

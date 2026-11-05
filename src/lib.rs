@@ -1117,8 +1117,9 @@
 //!   same decimal in every build.
 //! - **A `DateTime` expiration needs a time to measure from**: the thread's
 //!   reference datetime, from `ExpirationDate::set_reference_datetime`. With
-//!   none, a time to expiry is an error (`InvalidDateTime` in the crate's error,
-//!   for example `PricingError::Options`), never a made-up instant. The
+//!   none, a time to expiry is an error (`ExpirationDateError::InvalidDateTime`
+//!   inside the crate's error, for example `PricingError::Options`), never a made-up
+//!   instant. The
 //!   reference datetime belongs to one thread and is not seen by `rayon` workers.
 //! - **The `*_at` forms take the time as an argument** and exist in every build:
 //!   `Trade::new_at`, `Position::days_held_at`, `days_to_expiration_at` and
@@ -1130,7 +1131,8 @@
 //!   `expiration_date_string`, the replacements for `ExpirationDate::get_years`,
 //!   `get_days` and `get_date_string`, which exist only with the clock.
 //! - **Constructors that return a `Result` stay and return an error**: `Trade::new`
-//!   and each strategy's `new`. `get_strategy` works and keeps the date each leg
+//!   and each strategy's `new`, as `TradeError::Clock` and `StrategyError::Clock`;
+//!   `PositionError`, `ChainError` and `TransactionError` have the same variant. `get_strategy` works and keeps the date each leg
 //!   already carries.
 //! - **What cannot report an error needs the feature**: the `Default` of
 //!   `Position`, of the strategies, of `TradeRecord` and `PnLMetrics`;

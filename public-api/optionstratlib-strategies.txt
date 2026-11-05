@@ -21,6 +21,7 @@ pub optionstratlib_strategies::error::strategies::ProfitLossErrorKind::ProfitRan
 pub optionstratlib_strategies::error::strategies::ProfitLossErrorKind::ProfitRangeError::reason: alloc::string::String
 pub enum optionstratlib_strategies::error::strategies::StrategyError
 pub optionstratlib_strategies::error::strategies::StrategyError::BreakEvenError(optionstratlib_strategies::error::strategies::BreakEvenErrorKind)
+pub optionstratlib_strategies::error::strategies::StrategyError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_strategies::error::strategies::StrategyError::EmptyCollection
 pub optionstratlib_strategies::error::strategies::StrategyError::EmptyCollection::context: alloc::string::String
 pub optionstratlib_strategies::error::strategies::StrategyError::GreeksError(optionstratlib_pricing::error::greeks::GreeksError)
@@ -46,8 +47,6 @@ pub fn optionstratlib_strategies::error::strategies::StrategyError::missing_gree
 pub fn optionstratlib_strategies::error::strategies::StrategyError::no_valid_candidate(optionstratlib_strategies::strategies::base::StrategyType) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::numeric_conversion(f64) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
-impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_strategies::error::strategies::StrategyError
-pub fn optionstratlib_strategies::error::strategies::StrategyError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::error::strategies::StrategyError
 pub fn optionstratlib_strategies::error::strategies::StrategyError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_strategies::error::strategies::StrategyError
@@ -76,6 +75,7 @@ impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for
 pub fn optionstratlib_strategies::error::AdjustmentError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
 pub enum optionstratlib_strategies::error::StrategyError
 pub optionstratlib_strategies::error::StrategyError::BreakEvenError(optionstratlib_strategies::error::strategies::BreakEvenErrorKind)
+pub optionstratlib_strategies::error::StrategyError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_strategies::error::StrategyError::EmptyCollection
 pub optionstratlib_strategies::error::StrategyError::EmptyCollection::context: alloc::string::String
 pub optionstratlib_strategies::error::StrategyError::GreeksError(optionstratlib_pricing::error::greeks::GreeksError)
@@ -101,8 +101,6 @@ pub fn optionstratlib_strategies::error::strategies::StrategyError::missing_gree
 pub fn optionstratlib_strategies::error::strategies::StrategyError::no_valid_candidate(optionstratlib_strategies::strategies::base::StrategyType) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::numeric_conversion(f64) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
-impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_strategies::error::strategies::StrategyError
-pub fn optionstratlib_strategies::error::strategies::StrategyError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::error::strategies::StrategyError
 pub fn optionstratlib_strategies::error::strategies::StrategyError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_strategies::error::strategies::StrategyError

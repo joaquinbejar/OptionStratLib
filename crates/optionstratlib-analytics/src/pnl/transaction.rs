@@ -301,7 +301,7 @@ impl Transaction {
     ///
     /// # Errors
     ///
-    /// Returns [`TransactionError::Other`] in a build without the `clock`
+    /// Returns [`TransactionError::Clock`] in a build without the `clock`
     /// feature when the transaction has no time of its own.
     fn pnl_stamp(&self) -> Result<DateTime<Utc>, TransactionError> {
         match self.date_time {

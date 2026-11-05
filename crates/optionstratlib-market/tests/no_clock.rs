@@ -108,14 +108,55 @@ fn test_odte_delegates_to_odte_at() {
 #[cfg(not(feature = "clock"))]
 mod without_clock {
     use super::*;
-    use optionstratlib_core::error::ClockError;
+    use optionstratlib_core::error::{ClockError, PositionError};
+    use optionstratlib_core::model::{OptionStyle, OptionType, Options, Position, Side};
     use optionstratlib_core::utils::time::now;
+    use optionstratlib_market::chains::{OptionData, UpdateFromOptionData};
+    use optionstratlib_market::error::ChainError;
+    use rust_decimal::Decimal;
 
     /// Fails if anything in this configuration turned the clock on, the
     /// `io`, `synthetic` and `async` dependencies included.
     #[test]
     fn test_no_dependency_turns_the_clock_on() {
         assert_eq!(now(), Err(ClockError::Unavailable));
+    }
+
+    /// Refreshing a position re-stamps its open date, and there is no time to give it.
+    #[test]
+    fn test_update_from_option_data_is_a_typed_error() {
+        let mut position = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Long,
+                "TEST".to_string(),
+                Positive::HUNDRED,
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                Positive::ONE,
+                Positive::HUNDRED,
+                Decimal::ZERO,
+                OptionStyle::Call,
+                Positive::ZERO,
+                None,
+            ),
+            pos_or_panic!(5.0),
+            base(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        );
+        let updated = position.update_from_option_data(&OptionData::default());
+        assert!(matches!(updated, Err(PositionError::Clock(_))));
+    }
+
+    #[test]
+    fn test_chain_error_keeps_the_clock_error_as_such() {
+        assert!(matches!(
+            ChainError::from(ClockError::Unavailable),
+            ChainError::Clock(ClockError::Unavailable)
+        ));
     }
 
     /// `get_expiration_dates` has an error channel, so a `DateTime` is an error

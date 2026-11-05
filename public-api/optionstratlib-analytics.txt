@@ -344,6 +344,7 @@ pub fn optionstratlib_analytics::error::RNDError::invalid_parameters(&'static st
 impl core::convert::From<optionstratlib_market::error::chains::ChainError> for optionstratlib_analytics::error::RNDError
 pub fn optionstratlib_analytics::error::RNDError::from(optionstratlib_market::error::chains::ChainError) -> Self
 pub enum optionstratlib_analytics::error::TransactionError
+pub optionstratlib_analytics::error::TransactionError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_analytics::error::TransactionError::NotImplemented
 pub optionstratlib_analytics::error::TransactionError::NotImplemented::method: &'static str
 pub optionstratlib_analytics::error::TransactionError::NotImplemented::type_name: &'static str
@@ -355,8 +356,6 @@ impl optionstratlib_analytics::error::TransactionError
 pub fn optionstratlib_analytics::error::TransactionError::not_implemented(&'static str, &'static str) -> Self
 pub fn optionstratlib_analytics::error::TransactionError::other(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn optionstratlib_analytics::error::TransactionError::unsupported_option_type(option_type::option_type::OptionType) -> Self
-impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_analytics::error::TransactionError
-pub fn optionstratlib_analytics::error::TransactionError::from(optionstratlib_core::error::clock::ClockError) -> Self
 pub type optionstratlib_analytics::error::ProbabilityResult<T> = core::result::Result<T, optionstratlib_analytics::error::probability::ProbabilityError>
 pub mod optionstratlib_analytics::metrics
 pub mod optionstratlib_analytics::metrics::composite

@@ -443,6 +443,7 @@ pub enum optionstratlib_market::error::chains::ChainError
 pub optionstratlib_market::error::chains::ChainError::AtmNotFound
 pub optionstratlib_market::error::chains::ChainError::AtmNotFound::symbol: alloc::string::String
 pub optionstratlib_market::error::chains::ChainError::ChainBuildError(optionstratlib_market::error::chains::ChainBuildErrorKind)
+pub optionstratlib_market::error::chains::ChainError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_market::error::chains::ChainError::Curve(alloc::boxed::Box<optionstratlib_math::error::curves::CurveError>)
 pub optionstratlib_market::error::chains::ChainError::EmptyChain
 pub optionstratlib_market::error::chains::ChainError::EmptyChain::symbol: alloc::string::String
@@ -473,8 +474,6 @@ impl core::convert::From<core::num::error::ParseIntError> for optionstratlib_mar
 pub fn optionstratlib_market::error::chains::ChainError::from(core::num::error::ParseIntError) -> Self
 impl core::convert::From<csv::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(csv::error::Error) -> Self
-impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_market::error::chains::ChainError
-pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_market::error::chains::ChainError
@@ -526,6 +525,7 @@ pub enum optionstratlib_market::error::ChainError
 pub optionstratlib_market::error::ChainError::AtmNotFound
 pub optionstratlib_market::error::ChainError::AtmNotFound::symbol: alloc::string::String
 pub optionstratlib_market::error::ChainError::ChainBuildError(optionstratlib_market::error::chains::ChainBuildErrorKind)
+pub optionstratlib_market::error::ChainError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_market::error::ChainError::Curve(alloc::boxed::Box<optionstratlib_math::error::curves::CurveError>)
 pub optionstratlib_market::error::ChainError::EmptyChain
 pub optionstratlib_market::error::ChainError::EmptyChain::symbol: alloc::string::String
@@ -556,8 +556,6 @@ impl core::convert::From<core::num::error::ParseIntError> for optionstratlib_mar
 pub fn optionstratlib_market::error::chains::ChainError::from(core::num::error::ParseIntError) -> Self
 impl core::convert::From<csv::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(csv::error::Error) -> Self
-impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_market::error::chains::ChainError
-pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_market::error::chains::ChainError

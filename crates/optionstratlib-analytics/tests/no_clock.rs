@@ -50,7 +50,7 @@ mod without_clock {
     fn test_undated_transaction_is_a_typed_error() {
         assert!(matches!(
             transaction(None).pnl(),
-            Err(TransactionError::Other { .. })
+            Err(TransactionError::Clock(_))
         ));
     }
 }
