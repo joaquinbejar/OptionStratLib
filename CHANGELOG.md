@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Raw SVI volatility slice with weighted calibration** (#945), following
+  Gatheral and Jacquier, "Arbitrage-free SVI volatility surfaces"
+  (arXiv:1204.0646). In `optionstratlib_pricing::volatility` (also
+  `optionstratlib::volatility`). `SviParameters::try_new(a, b, rho, m, sigma)`
+  validates `b >= 0`, `|rho| < 1`, `sigma > 0` and
+  `a + b * sigma * sqrt(1 - rho^2) >= 0`. `SviSlice` adds a forward and a time
+  to expiry, and gives total variance and implied volatility by log moneyness
+  or by strike. `calibrate_svi` takes `SviObservation`s (strike, implied
+  volatility, weight) and an `SviCalibrationConfig`, and returns an `SviFit`
+  with the slice, one residual per observation, the weighted RMSE in implied
+  volatility, the same over the mean quote, and the iterations run. The method
+  is quasi-explicit and deterministic, with no random numbers and no new
+  dependency: a weighted least squares in total variance for fixed `(m, sigma)`, with the parameter bounds
+  enforced on the boundary, under a Nelder-Mead on `(m, ln sigma)` from a fixed
+  grid of starts. On noiseless quotes from a known slice the tests recover the
+  parameters within `1e-6` and the implied volatility within `1e-8`, wings
+  included. There is no flat fallback: a fit is checked against
+  `max_relative_rmse` (default 3%), its weighted RMSE in implied volatility over
+  the weighted mean observed implied volatility of the points with a positive
+  weight, and above it the fit is an error naming the relative RMSE, the limit
+  and the RMSE. A raw SVI slice is convex in `k`, so a frown has no better slice
+  than a flat one, and a flat result can only be returned when the quotes are
+  flat within that limit. This is the only judgement of a fit: there is no
+  heuristic on curvature or structure, a fit within the limit is not otherwise
+  judged good, and the caller tightens or loosens it. A calibrated slice is not
+  claimed free of arbitrage. Failures are a new `#[non_exhaustive]` `SviError`:
+  invalid parameters or configuration, too few observations or distinct strikes,
+  zero total weight, no convergence, no feasible point, relative RMSE above the
+  limit and non-finite kernel values. The aggregate
+  `optionstratlib::error::Error` has no variant for it yet, since adding one to that exhaustive enum is breaking; #944
+  adds it with the 0.24.0 bump. Runnable example: `svi_calibration` in
+  `examples_pricing`.
+
 ### Changed — breaking
 
 - **`ImpliedVolatilitySurface::iv_surface` is now

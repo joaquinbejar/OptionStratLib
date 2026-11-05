@@ -43,6 +43,13 @@ pub mod greeks;
 /// * Generic pricing-related errors
 mod pricing;
 
+/// ### SVI Errors (`SviError`)
+/// Handles:
+/// * Raw SVI parameter validation
+/// * SVI slice evaluation
+/// * SVI calibration failures
+mod svi;
+
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
 /// * Implied volatility calculation failures
@@ -52,4 +59,5 @@ mod volatility;
 
 pub use greeks::{GreeksError, GreeksResult};
 pub use pricing::{PricingError, PricingResult};
+pub use svi::SviError;
 pub use volatility::VolatilityError;

@@ -60,6 +60,7 @@ pub use optionstratlib::error::SimulationResult
 pub use optionstratlib::error::StrategyError
 pub use optionstratlib::error::StrategyResult
 pub use optionstratlib::error::SurfaceError
+pub use optionstratlib::error::SviError
 pub use optionstratlib::error::TradeError
 pub use optionstratlib::error::TransactionError
 pub use optionstratlib::error::VolatilityError

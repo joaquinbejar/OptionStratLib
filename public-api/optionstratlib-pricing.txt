@@ -153,6 +153,50 @@ impl core::convert::From<optionstratlib_pricing::error::PricingError> for option
 pub fn optionstratlib_core::error::options::OptionsError::from(optionstratlib_pricing::error::PricingError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::PricingError> for optionstratlib_pricing::error::greeks::GreeksError
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::PricingError) -> Self
+#[non_exhaustive] pub enum optionstratlib_pricing::error::SviError
+pub optionstratlib_pricing::error::SviError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes
+pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::distinct: usize
+pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::required: usize
+pub optionstratlib_pricing::error::SviError::InvalidConfig
+pub optionstratlib_pricing::error::SviError::InvalidConfig::parameter: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidConfig::reason: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidConfig::value: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::SviError::InvalidObservation
+pub optionstratlib_pricing::error::SviError::InvalidObservation::index: usize
+pub optionstratlib_pricing::error::SviError::InvalidObservation::reason: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidParameter
+pub optionstratlib_pricing::error::SviError::InvalidParameter::parameter: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidParameter::reason: &'static str
+pub optionstratlib_pricing::error::SviError::InvalidParameter::value: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::SviError::NegativeMinimumVariance
+pub optionstratlib_pricing::error::SviError::NegativeMinimumVariance::minimum: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::SviError::NegativeTotalVariance
+pub optionstratlib_pricing::error::SviError::NegativeTotalVariance::log_moneyness: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::SviError::NegativeTotalVariance::total_variance: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::SviError::NoConvergence
+pub optionstratlib_pricing::error::SviError::NoConvergence::iterations: u64
+pub optionstratlib_pricing::error::SviError::NoConvergence::limit: u64
+pub optionstratlib_pricing::error::SviError::NoFeasibleFit
+pub optionstratlib_pricing::error::SviError::NoFeasibleFit::reason: alloc::string::String
+pub optionstratlib_pricing::error::SviError::NonFinite
+pub optionstratlib_pricing::error::SviError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::SviError::NonFinite::value: f64
+pub optionstratlib_pricing::error::SviError::NonPositiveTotalWeight
+pub optionstratlib_pricing::error::SviError::Positive(positive::error::PositiveError)
+pub optionstratlib_pricing::error::SviError::RmseAboveLimit
+pub optionstratlib_pricing::error::SviError::RmseAboveLimit::limit: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::RmseAboveLimit::relative_rmse: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::RmseAboveLimit::rmse: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::TooFewObservations
+pub optionstratlib_pricing::error::SviError::TooFewObservations::got: usize
+pub optionstratlib_pricing::error::SviError::TooFewObservations::required: usize
+pub optionstratlib_pricing::error::SviError::ZeroForward
+pub optionstratlib_pricing::error::SviError::ZeroStrike
+pub optionstratlib_pricing::error::SviError::ZeroStrike::strike: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::ZeroTimeToExpiry
+impl optionstratlib_pricing::error::SviError
+pub fn optionstratlib_pricing::error::SviError::non_finite(&'static str, f64) -> Self
 pub enum optionstratlib_pricing::error::VolatilityError
 pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable
 pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable::source: alloc::boxed::Box<optionstratlib_pricing::error::VolatilityError>
@@ -578,6 +622,49 @@ pub fn optionstratlib_pricing::pricing::spread_black_scholes(&optionstratlib_cor
 pub fn optionstratlib_pricing::pricing::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub type optionstratlib_pricing::pricing::ClosedFormEngine = optionstratlib_pricing::pricing::unified::GenericPricingEngine<optionstratlib_pricing::pricing::unified::NoMonteCarlo>
 pub mod optionstratlib_pricing::volatility
+pub struct optionstratlib_pricing::volatility::SviCalibrationConfig
+pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_iterations: core::num::nonzero::NonZeroU64
+pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_relative_rmse: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviCalibrationConfig::tolerance: positive::positive::Positive
+impl core::default::Default for optionstratlib_pricing::volatility::SviCalibrationConfig
+pub fn optionstratlib_pricing::volatility::SviCalibrationConfig::default() -> Self
+pub struct optionstratlib_pricing::volatility::SviFit
+impl optionstratlib_pricing::volatility::SviFit
+pub fn optionstratlib_pricing::volatility::SviFit::iterations(&self) -> u64
+pub fn optionstratlib_pricing::volatility::SviFit::relative_rmse(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SviFit::residuals(&self) -> &[optionstratlib_pricing::volatility::SviResidual]
+pub fn optionstratlib_pricing::volatility::SviFit::rmse(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SviFit::slice(&self) -> &optionstratlib_pricing::volatility::SviSlice
+pub struct optionstratlib_pricing::volatility::SviObservation
+pub optionstratlib_pricing::volatility::SviObservation::implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviObservation::strike: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviObservation::weight: positive::positive::Positive
+pub struct optionstratlib_pricing::volatility::SviParameters
+impl optionstratlib_pricing::volatility::SviParameters
+pub fn optionstratlib_pricing::volatility::SviParameters::a(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SviParameters::b(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SviParameters::m(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SviParameters::rho(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SviParameters::sigma(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SviParameters::total_variance(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviParameters::try_new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_pricing::error::SviError>
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::SviResidual
+pub optionstratlib_pricing::volatility::SviResidual::fitted_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviResidual::log_moneyness: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SviResidual::observed_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviResidual::residual: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SviResidual::strike: positive::positive::Positive
+pub struct optionstratlib_pricing::volatility::SviSlice
+impl optionstratlib_pricing::volatility::SviSlice
+pub fn optionstratlib_pricing::volatility::SviSlice::forward(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SviSlice::implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviSlice::implied_volatility_at_strike(&self, positive::positive::Positive) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviSlice::log_moneyness(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviSlice::parameters(&self) -> optionstratlib_pricing::volatility::SviParameters
+pub fn optionstratlib_pricing::volatility::SviSlice::time_to_expiry(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SviSlice::total_variance(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_at_strike(&self, positive::positive::Positive) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::SviError>
+pub fn optionstratlib_pricing::volatility::SviSlice::try_new(optionstratlib_pricing::volatility::SviParameters, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_pricing::error::SviError>
 pub trait optionstratlib_pricing::volatility::AtmIvProvider
 pub fn optionstratlib_pricing::volatility::AtmIvProvider::atm_iv(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 impl optionstratlib_pricing::volatility::AtmIvProvider for positive::positive::Positive
@@ -587,6 +674,7 @@ pub fn optionstratlib_pricing::volatility::VolatilitySmile::smile(&self) -> opti
 pub fn optionstratlib_pricing::volatility::adjust_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 pub fn optionstratlib_pricing::volatility::annualized_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 pub fn optionstratlib_pricing::volatility::calculate_iv(positive::positive::Positive, positive::positive::Positive, financial_types::OptionStyle, positive::positive::Positive, positive::positive::Positive, alloc::string::String) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::calibrate_svi(&[optionstratlib_pricing::volatility::SviObservation], positive::positive::Positive, positive::positive::Positive, &optionstratlib_pricing::volatility::SviCalibrationConfig) -> core::result::Result<optionstratlib_pricing::volatility::SviFit, optionstratlib_pricing::error::SviError>
 pub fn optionstratlib_pricing::volatility::constant_volatility(&[rust_decimal::decimal::Decimal]) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 pub fn optionstratlib_pricing::volatility::de_annualized_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 pub fn optionstratlib_pricing::volatility::ewma_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_pricing::error::VolatilityError>
