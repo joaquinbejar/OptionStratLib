@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A build without the wall clock** (#944), for simulators, replay engines and
+  anything else that must be deterministic. New `clock` feature on the facade and
+  on `optionstratlib-core`, `-pricing`, `-simulation`, `-market`, `-analytics`,
+  `-strategies`, `-backtest` and `-visualization`, in `default` everywhere and
+  forwarded down; `optionstratlib-math` reads no clock and has none. With it off,
+  `cargo tree -e features -i chrono` shows no `clock` in any published crate or
+  facade combination, and `make check-no-clock` and the `No clock` CI job assert
+  that and lint, build and test those builds. A `Days` expiration prices to the
+  same decimal in every build; a `DateTime` measures from the thread's reference
+  datetime, and with none it is a typed error, never a made-up instant. New in
+  `optionstratlib_core::utils::time`, in every build: `now`, `now_or`,
+  `evaluation_time`, `resolution_base`, `years_to_expiration`, `days_to_expiration`
+  and `expiration_date_string`; with `clock`, `wall_clock`. New pure forms that take
+  the time: `Trade::new_at`, `Position::blank_at`, `days_held_at`,
+  `days_to_expiration_at` and `trade_at`, `new_at` on every strategy with a public
+  `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
+  `ClockError` in `optionstratlib_core::error`, also at `optionstratlib::error`: the
+  exhaustive error enums carry it through `ExpirationDateError::InvalidDateTime` or
+  an existing variant, so no variant is added until the 0.24.0 bump (#947). See
+  "Building without the clock" in the crate documentation.
 - **Raw SVI volatility slice with weighted calibration** (#945), following
   Gatheral and Jacquier, "Arbitrage-free SVI volatility surfaces"
   (arXiv:1204.0646). In `optionstratlib_pricing::volatility` (also
@@ -93,6 +113,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `examples_pricing`.
 
 ### Changed — breaking
+
+- **`expiration_date` 0.6 and `option_type` 0.6** (#944). Breaking, and released
+  with the 0.24.0 bump (#947):
+  - `ExpirationDate`'s `Ord` no longer reads the clock: every `Days` sorts before
+    every `DateTime`, where a mixed comparison used to go by instant. In this
+    library that changes the order of a `BTreeMap<ExpirationDate, _>` holding both
+    variants, so `OptionSeries::chains`, `get_expiration_dates` and the chain
+    `to_build_params` uses, and `OptionChain`'s `Ord` on chains whose
+    `expiration_date` strings mix a day count and a date; both are unchanged for one
+    variant, which is all `build_series` and deserialization produce.
+    `OptionSeries::odte` keeps comparing in time, through `cmp_at`. Compare mixed
+    variants with `ExpirationDate::cmp_at`.
+  - `ExpirationDate::from_string` and `get_days` no longer write the thread's
+    reference datetime. Before, parsing a date or asking a `DateTime` for its days
+    silently moved what every later `Days` on that thread resolved to. Call
+    `set_reference_datetime` where that was relied on. No code in this repository
+    was.
+  - `get_years`, `get_days`, `get_date`, `get_date_string` and `from_string_to_days`
+    exist only with the `clock` feature of `expiration_date`.
+- **`default-features = false` now also drops the clock** (#944). Breaking for a
+  consumer that named its capabilities, and released with the 0.24.0 bump (#947):
+  `optionstratlib = { default-features = false, features = ["pricing"] }` must add
+  `"clock"` to keep reading the time. The components depend on each other without
+  default features, and a direct dependency on a component keeps the clock through
+  its own default. Without the feature, `Trade::new`, each strategy's `new` and the
+  other constructors that return a `Result` give a typed error, and the items with
+  no error channel do not exist: `Default` for `Position`, the strategies,
+  `TradeRecord` and `PnLMetrics`, `long` and `short` on the spot, future and
+  perpetual legs, `create_sample_position`, `get_today_formatted`,
+  `get_today_or_tomorrow_formatted` and `From<PathOutcome> for SimulationResult`.
+- `Strategy::new` opens all the legs of one call at one instant rather than reading
+  the clock once per leg, and `SimulationStatsResult::from_outcomes` stamps all its
+  results with one instant (#944).
 
 - **`ImpliedVolatilitySurface::iv_surface` is now
   `HorizonVolatilitySurface::horizon_volatility_surface`** (#948). It

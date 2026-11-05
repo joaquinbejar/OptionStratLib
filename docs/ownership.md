@@ -74,6 +74,7 @@ component feature.
 | Plotly rendering and trace builders | `optionstratlib_visualization::visualization::make_scatter` | `optionstratlib::visualization::make_scatter` | plotly | `optionstratlib-visualization/plotly` |
 | PNG and SVG export | `optionstratlib_visualization::visualization::Graph::write_png` | `optionstratlib::visualization::Graph::write_png` | static_export | `optionstratlib-visualization/static_export` |
 | `utoipa::ToSchema` derives on domain types | `optionstratlib_core::model::Options` | `optionstratlib::model::Options` | schema | `optionstratlib-core/schema` |
+| The wall clock: the constructors that read it succeed, `Default` of a position and of a strategy, `ExpirationDate::get_years` and friends | `optionstratlib_core::utils::time::wall_clock` | `optionstratlib::utils::time::wall_clock` | clock | `optionstratlib-core/clock` |
 
 The facade has no `parallel` feature: it was reserved and is retired
 (#832), and `rayon` is a mandatory dependency.
@@ -91,6 +92,7 @@ and `optionstratlib::error::OperationErrorKind`.
 
 | Error | Owner package | Direct import | Facade path | Facade feature | Kind module |
 | --- | --- | --- | --- | --- | --- |
+| `ClockError` | `optionstratlib-core` | `optionstratlib_core::error::ClockError` | `optionstratlib::error::ClockError` | always | — |
 | `DecimalError` | `optionstratlib-core` | `optionstratlib_core::error::DecimalError` | `optionstratlib::error::DecimalError` | always | — |
 | `OptionsError` | `optionstratlib-core` | `optionstratlib_core::error::OptionsError` | `optionstratlib::error::OptionsError` | always | — |
 | `PositionError` | `optionstratlib-core` | `optionstratlib_core::error::PositionError` | `optionstratlib::error::PositionError` | always | `position` |
