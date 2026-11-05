@@ -7,7 +7,6 @@ aes -> cipher
 aes -> cpubits
 aes -> cpufeatures
 aes -> zeroize
-android_system_properties -> libc
 approx -> num-traits
 block-buffer -> hybrid-array
 block-buffer -> zeroize
@@ -19,12 +18,8 @@ cc -> shlex
 chacha20 -> cfg-if
 chacha20 -> cpufeatures
 chacha20 -> rand_core
-chrono -> iana-time-zone
-chrono -> js-sys
 chrono -> num-traits
 chrono -> serde
-chrono -> wasm-bindgen
-chrono -> windows-link
 cipher -> crypto-common
 cipher -> inout
 constant_time_eq -> rustversion
@@ -69,14 +64,6 @@ getrandom -> rand_core
 getrandom -> wasm-bindgen
 hmac -> digest
 hybrid-array -> typenum
-iana-time-zone -> android_system_properties
-iana-time-zone -> core-foundation-sys
-iana-time-zone -> iana-time-zone-haiku
-iana-time-zone -> js-sys
-iana-time-zone -> log
-iana-time-zone -> wasm-bindgen
-iana-time-zone -> windows-core
-iana-time-zone-haiku -> cc
 indexmap -> equivalent
 indexmap -> hashbrown
 inout -> hybrid-array
@@ -287,19 +274,6 @@ wasm-bindgen-macro-support -> wasm-bindgen-shared
 wasm-bindgen-shared -> unicode-ident
 wide -> bytemuck
 wide -> safe_arch
-windows-core -> windows-implement
-windows-core -> windows-interface
-windows-core -> windows-link
-windows-core -> windows-result
-windows-core -> windows-strings
-windows-implement -> proc-macro2
-windows-implement -> quote
-windows-implement -> syn
-windows-interface -> proc-macro2
-windows-interface -> quote
-windows-interface -> syn
-windows-result -> windows-link
-windows-strings -> windows-link
 windows-sys -> windows-link
 zip -> aes
 zip -> bzip2
@@ -333,7 +307,6 @@ zstd-sys -> cc
 zstd-sys -> pkg-config
 
 aes [zeroize]
-android_system_properties []
 approx [default,std]
 arrayvec [std]
 autocfg []
@@ -347,12 +320,11 @@ cc [parallel]
 cfg-if []
 cfg_aliases []
 chacha20 [rng]
-chrono [alloc,clock,default,iana-time-zone,js-sys,now,oldtime,serde,std,wasm-bindgen,wasmbind,winapi,windows-link]
+chrono [alloc,serde,std]
 cipher []
 cmov []
 const-oid []
 constant_time_eq [default,std]
-core-foundation-sys [default,link]
 cpubits []
 cpufeatures []
 crc32fast [default,std]
@@ -369,7 +341,7 @@ digest [alloc,block-api,default,mac,oid,zeroize]
 either [std,use_std]
 equivalent []
 errno [default,std]
-expiration_date [default]
+expiration_date []
 financial_types [default,std]
 find-msvc-tools []
 flate2 [any_impl,any_zlib,zlib-rs]
@@ -380,8 +352,6 @@ getrandom [std,sys_rng,wasm_js]
 hashbrown []
 hmac [zeroize]
 hybrid-array []
-iana-time-zone [fallback]
-iana-time-zone-haiku []
 indexmap [default,std]
 inout []
 itertools [default,use_alloc,use_std]
@@ -405,12 +375,12 @@ num-integer [i128,std]
 num-rational [std]
 num-traits [default,i128,libm,std]
 once_cell [alloc,default,race,std]
-option_type [default]
+option_type []
 optionstratlib [async,io,market,math,pricing]
-optionstratlib-core [default]
-optionstratlib-market [async,default,io]
-optionstratlib-math [default]
-optionstratlib-pricing [default]
+optionstratlib-core []
+optionstratlib-market [async,io]
+optionstratlib-math []
+optionstratlib-pricing []
 parking_lot [default]
 parking_lot_core []
 pbkdf2 [default,hmac]
@@ -464,17 +434,12 @@ typenum [const-generics]
 unicode-ident []
 uuid [default,rng,serde,std,v4]
 wasi [default,std]
-wasm-bindgen [default,std]
+wasm-bindgen [std]
 wasm-bindgen-macro []
 wasm-bindgen-macro-support []
 wasm-bindgen-shared []
 wide [std]
-windows-core [default,std]
-windows-implement []
-windows-interface []
 windows-link []
-windows-result [std]
-windows-strings [std]
 windows-sys [Wdk,Wdk_Foundation,Wdk_Storage,Wdk_Storage_FileSystem,Wdk_System,Wdk_System_IO,Win32,Win32_Foundation,Win32_Networking,Win32_Networking_WinSock,Win32_Security,Win32_Security_Authorization,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,Win32_System_Diagnostics,Win32_System_Diagnostics_Debug,Win32_System_IO,Win32_System_Pipes,Win32_System_SystemServices,Win32_System_Threading,Win32_System_WindowsProgramming,default]
 zeroize [alloc,default]
 zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,lzma,ppmd,time,xz,zstd]
