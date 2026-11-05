@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`ImpliedVolatilitySurface::iv_surface` reports annualized implied
+  volatility** (#948). It multiplied each volatility by `sqrt(days / 365)`,
+  so a flat 20% chain came back as about 5.7% at 30 days. **Results change**:
+  a flat 20% chain now gives 20% at every expiry. One chain holds one expiry,
+  so the term structure is assumed flat, not observed; this is not a
+  calibrated surface. A caller who wants the volatility over a horizon
+  multiplies by `sqrt(days / 365)` itself.
+
 ## [0.23.1] - 2026-10-26
 
 Only `optionstratlib-visualization` is released at 0.23.1; the other nine

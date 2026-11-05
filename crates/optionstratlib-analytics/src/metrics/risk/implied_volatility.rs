@@ -44,9 +44,6 @@ use optionstratlib_math::error::CurveError;
 use optionstratlib_math::error::SurfaceError;
 use optionstratlib_math::surfaces::Surface;
 
-#[cfg(test)]
-use rust_decimal::MathematicalOps;
-
 /// A trait for computing implied volatility curves by strike price.
 ///
 /// The implied volatility curve shows how IV varies across different strike
@@ -118,7 +115,10 @@ pub trait ImpliedVolatilityCurve {
 /// A `Surface` where:
 /// - **X-axis**: Strike price in currency units
 /// - **Y-axis**: Days to expiration
-/// - **Z-axis**: Implied volatility as a decimal
+/// - **Z-axis**: Annualized implied volatility as a decimal
+///
+/// The output is annualized at every expiry. An implementation over a single
+/// expiry assumes a flat term structure; it is not a calibrated surface.
 ///
 /// # Example
 ///
@@ -160,7 +160,6 @@ mod tests_implied_volatility_traits {
     use optionstratlib_core::pos_or_panic;
     use optionstratlib_math::curves::Point2D;
     use optionstratlib_math::surfaces::Point3D;
-    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 
@@ -194,9 +193,7 @@ mod tests_implied_volatility_traits {
 
             for (strike, base_iv) in strikes.iter().zip(base_ivs.iter()) {
                 for days in &days_to_expiry {
-                    let time_factor = (days.to_dec() / dec!(365.0)).sqrt().unwrap_or(Decimal::ONE);
-                    let adjusted_iv = *base_iv * time_factor;
-                    points.insert(Point3D::new(*strike, days.to_dec(), adjusted_iv));
+                    points.insert(Point3D::new(*strike, days.to_dec(), *base_iv));
                 }
             }
 
@@ -247,7 +244,7 @@ mod tests_implied_volatility_traits {
     }
 
     #[test]
-    fn test_iv_surface_time_scaling() {
+    fn test_iv_surface_one_point_per_expiry() {
         let iv = TestIVSurface;
         let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
         let surface = iv.iv_surface(days).unwrap();
@@ -255,7 +252,7 @@ mod tests_implied_volatility_traits {
         // Find points at same strike but different times
         let points: Vec<&Point3D> = surface.points.iter().collect();
 
-        // Points at strike 100 should show time scaling
+        // Strike 100 has one point per requested expiry
         let strike_100_points: Vec<&&Point3D> =
             points.iter().filter(|p| p.x == dec!(100.0)).collect();
 

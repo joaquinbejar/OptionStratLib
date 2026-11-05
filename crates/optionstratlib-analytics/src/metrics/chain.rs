@@ -364,8 +364,9 @@ impl ImpliedVolatilitySurface for OptionChain {
     /// Computes the implied volatility surface (strike vs time) for this option chain.
     ///
     /// Creates a 3D surface showing how implied volatility varies across both strike
-    /// prices and time to expiration. The IV is scaled using the square root of time
-    /// rule to project values across different time horizons.
+    /// prices and the requested expiries. Every z value is the annualized implied
+    /// volatility quoted in this chain, unscaled: a chain holds one expiry, so
+    /// the term structure is assumed flat and is not observed or calibrated.
     ///
     /// # Parameters
     ///
@@ -396,26 +397,10 @@ impl ImpliedVolatilitySurface for OptionChain {
             }
 
             for days in &days_to_expiry {
-                // Scale IV using square root of time rule
-                // This projects the current IV to different time horizons
-                // Dividing by a constant above one cannot leave the range.
-                let time_factor = d_sqrt(
-                    d_div(days.to_dec(), dec!(365.0), "metrics::chain::iv_time_factor")
-                        .map_err(surface_math)?,
-                    "metrics::chain::iv_time_factor",
-                )
-                .map_err(surface_math)?;
-                let adjusted_iv = d_mul(
-                    opt.implied_volatility.to_dec(),
-                    time_factor,
-                    "metrics::chain::iv_surface",
-                )
-                .map_err(surface_math)?;
-
                 points.insert(Point3D::new(
                     opt.strike_price.to_dec(),
                     days.to_dec(),
-                    adjusted_iv,
+                    opt.implied_volatility.to_dec(),
                 ));
             }
         }
@@ -2232,10 +2217,16 @@ mod tests_panic_freedom {
             None,
             None,
         );
-        assert!(matches!(
-            max_iv.iv_surface(vec![Positive::MAX]),
-            Err(SurfaceError::AnalysisError(_))
-        ));
+        // The annualized volatility is reported as quoted, so nothing can overflow.
+        let surface = max_iv
+            .iv_surface(vec![Positive::MAX])
+            .expect("no arithmetic");
+        assert!(
+            surface
+                .points
+                .iter()
+                .all(|point| point.z == Positive::MAX.to_dec())
+        );
     }
 }
 

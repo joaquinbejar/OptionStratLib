@@ -161,22 +161,35 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
-    fn test_iv_surface_time_scaling() {
-        let chain = create_test_chain();
-        let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
+    fn test_iv_surface_is_annualized_at_every_expiry() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos_or_panic!(100.0),
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        chain.add_option(
+            pos_or_panic!(100.0),
+            None,
+            None,
+            None,
+            None,
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let days = [7.0, 30.0, 90.0, 365.0]
+            .map(|day| pos_or_panic!(day))
+            .to_vec();
         let surface = chain.iv_surface(days).unwrap();
 
-        // Verify that longer-dated IVs are scaled appropriately
-        // sqrt(90/365) / sqrt(30/365) ≈ 1.73
-        let points: Vec<_> = surface.points.iter().collect();
-
-        // Find points at same strike but different times
-        let strike_100_points: Vec<_> = points
-            .iter()
-            .filter(|p| (p.x - dec!(100.0)).abs() < dec!(0.01))
-            .collect();
-
-        assert_eq!(strike_100_points.len(), 2);
+        assert_eq!(surface.points.len(), 4);
+        assert!(surface.points.iter().all(|point| point.z == dec!(0.2)));
     }
 
     #[test]
