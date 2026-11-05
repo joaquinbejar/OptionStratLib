@@ -597,7 +597,7 @@ impl OptionChainProjections for OptionChain {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_basic_curves {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -797,7 +797,7 @@ mod tests_basic_curves {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_option_chain_surfaces {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -1059,7 +1059,7 @@ mod tests_option_chain_surfaces {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_option_chain_time_surfaces {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -1352,9 +1352,11 @@ mod tests_gamma_calculations_projections {
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::get_x_days_formatted;
 
     // Helper function to create a test chain with predefined gamma values
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1368,6 +1370,7 @@ mod tests_gamma_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_gamma_curve() {
         let mut chain = create_test_chain_with_gamma();
@@ -1429,6 +1432,7 @@ mod tests_delta_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_curve() {
         let mut chain = create_test_chain_with_delta();
@@ -1514,6 +1518,7 @@ mod tests_vega_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_curve() {
         let mut chain = create_test_chain_with_vega();
@@ -1599,6 +1604,7 @@ mod tests_theta_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve() {
         let mut chain = create_test_chain_with_theta();
@@ -1915,7 +1921,7 @@ mod tests_color_calculations_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod chain_coverage_tests_projections {
     #![allow(clippy::indexing_slicing)]
 
@@ -1988,7 +1994,7 @@ mod chain_coverage_tests_projections {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod chain_coverage_tests_bis_projections {
     use super::OptionChainProjections;
     use optionstratlib_core::model::ExpirationDate;

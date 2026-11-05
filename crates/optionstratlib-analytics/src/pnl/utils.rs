@@ -83,6 +83,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -95,6 +96,7 @@ impl PnL {
     ///     pos_or_panic!(350.0),        // Initial income
     ///     Utc::now(),         // Current timestamp
     /// );
+    /// # }
     /// ```
     #[inline]
     #[must_use]
@@ -124,6 +126,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -138,6 +141,7 @@ impl PnL {
     /// );
     ///
     /// assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    /// # }
     /// ```
     #[inline]
     #[must_use]
@@ -176,6 +180,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -187,6 +192,7 @@ impl PnL {
     ///
     /// let total = a.try_add(&b)?;
     /// assert_eq!(total.realized, Some(dec!(750.0)));
+    /// # }
     /// # Ok::<(), optionstratlib_pricing::error::PricingError>(())
     /// ```
     pub fn try_add(&self, other: &PnL) -> Result<PnL, PricingError> {
@@ -246,7 +252,7 @@ impl TryFrom<&Trade> for PnL {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_sum {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -366,7 +372,7 @@ mod tests_sum {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_add {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -480,7 +486,7 @@ mod tests_add {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_total_pnl {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -560,7 +566,7 @@ mod tests_total_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_try_from_trade {
     use super::*;
     use optionstratlib_core::model::TradeStatus;

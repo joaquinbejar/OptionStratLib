@@ -25,6 +25,8 @@
 //! payoff chart, lives in `optionstratlib-visualization`
 //! (`tests/strategies_panic_freedom_test.rs`) beside `Graph`.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::pnl::PnLCalculator;
 use optionstratlib_core::model::leg::SpotPosition;
 use optionstratlib_core::model::types::Action;

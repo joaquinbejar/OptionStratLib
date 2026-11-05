@@ -29,6 +29,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
 };
 use optionstratlib_core::model::types::OptionType;
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -95,9 +96,7 @@ fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, Prici
     dates.sort_by(f64::total_cmp);
 
     // Total expiration in years
-    let t_total = option
-        .expiration_date
-        .get_years()
+    let t_total = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     // Convert reset dates from days to years

@@ -32,6 +32,7 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -107,7 +108,7 @@ pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let r_d = option.risk_free_rate;
     let q = Decimal::from(option.dividend_yield);
     let sigma_s = Decimal::from(option.implied_volatility);
-    let t = Decimal::from(option.expiration_date.get_years()?);
+    let t = Decimal::from(years_to_expiration(&option.expiration_date)?);
 
     if t <= dec!(0.0) {
         let intrinsic = match option.option_style {

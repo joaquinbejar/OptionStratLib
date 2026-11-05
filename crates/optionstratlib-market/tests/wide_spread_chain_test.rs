@@ -13,6 +13,8 @@
 //! truncated the chain: the cheap out-of-the-money wings — the long legs of
 //! every defined-risk structure — disappeared exactly as they decayed.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};
 use optionstratlib_market::chains::OptionChain;

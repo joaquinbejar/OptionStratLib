@@ -443,7 +443,7 @@ mod tests_options {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_expiration_date {
 
     use chrono::{Duration, NaiveDate, TimeZone, Utc};

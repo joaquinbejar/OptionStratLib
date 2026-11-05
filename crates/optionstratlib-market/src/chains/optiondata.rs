@@ -13,6 +13,7 @@ use optionstratlib_core::model::Position;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::utils::sub_floor_zero;
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, Options, Side};
+use optionstratlib_core::utils::time::now;
 use optionstratlib_pricing::greeks::{Greeks, GreeksSnapshot, delta, gamma};
 use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
@@ -965,11 +966,7 @@ impl OptionData {
                 Positive::new_decimal(premium_dec)?
             }
         };
-        let date = if let Some(date) = date {
-            date
-        } else {
-            Utc::now()
-        };
+        let date = if let Some(date) = date { date } else { now()? };
         let open_fee = if let Some(open_fee) = open_fee {
             open_fee
         } else {
@@ -1934,7 +1931,7 @@ mod tests_greeks_snapshot {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_get_position {
     use super::*;
     use chrono::{Duration, Utc};

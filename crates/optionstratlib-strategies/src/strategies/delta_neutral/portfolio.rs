@@ -527,7 +527,7 @@ impl fmt::Display for AdjustmentTarget {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_portfolio_greeks {
     use super::*;
     use chrono::Utc;

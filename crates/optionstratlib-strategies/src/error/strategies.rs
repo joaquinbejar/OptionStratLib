@@ -616,6 +616,14 @@ impl From<StrategyError> for ProbabilityError {
     }
 }
 
+impl From<optionstratlib_core::error::ClockError> for StrategyError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_core::error::ClockError) -> Self {
+        OptionsError::from(err).into()
+    }
+}
+
 #[cfg(test)]
 mod tests_from_str {
     use super::*;

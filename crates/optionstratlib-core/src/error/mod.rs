@@ -32,6 +32,10 @@
 //! use optionstratlib_core::error::trade::TradeError;
 //! ```
 
+/// ### Clock Errors (`ClockError`)
+/// The current time was asked for in a build without the `clock` feature.
+mod clock;
+
 /// ### Common error kinds (`OperationErrorKind`)
 /// Provides a common set of error kinds used across various modules:
 /// * Validation failures
@@ -78,6 +82,7 @@ mod settlement;
 /// * Trade parameter validation
 mod trade;
 
+pub use clock::ClockError;
 pub use common::OperationErrorKind;
 pub use decimal::{DecimalError, DecimalResult};
 pub use options::{OptionsError, OptionsResult};

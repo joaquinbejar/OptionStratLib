@@ -252,6 +252,14 @@ impl From<PricingError> for OptionsError {
     }
 }
 
+impl From<optionstratlib_core::error::ClockError> for PricingError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_core::error::ClockError) -> Self {
+        Self::ExpirationDate(err.into())
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests_pricing_non_finite {

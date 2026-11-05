@@ -20,10 +20,10 @@ publish = false
 description = "Prototype for #920: native PNG/SVG export with Plotters, compared with the Plotly static export (baseline retired in #927)."
 
 [dependencies]
-optionstratlib-core = { workspace = true }
-optionstratlib-pricing = { workspace = true }
-optionstratlib-strategies = { workspace = true }
-optionstratlib-visualization = { workspace = true }
+optionstratlib-core = { workspace = true, features = ["clock"] }
+optionstratlib-pricing = { workspace = true, features = ["clock"] }
+optionstratlib-strategies = { workspace = true, features = ["clock"] }
+optionstratlib-visualization = { workspace = true, features = ["clock"] }
 # Only the pieces the prototype draws with, and no font feature: neither
 # `ab_glyph` nor `ttf` (font-kit, fontconfig), so no ttf-parser
 # (RUSTSEC-2026-0192). The prototype measures and draws every label itself

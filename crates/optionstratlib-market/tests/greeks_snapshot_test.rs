@@ -7,6 +7,8 @@
 //! Verifies that a chain built through the normal path carries the full
 //! twelve-greek snapshot on every strike, for both option styles.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};
 use optionstratlib_market::chains::OptionChain;

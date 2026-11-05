@@ -27,7 +27,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -44,6 +44,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{
@@ -219,15 +220,67 @@ impl IronCondor {
         open_fee: Positive,
         close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            short_call_strike,
+            short_put_strike,
+            long_call_strike,
+            long_put_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_short_call,
+            premium_short_put,
+            premium_long_call,
+            premium_long_put,
+            open_fee,
+            close_fee,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        short_call_strike: Positive,
+        short_put_strike: Positive,
+        long_call_strike: Positive,
+        long_put_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_short_call: Positive,
+        premium_short_put: Positive,
+        premium_long_call: Positive,
+        premium_long_put: Positive,
+        open_fee: Positive,
+        close_fee: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = IronCondor {
             name: "Iron Condor".to_string(),
             kind: StrategyType::IronCondor,
             description: IRON_CONDOR_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_call: Position::default(),
-            short_put: Position::default(),
-            long_call: Position::default(),
-            long_put: Position::default(),
+            short_call: Position::blank_at(date),
+            short_put: Position::blank_at(date),
+            long_call: Position::blank_at(date),
+            long_put: Position::blank_at(date),
         };
 
         // Short Call
@@ -248,7 +301,7 @@ impl IronCondor {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -274,7 +327,7 @@ impl IronCondor {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -300,7 +353,7 @@ impl IronCondor {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -326,7 +379,7 @@ impl IronCondor {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -426,7 +479,7 @@ impl StrategyConstructor for IronCondor {
         let long_put = Position::new(
             lowest_strike.option.clone(),
             lowest_strike.premium,
-            Utc::now(),
+            now_or(lowest_strike.date),
             lowest_strike.open_fee,
             lowest_strike.close_fee,
             lowest_strike.epic.clone(),
@@ -436,7 +489,7 @@ impl StrategyConstructor for IronCondor {
         let short_put = Position::new(
             lower_middle_strike.option.clone(),
             lower_middle_strike.premium,
-            Utc::now(),
+            now_or(lower_middle_strike.date),
             lower_middle_strike.open_fee,
             lower_middle_strike.close_fee,
             lower_middle_strike.epic.clone(),
@@ -446,7 +499,7 @@ impl StrategyConstructor for IronCondor {
         let short_call = Position::new(
             upper_middle_strike.option.clone(),
             upper_middle_strike.premium,
-            Utc::now(),
+            now_or(upper_middle_strike.date),
             upper_middle_strike.open_fee,
             upper_middle_strike.close_fee,
             upper_middle_strike.epic.clone(),
@@ -456,7 +509,7 @@ impl StrategyConstructor for IronCondor {
         let long_call = Position::new(
             highest_strike.option.clone(),
             highest_strike.premium,
-            Utc::now(),
+            now_or(highest_strike.date),
             highest_strike.open_fee,
             highest_strike.close_fee,
             highest_strike.epic.clone(),
@@ -1370,10 +1423,10 @@ impl PnLCalculator for IronCondor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(IronCondor, test_short_call_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor {
     use super::*;
 
@@ -1586,7 +1639,7 @@ mod tests_iron_condor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_validable {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1738,7 +1791,7 @@ mod tests_iron_condor_validable {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_strategies {
     use super::*;
 
@@ -2183,7 +2236,7 @@ mod tests_iron_condor_strategies {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_optimizable {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2521,7 +2574,7 @@ mod tests_iron_condor_optimizable {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_profit {
     use super::*;
 
@@ -2789,7 +2842,7 @@ mod tests_iron_condor_profit {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -2984,7 +3037,7 @@ mod tests_iron_condor_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_delta_size {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -3181,7 +3234,7 @@ mod tests_iron_condor_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_probability {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -3394,7 +3447,7 @@ mod tests_iron_condor_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3590,7 +3643,7 @@ mod tests_iron_condor_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3713,7 +3766,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3938,7 +3991,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_condor_pnl {
     use super::*;
     use optionstratlib_core::pos_or_panic;

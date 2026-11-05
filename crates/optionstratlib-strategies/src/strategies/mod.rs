@@ -42,6 +42,7 @@
 //! Example usage of the Bull Call Spread strategy:
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
@@ -73,6 +74,7 @@
 //! let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", profit, loss);
 //! # Ok(())
+//! # }
 //! # }
 //! ```
 //!
@@ -158,6 +160,7 @@
 //! //! Example usage of the Iron Condor strategy:
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
@@ -191,6 +194,7 @@
 //! let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 //! # Ok(())
+//! # }
 //! # }
 //! ```
 //!
@@ -270,12 +274,18 @@ pub mod short_strangle;
 // (#814).
 #[cfg(test)]
 mod test_support {
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::{ExpirationDate, Positive};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     /// Thirteen strikes, 85 to 115 every 2.5, on a spot of 100 thirty days
     /// from expiry, priced by Black-Scholes at a 20% volatility with a mild
     /// skew. Call quotes fall and put quotes rise with the strike, so every

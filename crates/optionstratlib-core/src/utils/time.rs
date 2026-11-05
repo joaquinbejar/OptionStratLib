@@ -5,8 +5,13 @@
 ******************************************************************************/
 
 use crate::constants::*;
-use chrono::{Duration, Local, NaiveTime, Utc};
+use crate::error::ClockError;
+#[cfg(feature = "clock")]
+use chrono::NaiveTime;
+use chrono::{DateTime, Duration, NaiveDate, Utc};
+use expiration_date::ExpirationDate;
 use expiration_date::error::ExpirationDateError;
+use positive::constants::DAYS_IN_A_YEAR;
 use positive::{Positive, PositiveError};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -14,6 +19,157 @@ use std::fmt;
 
 #[cfg(test)]
 use positive::pos_or_panic;
+
+/// Reads the wall clock.
+///
+/// The only place in the library that does, together with the local-date
+/// helper behind [`get_x_days_formatted`]. Exists only with the `clock`
+/// feature; use [`now`] where the code has an error channel.
+#[cfg(feature = "clock")]
+#[must_use]
+#[inline]
+pub fn wall_clock() -> DateTime<Utc> {
+    Utc::now()
+}
+
+/// The current instant, from the wall clock.
+///
+/// # Errors
+///
+/// Returns [`ClockError::Unavailable`] in a build without the `clock` feature.
+/// There is no fallback to a made-up instant.
+#[cfg(feature = "clock")]
+#[inline]
+pub fn now() -> Result<DateTime<Utc>, ClockError> {
+    Ok(wall_clock())
+}
+
+/// The current instant, from the wall clock.
+///
+/// # Errors
+///
+/// Returns [`ClockError::Unavailable`] in a build without the `clock` feature,
+/// as this one is. There is no fallback to a made-up instant.
+#[cfg(not(feature = "clock"))]
+#[inline]
+pub fn now() -> Result<DateTime<Utc>, ClockError> {
+    Err(ClockError::Unavailable)
+}
+
+/// The current instant when the build has a clock, `existing` otherwise.
+///
+/// For the code that re-stamps something that already carries a time, such as
+/// a leg rebuilt into a strategy: without a clock it keeps the time the caller
+/// gave it.
+#[must_use]
+#[inline]
+pub fn now_or(existing: DateTime<Utc>) -> DateTime<Utc> {
+    now().unwrap_or(existing)
+}
+
+/// The instant a time-to-expiry is measured from.
+///
+/// With the `clock` feature, the wall clock; the thread's reference datetime is
+/// ignored, as `ExpirationDate::get_years` ignores it. Without it, the
+/// thread's reference datetime.
+///
+/// # Errors
+///
+/// Returns [`ClockError::Unavailable`] when the build has no clock and the
+/// thread has no reference datetime.
+#[inline]
+pub fn evaluation_time() -> Result<DateTime<Utc>, ClockError> {
+    now().or_else(|error| ExpirationDate::get_reference_datetime().ok_or(error))
+}
+
+/// The instant a relative expiration is resolved from.
+///
+/// The thread's reference datetime when one is set, the wall clock otherwise,
+/// as `ExpirationDate::get_date` does.
+///
+/// # Errors
+///
+/// Returns [`ClockError::Unavailable`] when the thread has no reference
+/// datetime and the build has no clock.
+#[inline]
+pub fn resolution_base() -> Result<DateTime<Utc>, ClockError> {
+    ExpirationDate::get_reference_datetime().map_or_else(now, Ok)
+}
+
+/// The years from now to `expiration`, on Actual/365 Fixed.
+///
+/// Gives what `ExpirationDate::get_years` gives and also exists without the
+/// `clock` feature. A `Days` needs no clock: its count over 365 is the answer,
+/// in every build. A `DateTime` is measured from [`evaluation_time`].
+///
+/// # Errors
+///
+/// Returns [`ExpirationDateError::InvalidDateTime`] for a `DateTime` when
+/// [`evaluation_time`] fails, and the conversion errors of
+/// [`ExpirationDate::get_years_at`].
+#[inline]
+pub fn years_to_expiration(expiration: &ExpirationDate) -> Result<Positive, ExpirationDateError> {
+    match expiration {
+        // The formula of `expiration_date` for a `Days`, which `get_years_at`
+        // answers without reading its base; a test pins the two together.
+        ExpirationDate::Days(days) => {
+            Positive::new(days.to_f64() / DAYS_IN_A_YEAR.to_f64()) // scan-banned: allow -- the formula of `expiration_date`, kept bit for bit so a default build stays numerically identical
+                .map_err(Into::into)
+        }
+        ExpirationDate::DateTime(_) => expiration.get_years_at(evaluation_time()?),
+    }
+}
+
+/// The fractional days from now to `expiration`.
+///
+/// Gives what `ExpirationDate::get_days` gives and also exists without the
+/// `clock` feature. A `Days` returns its own count, in every build. A `DateTime`
+/// is measured from [`evaluation_time`], and is zero once it has passed.
+///
+/// # Errors
+///
+/// Returns [`ExpirationDateError::InvalidDateTime`] for a `DateTime` when
+/// [`evaluation_time`] fails, and the conversion errors of
+/// [`ExpirationDate::get_days_at`].
+#[inline]
+pub fn days_to_expiration(expiration: &ExpirationDate) -> Result<Positive, ExpirationDateError> {
+    match expiration {
+        ExpirationDate::Days(days) => Ok(*days),
+        ExpirationDate::DateTime(_) => expiration.get_days_at(evaluation_time()?),
+    }
+}
+
+/// The expiration as a `YYYY-MM-DD` string.
+///
+/// Gives what `ExpirationDate::get_date_string` gives and also exists without
+/// the `clock` feature. A `DateTime` needs no clock. A `Days` counts from 18:30
+/// UTC on the day of [`evaluation_time`].
+///
+/// # Errors
+///
+/// Returns [`ExpirationDateError::InvalidDateTime`] for a `Days` when
+/// [`evaluation_time`] fails, and the overflow errors of
+/// [`ExpirationDate::get_date_string_at`].
+pub fn expiration_date_string(expiration: &ExpirationDate) -> Result<String, ExpirationDateError> {
+    match expiration {
+        ExpirationDate::DateTime(datetime) => expiration.get_date_string_at(*datetime),
+        ExpirationDate::Days(_) => expiration.get_date_string_at(evaluation_time()?),
+    }
+}
+
+/// Today's date in the local time zone.
+#[cfg(feature = "clock")]
+#[inline]
+fn local_today() -> Result<NaiveDate, ClockError> {
+    Ok(chrono::Local::now().date_naive())
+}
+
+/// Today's date in the local time zone: unavailable in a build with no clock.
+#[cfg(not(feature = "clock"))]
+#[inline]
+fn local_today() -> Result<NaiveDate, ClockError> {
+    Err(ClockError::Unavailable)
+}
 
 /// Represents different timeframes for volatility calculations.
 ///
@@ -255,17 +411,20 @@ pub fn convert_time_frame(
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "clock")] {
 /// use tracing::info;
 /// use optionstratlib_core::utils::time::get_tomorrow_formatted;
 /// let tomorrow = get_tomorrow_formatted()?;
 /// info!("{}", tomorrow); // Output will vary depending on the current date.
+/// # }
 /// # Ok::<(), optionstratlib_core::model::ExpirationDateError>(())
 /// ```
 ///
 /// # Errors
 ///
 /// Returns [`ExpirationDateError::ArithmeticOverflow`] when today is the last
-/// date the calendar can hold; see [`get_x_days_formatted`].
+/// date the calendar can hold, and [`ExpirationDateError::InvalidDateTime`] in a
+/// build without the `clock` feature; see [`get_x_days_formatted`].
 pub fn get_tomorrow_formatted() -> Result<String, ExpirationDateError> {
     get_x_days_formatted(1)
 }
@@ -291,10 +450,12 @@ pub fn get_tomorrow_formatted() -> Result<String, ExpirationDateError> {
 /// Returns [`ExpirationDateError::ArithmeticOverflow`] when `days` is beyond
 /// the range of a day count (`TimeDelta::days` aborted on it) or the date
 /// it lands on is outside the calendar (`NaiveDate + TimeDelta` aborted on
-/// it), both before #788.
+/// it), both before #788, and [`ExpirationDateError::InvalidDateTime`] in a
+/// build without the `clock` feature.
 pub fn get_x_days_formatted(days: i64) -> Result<String, ExpirationDateError> {
+    let today = local_today()?;
     let target = Duration::try_days(days)
-        .and_then(|delta| Local::now().date_naive().checked_add_signed(delta))
+        .and_then(|delta| today.checked_add_signed(delta))
         .ok_or_else(|| {
             ExpirationDateError::ArithmeticOverflow(format!(
                 "a date {days} days from today is outside the representable calendar range"
@@ -327,7 +488,8 @@ pub fn get_x_days_formatted(days: i64) -> Result<String, ExpirationDateError> {
 /// count does not fit an `i64`, does not fit a `chrono` day span, or moves the
 /// date outside the calendar range `chrono` can represent. The date is never
 /// replaced by today's: a caller asking for a date `days` ahead either gets
-/// that date or an error.
+/// that date or an error. Returns [`ExpirationDateError::InvalidDateTime`] in a
+/// build without the `clock` feature.
 ///
 /// # Note
 /// - The function uses the local time zone and the `chrono` crate for date manipulation.
@@ -340,7 +502,7 @@ pub fn get_x_days_formatted_pos(days: Positive) -> Result<String, ExpirationDate
         .ok()
         .and_then(|whole| whole.to_i64_checked())
         .ok_or_else(|| unrepresentable_day_offset(days))?;
-    let today = Local::now().date_naive();
+    let today = local_today()?;
     let target = Duration::try_days(ceiling)
         .and_then(|delta| today.checked_add_signed(delta))
         .ok_or_else(|| unrepresentable_day_offset(days))?;
@@ -361,16 +523,19 @@ fn unrepresentable_day_offset(days: Positive) -> ExpirationDateError {
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "clock")] {
 /// use chrono::Local;
 /// use optionstratlib_core::utils::time::get_today_formatted;
 ///
 /// let today_formatted = get_today_formatted();
 /// let expected_format = Local::now().date_naive().format("%d-%b-%Y").to_string().to_lowercase();
 /// assert_eq!(today_formatted, expected_format);
+/// # }
 /// ```
+#[cfg(feature = "clock")]
 #[must_use]
 pub fn get_today_formatted() -> String {
-    let today = Local::now().date_naive();
+    let today = chrono::Local::now().date_naive();
     today.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
@@ -381,6 +546,7 @@ pub fn get_today_formatted() -> String {
 /// the compiler: a literal outside chrono's ranges would fail the build with
 /// `evaluation of constant value failed`, and no run time reaches the `None`
 /// arm (#788), as with `DEFAULT_BINOMIAL_STEPS`.
+#[cfg(feature = "clock")]
 const TODAY_CUTOFF: NaiveTime = match NaiveTime::from_hms_opt(18, 30, 0) {
     Some(t) => t,
     None => unreachable!(), // scan-banned: allow -- `const` context: an unreachable arm here fails compilation, it cannot abort at run time
@@ -401,16 +567,19 @@ const TODAY_CUTOFF: NaiveTime = match NaiveTime::from_hms_opt(18, 30, 0) {
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "clock")] {
 /// use chrono::{Utc, NaiveTime, Timelike};
 /// use tracing::info;
 /// use optionstratlib_core::utils::time::get_today_or_tomorrow_formatted;
 ///
 /// info!("{}", get_today_or_tomorrow_formatted());
+/// # }
 /// ```
+#[cfg(feature = "clock")]
 #[must_use]
 pub fn get_today_or_tomorrow_formatted() -> String {
     let cutoff_time = TODAY_CUTOFF;
-    let now = Utc::now();
+    let now = wall_clock();
     // Get the date we should use based on current UTC time
     let target_date = if now.time() > cutoff_time {
         now.date_naive()
@@ -719,7 +888,7 @@ mod tests_timeframe_convert {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_x_days_formatted_pos {
     use super::*;
 
@@ -755,7 +924,7 @@ mod tests_x_days_formatted_pos {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_panic_paths {
     use super::*;
     use chrono::{Duration, Local};
@@ -824,5 +993,188 @@ mod tests_panic_paths {
             .to_string()
             .to_lowercase();
         assert_eq!(get_tomorrow_formatted().ok(), Some(tomorrow));
+    }
+}
+
+#[cfg(test)]
+mod tests_clock_helpers {
+    use super::*;
+    use chrono::TimeZone;
+
+    fn base() -> DateTime<Utc> {
+        match Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).single() {
+            Some(base) => base,
+            None => panic!("2030-01-01 is one instant"),
+        }
+    }
+
+    /// `years_to_expiration` answers a `Days` without a clock: the answer must
+    /// be what `get_years_at` gives, whatever the base, in every build.
+    #[test]
+    fn test_years_to_expiration_days_matches_get_years_at_at_any_base() {
+        for days in [0.0, 0.5, 1.0, 7.0, 30.0, 30.25, 365.0, 3650.0, 1e9] {
+            let expiration = ExpirationDate::Days(pos_or_panic!(days));
+            let years = years_to_expiration(&expiration).unwrap();
+            assert_eq!(years, expiration.get_years_at(base()).unwrap());
+            assert_eq!(
+                years,
+                expiration
+                    .get_years_at(base() + Duration::days(777))
+                    .unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_days_to_expiration_days_is_its_own_count() {
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.25));
+        assert_eq!(
+            days_to_expiration(&expiration).unwrap(),
+            pos_or_panic!(30.25)
+        );
+    }
+
+    #[test]
+    fn test_expiration_date_string_datetime_needs_no_clock() {
+        let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+        assert_eq!(expiration_date_string(&expiration).unwrap(), "2030-01-31");
+    }
+
+    #[test]
+    fn test_resolution_base_prefers_the_reference_datetime() {
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let resolved = resolution_base();
+        ExpirationDate::set_reference_datetime(None);
+        assert_eq!(resolved, Ok(base()));
+    }
+
+    /// With the clock on the helpers give exactly what the `expiration_date`
+    /// methods give, so a default build is numerically unchanged.
+    #[cfg(feature = "clock")]
+    mod with_clock {
+        use super::*;
+
+        #[test]
+        fn test_days_answers_match_the_clock_reading_methods() {
+            for days in [0.0, 0.5, 1.0, 30.0, 30.25, 365.0] {
+                let expiration = ExpirationDate::Days(pos_or_panic!(days));
+                assert_eq!(
+                    years_to_expiration(&expiration).unwrap(),
+                    expiration.get_years().unwrap()
+                );
+                assert_eq!(
+                    days_to_expiration(&expiration).unwrap(),
+                    expiration.get_days().unwrap()
+                );
+                assert_eq!(
+                    expiration_date_string(&expiration).unwrap(),
+                    expiration.get_date_string().unwrap()
+                );
+            }
+        }
+
+        #[test]
+        fn test_datetime_answers_match_the_clock_reading_methods() {
+            // The two reads are moments apart, so the comparison leaves room for
+            // them, and the half day keeps a whole-day count from flipping between.
+            let tolerance = 1e-6;
+            let expiration =
+                ExpirationDate::DateTime(wall_clock() + Duration::days(30) + Duration::hours(12));
+            let years = years_to_expiration(&expiration).unwrap().to_f64();
+            assert!((years - expiration.get_years().unwrap().to_f64()).abs() < tolerance);
+            let days = days_to_expiration(&expiration).unwrap().to_f64();
+            assert!((days - expiration.get_days().unwrap().to_f64()).abs() < 1e-3);
+            assert_eq!(
+                expiration_date_string(&expiration).unwrap(),
+                expiration.get_date_string().unwrap()
+            );
+        }
+
+        #[test]
+        fn test_the_reference_datetime_does_not_move_the_evaluation_time() {
+            let long_ago = base() - Duration::days(36_500);
+            ExpirationDate::set_reference_datetime(Some(long_ago));
+            let evaluated = evaluation_time();
+            ExpirationDate::set_reference_datetime(None);
+            assert!(evaluated.unwrap() > long_ago);
+        }
+
+        #[test]
+        fn test_now_or_reads_the_clock() {
+            assert!(now_or(base() - Duration::days(365_000)) > base() - Duration::days(365_000));
+            assert!(now().is_ok());
+        }
+    }
+
+    #[cfg(not(feature = "clock"))]
+    mod without_clock {
+        use super::*;
+
+        #[test]
+        fn test_now_is_the_typed_error() {
+            assert_eq!(now(), Err(ClockError::Unavailable));
+        }
+
+        #[test]
+        fn test_now_or_keeps_the_given_instant() {
+            assert_eq!(now_or(base()), base());
+        }
+
+        #[test]
+        fn test_evaluation_time_falls_back_only_to_the_reference_datetime() {
+            assert_eq!(evaluation_time(), Err(ClockError::Unavailable));
+            assert_eq!(resolution_base(), Err(ClockError::Unavailable));
+            ExpirationDate::set_reference_datetime(Some(base()));
+            let evaluated = evaluation_time();
+            ExpirationDate::set_reference_datetime(None);
+            assert_eq!(evaluated, Ok(base()));
+        }
+
+        #[test]
+        fn test_datetime_without_a_reference_is_invalid_datetime() {
+            let expiration = ExpirationDate::DateTime(base());
+            let expected = ClockError::Unavailable.to_string();
+            for error in [
+                years_to_expiration(&expiration).unwrap_err(),
+                days_to_expiration(&expiration).unwrap_err(),
+            ] {
+                assert!(
+                    matches!(error, ExpirationDateError::InvalidDateTime(ref text) if *text == expected)
+                );
+            }
+        }
+
+        #[test]
+        fn test_datetime_with_a_reference_matches_the_pure_forms() {
+            let expiration = ExpirationDate::DateTime(base() + Duration::days(30));
+            ExpirationDate::set_reference_datetime(Some(base()));
+            let years = years_to_expiration(&expiration);
+            let days = days_to_expiration(&expiration);
+            ExpirationDate::set_reference_datetime(None);
+            assert_eq!(years.unwrap(), expiration.get_years_at(base()).unwrap());
+            assert_eq!(days.unwrap(), expiration.get_days_at(base()).unwrap());
+        }
+
+        #[test]
+        fn test_days_string_needs_a_reference_datetime() {
+            let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
+            assert!(expiration_date_string(&expiration).is_err());
+            ExpirationDate::set_reference_datetime(Some(base()));
+            let text = expiration_date_string(&expiration);
+            ExpirationDate::set_reference_datetime(None);
+            assert_eq!(text.unwrap(), "2030-01-31");
+        }
+
+        #[test]
+        fn test_local_date_helpers_report_the_missing_clock() {
+            assert!(matches!(
+                get_tomorrow_formatted(),
+                Err(ExpirationDateError::InvalidDateTime(_))
+            ));
+            assert!(matches!(
+                get_x_days_formatted_pos(Positive::ONE),
+                Err(ExpirationDateError::InvalidDateTime(_))
+            ));
+        }
     }
 }

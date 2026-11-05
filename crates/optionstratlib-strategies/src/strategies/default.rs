@@ -4,13 +4,19 @@ use crate::strategies::long_put::LONG_PUT_DESCRIPTION;
 use crate::strategies::poor_mans_covered_call::PMCC_DESCRIPTION;
 use crate::strategies::short_call::SHORT_CALL_DESCRIPTION;
 use crate::strategies::short_put::SHORT_PUT_DESCRIPTION;
+#[cfg(feature = "clock")]
 use crate::strategies::{
     BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
-    IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
-    PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
+    IronCondor, LongButterflySpread, LongStraddle, LongStrangle, ShortButterflySpread,
+    ShortStraddle, ShortStrangle,
 };
+use crate::strategies::{LongCall, LongPut, PoorMansCoveredCall, ShortCall, ShortPut};
+use chrono::{DateTime, Utc};
 use optionstratlib_core::model::Position;
+#[cfg(feature = "clock")]
+use optionstratlib_core::utils::time::wall_clock;
 
+#[cfg(feature = "clock")]
 impl Default for BullCallSpread {
     fn default() -> Self {
         BullCallSpread {
@@ -24,6 +30,7 @@ impl Default for BullCallSpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for BearCallSpread {
     fn default() -> Self {
         BearCallSpread {
@@ -37,6 +44,7 @@ impl Default for BearCallSpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for BullPutSpread {
     fn default() -> Self {
         BullPutSpread {
@@ -50,6 +58,7 @@ impl Default for BullPutSpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for BearPutSpread {
     fn default() -> Self {
         BearPutSpread {
@@ -63,6 +72,7 @@ impl Default for BearPutSpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for LongButterflySpread {
     fn default() -> Self {
         LongButterflySpread {
@@ -77,6 +87,7 @@ impl Default for LongButterflySpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for ShortButterflySpread {
     fn default() -> Self {
         ShortButterflySpread {
@@ -91,6 +102,7 @@ impl Default for ShortButterflySpread {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for IronCondor {
     fn default() -> Self {
         IronCondor {
@@ -105,6 +117,7 @@ impl Default for IronCondor {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for IronButterfly {
     fn default() -> Self {
         IronButterfly {
@@ -119,6 +132,7 @@ impl Default for IronButterfly {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for LongStraddle {
     fn default() -> Self {
         LongStraddle {
@@ -131,6 +145,7 @@ impl Default for LongStraddle {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for ShortStraddle {
     fn default() -> Self {
         ShortStraddle {
@@ -143,6 +158,7 @@ impl Default for ShortStraddle {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for LongStrangle {
     fn default() -> Self {
         LongStrangle {
@@ -155,6 +171,7 @@ impl Default for LongStrangle {
         }
     }
 }
+#[cfg(feature = "clock")]
 impl Default for ShortStrangle {
     fn default() -> Self {
         ShortStrangle {
@@ -167,18 +184,26 @@ impl Default for ShortStrangle {
         }
     }
 }
-impl Default for PoorMansCoveredCall {
-    fn default() -> Self {
+impl PoorMansCoveredCall {
+    /// The strategy with no legs placed yet, its legs blank and opened at `date`.
+    pub(crate) fn blank_at(date: DateTime<Utc>) -> Self {
         PoorMansCoveredCall {
             name: "Poor Man's Covered Call".to_string(),
             kind: StrategyType::PoorMansCoveredCall,
             description: PMCC_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            short_call: Position::default(),
+            long_call: Position::blank_at(date),
+            short_call: Position::blank_at(date),
         }
     }
 }
+#[cfg(feature = "clock")]
+impl Default for PoorMansCoveredCall {
+    fn default() -> Self {
+        Self::blank_at(wall_clock())
+    }
+}
+#[cfg(feature = "clock")]
 impl Default for BullCallLadder {
     fn default() -> Self {
         BullCallLadder {
@@ -193,47 +218,75 @@ impl Default for BullCallLadder {
         }
     }
 }
-impl Default for LongCall {
-    fn default() -> Self {
+impl LongCall {
+    /// The strategy with no legs placed yet, its legs blank and opened at `date`.
+    pub(crate) fn blank_at(date: DateTime<Utc>) -> Self {
         LongCall {
             name: "Long Call".to_string(),
             kind: StrategyType::LongCall,
             description: LONG_CALL_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
+            long_call: Position::blank_at(date),
         }
     }
 }
-impl Default for LongPut {
+#[cfg(feature = "clock")]
+impl Default for LongCall {
     fn default() -> Self {
+        Self::blank_at(wall_clock())
+    }
+}
+impl LongPut {
+    /// The strategy with no legs placed yet, its legs blank and opened at `date`.
+    pub(crate) fn blank_at(date: DateTime<Utc>) -> Self {
         LongPut {
             name: "Long Put".to_string(),
             kind: StrategyType::LongPut,
             description: LONG_PUT_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_put: Position::default(),
+            long_put: Position::blank_at(date),
         }
     }
 }
-impl Default for ShortCall {
+#[cfg(feature = "clock")]
+impl Default for LongPut {
     fn default() -> Self {
+        Self::blank_at(wall_clock())
+    }
+}
+impl ShortCall {
+    /// The strategy with no legs placed yet, its legs blank and opened at `date`.
+    pub(crate) fn blank_at(date: DateTime<Utc>) -> Self {
         ShortCall {
             name: "Short Call".to_string(),
             kind: StrategyType::ShortCall,
             description: SHORT_CALL_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_call: Position::default(),
+            short_call: Position::blank_at(date),
         }
     }
 }
-impl Default for ShortPut {
+#[cfg(feature = "clock")]
+impl Default for ShortCall {
     fn default() -> Self {
+        Self::blank_at(wall_clock())
+    }
+}
+impl ShortPut {
+    /// The strategy with no legs placed yet, its legs blank and opened at `date`.
+    pub(crate) fn blank_at(date: DateTime<Utc>) -> Self {
         ShortPut {
             name: "Short Put".to_string(),
             kind: StrategyType::ShortPut,
             description: SHORT_PUT_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_put: Position::default(),
+            short_put: Position::blank_at(date),
         }
+    }
+}
+#[cfg(feature = "clock")]
+impl Default for ShortPut {
+    fn default() -> Self {
+        Self::blank_at(wall_clock())
     }
 }

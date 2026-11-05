@@ -11,6 +11,8 @@
 //! - Charm Curve and Surface
 //! - Color Curve and Surface
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::analytics::OptionChainProjections;
 use optionstratlib_analytics::metrics::{CharmSurface, ColorSurface, ThetaSurface};
 use optionstratlib_core::model::ExpirationDate;

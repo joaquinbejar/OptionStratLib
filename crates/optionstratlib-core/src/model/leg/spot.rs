@@ -19,6 +19,8 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::SpotPosition;
 //! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
@@ -33,12 +35,16 @@
 //!     Positive::ONE,        // $1 open fee
 //!     Positive::ONE,        // $1 close fee
 //! );
+//! # }
+//! # }
 //! ```
 
 use crate::error::PositionError;
 use crate::model::decimal::{d_div, d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -132,6 +138,7 @@ impl SpotPosition {
     /// # Returns
     ///
     /// A new long `SpotPosition` with zero fees.
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn long(symbol: String, quantity: Positive, cost_basis: Positive) -> Self {
         Self::new(
@@ -139,7 +146,7 @@ impl SpotPosition {
             quantity,
             cost_basis,
             Side::Long,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
             Positive::ZERO,
         )
@@ -156,6 +163,7 @@ impl SpotPosition {
     /// # Returns
     ///
     /// A new short `SpotPosition` with zero fees.
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn short(symbol: String, quantity: Positive, cost_basis: Positive) -> Self {
         Self::new(
@@ -163,7 +171,7 @@ impl SpotPosition {
             quantity,
             cost_basis,
             Side::Short,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
             Positive::ZERO,
         )
@@ -338,6 +346,7 @@ impl std::fmt::Display for SpotPosition {
     }
 }
 
+#[cfg(feature = "clock")]
 impl Default for SpotPosition {
     fn default() -> Self {
         Self {
@@ -345,14 +354,14 @@ impl Default for SpotPosition {
             quantity: Positive::ZERO,
             cost_basis: Positive::ZERO,
             side: Side::Long,
-            date: Utc::now(),
+            date: wall_clock(),
             open_fee: Positive::ZERO,
             close_fee: Positive::ZERO,
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use positive::pos_or_panic;
@@ -364,7 +373,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            wall_clock(),
             Positive::ONE,
             Positive::ONE,
         );
@@ -452,7 +461,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
@@ -502,7 +511,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
@@ -516,7 +525,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Short,
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
@@ -544,7 +553,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(50.0),
             pos_or_panic!(50.0),
         );
@@ -558,7 +567,7 @@ mod tests {
             Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Short,
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(50.0),
             pos_or_panic!(50.0),
         );

@@ -105,6 +105,7 @@
 //! object type with both bounds:
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::{ExpirationDate, Position, Positive};
 //! use optionstratlib_core::pos_or_panic;
 //! use optionstratlib_strategies::strategies::base::{Positionable, StrategyType};
@@ -169,6 +170,7 @@
 //!     assert_eq!(rebuilt.graph_data(), strategy.graph_data());
 //!     Ok(())
 //! }
+//! # }
 //! ```
 //!
 //! ## Imports

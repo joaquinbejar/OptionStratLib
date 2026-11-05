@@ -172,6 +172,7 @@ fn test_canonical_error_paths_are_component_errors() {
         facade::SettlementError,
         optionstratlib_core::error::SettlementError
     );
+    same!(facade::ClockError, optionstratlib_core::error::ClockError);
     same!(facade::TradeError, optionstratlib_core::error::TradeError);
     same!(
         facade::OperationErrorKind,

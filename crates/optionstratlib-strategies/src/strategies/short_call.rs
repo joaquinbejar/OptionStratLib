@@ -16,7 +16,6 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -31,6 +30,7 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::utils::time::now;
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_pricing::error::GreeksError;
@@ -136,7 +136,8 @@ impl ShortCall {
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = ShortCall::default();
+        let date = now()?;
+        let mut strategy = ShortCall::blank_at(date);
 
         let short_call_option = Options::new(
             OptionType::European,
@@ -155,7 +156,7 @@ impl ShortCall {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -476,7 +477,7 @@ impl StrategyConstructor for ShortCall {
             Side::Short,
             "ShortCall",
         )?;
-        let mut strategy = ShortCall::default();
+        let mut strategy = ShortCall::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -602,10 +603,10 @@ impl PnLCalculator for ShortCall {
 
 impl Strategable for ShortCall {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(ShortCall, test_short_call_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_break_even {
     use super::*;
     use optionstratlib_core::pos_or_panic;

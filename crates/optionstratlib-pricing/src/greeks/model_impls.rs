@@ -373,7 +373,7 @@ mod tests_greek_trait {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_greeks_contract_size {
     use super::*;
     use optionstratlib_core::model::types::{BinaryType, OptionStyle, OptionType, Side};

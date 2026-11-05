@@ -1,3 +1,5 @@
+#![cfg(feature = "clock")]
+
 use chrono::Utc;
 use optionstratlib_analytics::error::TransactionError;
 use optionstratlib_analytics::pnl::DeltaAdjustment;

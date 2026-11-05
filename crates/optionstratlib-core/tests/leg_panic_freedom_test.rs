@@ -19,6 +19,8 @@
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::leg::{
     Expirable, Fundable, FuturePosition, Leg, LegAble, Marginable, PerpetualPosition, SpotPosition,
 };

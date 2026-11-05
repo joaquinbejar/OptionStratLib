@@ -1245,11 +1245,14 @@ mod tests_display_implementations {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    #[cfg(feature = "clock")]
     use crate::strategies::ShortStrangle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
     use serde_json;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
     #[test]
@@ -1434,6 +1437,7 @@ mod tests_serialization {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_response_serialization() {
         let strategy = ShortStrangle::new(

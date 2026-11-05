@@ -7,6 +7,7 @@ use crate::strategies::shared::{
 };
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use optionstratlib_core::model::decimal::d_div;
+use optionstratlib_core::utils::time::now;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
 use crate::error::StrategyError;
@@ -17,7 +18,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -140,7 +141,47 @@ impl ShortPut {
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = ShortPut::default();
+        Self::new_at(
+            underlying_symbol,
+            short_put_strike,
+            short_put_expiration,
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate,
+            dividend_yield,
+            premium_short_put,
+            open_fee_short_put,
+            close_fee_short_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments, dead_code)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        short_put_strike: Positive,
+        short_put_expiration: ExpirationDate,
+        implied_volatility: Positive,
+        quantity: Positive,
+        underlying_price: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        premium_short_put: Positive,
+        open_fee_short_put: Positive,
+        close_fee_short_put: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
+        let mut strategy = ShortPut::blank_at(date);
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -159,7 +200,7 @@ impl ShortPut {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee_short_put,
             close_fee_short_put,
             None,
@@ -478,7 +519,7 @@ impl StrategyConstructor for ShortPut {
             Side::Short,
             "ShortPut",
         )?;
-        let mut strategy = ShortPut::default();
+        let mut strategy = ShortPut::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -603,5 +644,5 @@ impl PnLCalculator for ShortPut {
 
 impl Strategable for ShortPut {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(ShortPut, test_short_put_implementations);

@@ -87,6 +87,14 @@ impl TransactionError {
     }
 }
 
+impl From<optionstratlib_core::error::ClockError> for TransactionError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_core::error::ClockError) -> Self {
+        Self::other(err.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

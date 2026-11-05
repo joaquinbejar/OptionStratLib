@@ -11,6 +11,8 @@
 //! - PutCallRatioCurve
 //! - StrikeConcentrationCurve
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::metrics::{PutCallRatioCurve, VolatilitySkewCurve};
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{pos_or_panic, spos};

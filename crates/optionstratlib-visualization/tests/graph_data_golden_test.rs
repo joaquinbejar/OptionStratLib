@@ -37,6 +37,8 @@
 //! Regenerate with `OSL_WRITE_GOLDEN=1 cargo test -p optionstratlib-visualization --test graph_data_golden_test`
 //! only when a change of chart data is intended and reviewed.
 
+#![cfg(feature = "clock")]
+
 use chrono::{DateTime, TimeZone, Utc};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Position, Positive};

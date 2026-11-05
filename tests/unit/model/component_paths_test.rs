@@ -5,6 +5,8 @@
 //! called with a value obtained through the `optionstratlib` facade (or the
 //! other way round). A facade wrapper or copy would fail to compile here.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib::prelude::pos_or_panic;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

@@ -195,7 +195,7 @@ pub struct SimulationStatsResult {
 impl_json_debug_pretty!(SimulationStatsResult);
 impl_json_display!(SimulationStatsResult);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use optionstratlib_analytics::pnl::PnL;

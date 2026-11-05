@@ -18,6 +18,8 @@
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::leg::{FuturePosition, Leg, PerpetualPosition, SpotPosition};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::utils::create_sample_option_simplest;

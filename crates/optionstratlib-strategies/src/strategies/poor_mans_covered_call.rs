@@ -38,7 +38,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -56,6 +56,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -213,7 +214,57 @@ impl PoorMansCoveredCall {
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = PoorMansCoveredCall::default();
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            long_call_strike,
+            short_call_strike,
+            long_call_expiration,
+            short_call_expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_short_call,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_short_call,
+            close_fee_short_call,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        long_call_strike: Positive,
+        short_call_strike: Positive,
+        long_call_expiration: ExpirationDate,
+        short_call_expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_short_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
+        let mut strategy = PoorMansCoveredCall::blank_at(date);
 
         // Long Call (LEAPS)
         let long_call_option = Options::new(
@@ -233,7 +284,7 @@ impl PoorMansCoveredCall {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long_call,
             close_fee_long_call,
             None,
@@ -259,7 +310,7 @@ impl PoorMansCoveredCall {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -333,7 +384,7 @@ impl StrategyConstructor for PoorMansCoveredCall {
         let long_call = Position::new(
             lower_strike_position.option.clone(),
             lower_strike_position.premium,
-            Utc::now(),
+            now_or(lower_strike_position.date),
             lower_strike_position.open_fee,
             lower_strike_position.close_fee,
             lower_strike_position.epic.clone(),
@@ -343,7 +394,7 @@ impl StrategyConstructor for PoorMansCoveredCall {
         let short_call = Position::new(
             higher_strike_position.option.clone(),
             higher_strike_position.premium,
-            Utc::now(),
+            now_or(higher_strike_position.date),
             higher_strike_position.open_fee,
             higher_strike_position.close_fee,
             higher_strike_position.epic.clone(),
@@ -1015,13 +1066,13 @@ impl PnLCalculator for PoorMansCoveredCall {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(
     PoorMansCoveredCall,
     test_short_call_implementations
 );
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pmcc_validation {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1162,7 +1213,7 @@ mod tests_pmcc_validation {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pmcc_optimization {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1353,7 +1404,7 @@ mod tests_pmcc_optimization {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pmcc_pnl {
     use super::*;
 
@@ -1443,7 +1494,7 @@ mod tests_pmcc_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pmcc_best_area {
     use super::*;
 
@@ -1533,7 +1584,7 @@ mod tests_pmcc_best_area {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pmcc_best_ratio {
     use super::*;
 
@@ -1622,7 +1673,7 @@ mod tests_pmcc_best_ratio {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1770,7 +1821,7 @@ mod tests_short_straddle_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_delta_size {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1918,7 +1969,7 @@ mod tests_short_straddle_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_poor_mans_covered_call_probability {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -2147,7 +2198,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_poor_mans_covered_call_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2277,7 +2328,7 @@ mod tests_poor_mans_covered_call_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2402,7 +2453,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2519,7 +2570,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_poor_mans_covered_call_pnl {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;

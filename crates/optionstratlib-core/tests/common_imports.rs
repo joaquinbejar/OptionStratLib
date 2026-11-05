@@ -3,6 +3,8 @@
 //! `optionstratlib-core` has no prelude by decision; these paths are its
 //! intended entry points. A test here breaks when one of them moves.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::leg::{Leg, LegAble, SpotPosition};
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Positive, Side, Trade,

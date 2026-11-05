@@ -246,7 +246,7 @@ impl SimulationStats {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use crate::backtesting::results::SimulationStatsResult;

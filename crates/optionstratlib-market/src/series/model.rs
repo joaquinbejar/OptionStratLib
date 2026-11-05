@@ -5,11 +5,15 @@ use chrono::NaiveDate;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::time::{
+    days_to_expiration, expiration_date_string, resolution_base,
+};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -84,28 +88,51 @@ impl OptionSeries {
     /// - `None` if there are no option chains or if the nearest expiration date is more than 1 day away.
     ///
     /// # Behavior
-    /// The function checks the first key-value pair in the `chains` collection. If the expiration date is
-    /// within one day (`ExpirationDate::Days(Positive::ONE)`), it returns a cloned instance of the corresponding
+    /// The function takes the chain with the earliest expiration. If that expiration is within one day
+    /// (`ExpirationDate::Days(Positive::ONE)`), it returns a cloned instance of the corresponding
     /// `OptionChain`. Otherwise, it returns `None`.
     ///
     /// # Notes
-    /// - The `chains` collection must be ordered by expiration date for this function to work correctly.
     /// - This method assumes that there is a defined threshold of "1 day" to determine closeness.
+    ///
+    /// The chains are compared in time, from the thread's reference datetime or
+    /// else the current time. In a build without the `clock` feature and with no
+    /// reference datetime, a series holding a `DateTime` expiration has no answer
+    /// and returns `None`.
     ///
     /// # Errors
     /// This function does not return errors but may return `None` if no conditions are met.
     #[must_use]
     pub fn odte(&self) -> Option<OptionChain> {
-        match self.chains.first_key_value() {
-            Some((expiration_date, option_chain)) => {
-                if expiration_date <= &ExpirationDate::Days(Positive::ONE) {
-                    Some(option_chain.clone())
-                } else {
-                    None
+        let one_day = ExpirationDate::Days(Positive::ONE);
+        // `Ord` puts every `Days` before every `DateTime`, so the first key is
+        // not the earliest one when both variants are present: the comparison
+        // in time needs a base.
+        let Ok(base) = resolution_base() else {
+            return match self.chains.first_key_value() {
+                Some((days @ ExpirationDate::Days(_), chain))
+                    if days <= &one_day && !self.has_datetime_expiration() =>
+                {
+                    Some(chain.clone())
                 }
-            }
-            None => None,
-        }
+                _ => None,
+            };
+        };
+        let (expiration_date, chain) = self
+            .chains
+            .iter()
+            .min_by(|left, right| left.0.cmp_at(right.0, base))?;
+        (expiration_date.cmp_at(&one_day, base) != Ordering::Greater).then(|| chain.clone())
+    }
+
+    /// Whether a chain of the series expires at an absolute instant.
+    ///
+    /// `Ord` puts every `Days` first, so only the last key needs looking at.
+    fn has_datetime_expiration(&self) -> bool {
+        matches!(
+            self.chains.last_key_value(),
+            Some((ExpirationDate::DateTime(_), _))
+        )
     }
 
     /// Retrieves the expiration dates associated with the chains.
@@ -128,7 +155,7 @@ impl OptionSeries {
     pub fn get_expiration_dates(&self) -> Result<Vec<Positive>, ChainError> {
         self.chains
             .keys()
-            .map(|e| e.get_days())
+            .map(days_to_expiration)
             .collect::<Result<Vec<Positive>, _>>()
             .map_err(|e| e.into())
     }
@@ -185,7 +212,7 @@ impl OptionSeries {
             params.chain_params.price_params.expiration_date = Some(expiration_date);
             params.chain_params.strike_interval = None;
             let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params)?;
-            let date_string = expiration_date.get_date_string().map_err(|e| {
+            let date_string = expiration_date_string(&expiration_date).map_err(|e| {
                 ChainError::invalid_parameters(
                     "expiration_date",
                     &format!("failed to get date string: {e}"),
@@ -297,7 +324,7 @@ impl Serialize for OptionSeries {
         // than panicking inside the closure.
         let mut chains_map: BTreeMap<String, &OptionChain> = BTreeMap::new();
         for (date, chain) in &self.chains {
-            let key = date.get_date_string().map_err(serde::ser::Error::custom)?;
+            let key = expiration_date_string(date).map_err(serde::ser::Error::custom)?;
             chains_map.insert(key, chain);
         }
         state.serialize_field("chains", &chains_map)?;
@@ -318,8 +345,7 @@ impl Serialize for OptionSeries {
 /// Reads a `chains` key written by `ExpirationDate::get_date_string` back as
 /// an absolute expiration at 18:30 UTC on that date, so formatting it again
 /// gives the same key. The key is parsed here rather than through
-/// `ExpirationDate::from_string`, which also overwrites the thread-local
-/// reference datetime that `ExpirationDate::Days` resolves against.
+/// `ExpirationDate::from_string` so that it reads back at that time of day.
 fn expiration_from_key(key: &str) -> Result<ExpirationDate, String> {
     let date = NaiveDate::parse_from_str(key, "%Y-%m-%d")
         .map_err(|e| format!("Invalid date format: {key:?} is not YYYY-MM-DD: {e}"))?;
@@ -442,16 +468,22 @@ impl<'de> Deserialize<'de> for OptionSeries {
 #[cfg(test)]
 mod tests_option_series {
     use super::*;
-    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::spos;
+    use optionstratlib_core::{model::Positive, pos_or_panic};
 
     use crate::chains::OptionChain;
+    #[cfg(feature = "clock")]
     use crate::series::params::OptionSeriesBuildParams;
     use optionstratlib_core::utils::Len;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::get_x_days_formatted_pos;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a simple OptionChain for testing
+    #[cfg(feature = "clock")]
     fn create_test_chain(expiration_days: Positive) -> OptionChain {
         let date =
             get_x_days_formatted_pos(expiration_days).expect("test expiration fits the calendar");
@@ -483,6 +515,7 @@ mod tests_option_series {
     }
 
     // Helper function to create a basic OptionSeries for testing
+    #[cfg(feature = "clock")]
     fn create_test_series() -> OptionSeries {
         let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
@@ -535,6 +568,7 @@ mod tests_option_series {
     mod tests_odte_method {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_odte_with_valid_chain() {
             let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
@@ -550,6 +584,7 @@ mod tests_option_series {
             assert_eq!(odte_chain.unwrap().symbol, "TEST");
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_odte_with_invalid_chain() {
             let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
@@ -573,6 +608,7 @@ mod tests_option_series {
             assert!(odte_chain.is_none());
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_odte_with_exact_one_day() {
             let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
@@ -591,6 +627,7 @@ mod tests_option_series {
     mod tests_get_expiration_dates {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_get_expiration_dates_normal_case() {
             let series = create_test_series();
@@ -620,10 +657,13 @@ mod tests_option_series {
     }
 
     mod tests_build_series {
+        #[cfg(feature = "clock")]
         use super::*;
 
+        #[cfg(feature = "clock")]
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_build_series_basic() {
             // Create price params
@@ -677,6 +717,7 @@ mod tests_option_series {
     mod tests_to_build_params {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_to_build_params_normal_case() {
             let series = create_test_series();
@@ -705,8 +746,10 @@ mod tests_option_series {
     mod tests_display {
         use super::*;
 
+        #[cfg(feature = "clock")]
         use tracing::info;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_display_full_series() {
             let series = create_test_series();
@@ -749,6 +792,7 @@ mod tests_option_series {
     mod tests_len {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_len_normal_case() {
             let series = create_test_series();
@@ -781,6 +825,7 @@ mod tests_option_series {
             )
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_round_trip_keeps_every_chain_and_date() {
             let mut original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
@@ -822,7 +867,7 @@ mod tests_option_series {
             let read: Vec<String> = back
                 .chains
                 .keys()
-                .map(|date| match date.get_date_string() {
+                .map(|date| match expiration_date_string(date) {
                     Ok(date) => date,
                     Err(error) => panic!("date string: {error}"),
                 })
@@ -1006,6 +1051,7 @@ mod tests_option_series {
             assert_eq!(deserialized.dividend_yield, None);
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_serialization_individual_chain() {
             // This test verifies if individual OptionChain serialization works
@@ -1034,8 +1080,10 @@ mod tests_option_series {
     }
 
     mod tests_clone {
+        #[cfg(feature = "clock")]
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_clone() {
             let original = create_test_series();

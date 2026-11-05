@@ -17,7 +17,6 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -32,6 +31,7 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::utils::time::now;
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_pricing::error::GreeksError;
@@ -133,7 +133,8 @@ impl LongPut {
         open_fee_long_put: Positive,
         close_fee_long_put: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = LongPut::default();
+        let date = now()?;
+        let mut strategy = LongPut::blank_at(date);
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -152,7 +153,7 @@ impl LongPut {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee_long_put,
             close_fee_long_put,
             None,
@@ -471,7 +472,7 @@ impl StrategyConstructor for LongPut {
             Side::Long,
             "LongPut",
         )?;
-        let mut strategy = LongPut::default();
+        let mut strategy = LongPut::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -596,10 +597,10 @@ impl PnLCalculator for LongPut {
 
 impl Strategable for LongPut {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(LongPut, test_long_put_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_break_even {
     use super::*;
     use optionstratlib_core::pos_or_panic;

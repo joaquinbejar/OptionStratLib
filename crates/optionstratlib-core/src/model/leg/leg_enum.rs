@@ -20,6 +20,7 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::{Leg, SpotPosition};
 //! use optionstratlib_core::model::Position;
 //! use optionstratlib_core::model::types::Side;
@@ -31,6 +32,7 @@
 //!
 //! // Check leg type
 //! assert!(spot_leg.is_spot());
+//! # }
 //! ```
 
 use crate::error::PositionError;
@@ -356,7 +358,7 @@ impl From<PerpetualPosition> for Leg {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use crate::model::ExpirationDate;

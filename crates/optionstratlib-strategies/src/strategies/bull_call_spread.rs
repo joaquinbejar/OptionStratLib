@@ -33,7 +33,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -50,8 +50,9 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -160,6 +161,53 @@ impl BullCallSpread {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
+        long_strike: Positive,
+        short_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_short_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+    ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            long_strike,
+            short_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_short_call,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_short_call,
+            close_fee_short_call,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
         mut long_strike: Positive,
         mut short_strike: Positive,
         expiration: ExpirationDate,
@@ -173,6 +221,7 @@ impl BullCallSpread {
         close_fee_long_call: Positive,
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
+        date: DateTime<Utc>,
     ) -> Result<Self, StrategyError> {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
@@ -186,8 +235,8 @@ impl BullCallSpread {
             kind: StrategyType::BullCallSpread,
             description: BULL_CALL_SPREAD_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            short_call: Position::default(),
+            long_call: Position::blank_at(date),
+            short_call: Position::blank_at(date),
         };
 
         let long_call_option = Options::new(
@@ -207,7 +256,7 @@ impl BullCallSpread {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long_call,
             close_fee_long_call,
             None,
@@ -232,7 +281,7 @@ impl BullCallSpread {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -318,7 +367,7 @@ impl StrategyConstructor for BullCallSpread {
         let long_call = Position::new(
             lower_strike_option.option.clone(),
             lower_strike_option.premium,
-            Utc::now(),
+            now_or(lower_strike_option.date),
             lower_strike_option.open_fee,
             lower_strike_option.close_fee,
             lower_strike_option.epic.clone(),
@@ -328,7 +377,7 @@ impl StrategyConstructor for BullCallSpread {
         let short_call = Position::new(
             higher_strike_option.option.clone(),
             higher_strike_option.premium,
-            Utc::now(),
+            now_or(higher_strike_option.date),
             higher_strike_option.open_fee,
             higher_strike_option.close_fee,
             higher_strike_option.epic.clone(),
@@ -1033,10 +1082,10 @@ impl PnLCalculator for BullCallSpread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BullCallSpread, test_short_call_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 fn bull_call_spread_test() -> BullCallSpread {
     use rust_decimal_macros::dec;
     let underlying_price = pos_or_panic!(5781.88);
@@ -1060,7 +1109,7 @@ fn bull_call_spread_test() -> BullCallSpread {
     .unwrap()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_strategy {
     use super::*;
 
@@ -1293,7 +1342,7 @@ mod tests_bull_call_spread_strategy {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_validation {
     use super::*;
 
@@ -1507,7 +1556,7 @@ mod tests_bull_call_spread_validation {
 /// A vertical spread priced at a negative risk-free rate builds and validates
 /// (#709): `Options::validate` no longer rejects `r < 0`, so neither the
 /// constructor nor the position-based builders do.
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_negative_rate {
     use super::*;
     use crate::strategies::StrategyRequest;
@@ -1610,7 +1659,7 @@ mod tests_bull_call_spread_negative_rate {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_optimization {
     use super::*;
 
@@ -2015,7 +2064,7 @@ mod tests_bull_call_spread_optimization {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_profit {
     use super::*;
 
@@ -2194,7 +2243,7 @@ mod tests_bull_call_spread_profit {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_graph {
     use super::*;
 
@@ -2220,7 +2269,7 @@ mod tests_bull_call_spread_graph {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_probability {
     use super::*;
 
@@ -2432,7 +2481,7 @@ mod tests_bull_call_spread_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_delta {
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::bull_call_spread::BullCallSpread;
@@ -2592,7 +2641,7 @@ mod tests_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_delta_size {
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::bull_call_spread::BullCallSpread;
@@ -2751,7 +2800,7 @@ mod tests_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_position_management {
     use super::*;
 
@@ -2863,7 +2912,7 @@ mod tests_bull_call_spread_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position {
     use super::*;
 
@@ -2986,7 +3035,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_constructor {
     use super::*;
 
@@ -3133,7 +3182,7 @@ mod tests_bull_call_spread_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_spread_pnl {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;

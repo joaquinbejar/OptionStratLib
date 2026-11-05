@@ -16,8 +16,8 @@ description = "Cross-component integration tests of the OptionStratLib workspace
 # Every component a test uses is declared here directly; the facade is not,
 # because no test in this package is about the facade.
 [dev-dependencies]
-optionstratlib-core = { workspace = true }
-optionstratlib-pricing = { workspace = true }
-optionstratlib-strategies = { workspace = true }
+optionstratlib-core = { workspace = true, features = ["clock"] }
+optionstratlib-pricing = { workspace = true, features = ["clock"] }
+optionstratlib-strategies = { workspace = true, features = ["clock"] }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }

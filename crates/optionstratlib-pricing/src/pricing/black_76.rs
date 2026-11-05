@@ -8,6 +8,8 @@ use crate::kernels::{big_n, calculate_d_values_black_76, d_values_and_time, disc
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+#[cfg(test)]
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 #[cfg(test)]
 use rust_decimal::MathematicalOps;
@@ -496,7 +498,9 @@ mod tests {
     /// This is the structural equivalence that grounds Black-76 in the BSM framework.
     fn assert_matches_bsm(f: f64, k: f64, r: Decimal, t_days: f64, sigma: f64, style: OptionStyle) {
         let opt_b76 = create_option(f, k, r, t_days, sigma, style);
-        let years = opt_b76.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt_b76.expiration_date)
+            .unwrap()
+            .to_dec();
         let discount_factor = (-r * years).exp();
         let s_decimal = Decimal::from_f64_retain(f).unwrap() * discount_factor;
         let s = Positive::new_decimal(s_decimal).unwrap();

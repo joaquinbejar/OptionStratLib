@@ -12,7 +12,6 @@ use crate::chains::utils::{
 };
 use crate::chains::{OptionData, OptionsInStrike};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
-use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
@@ -25,6 +24,8 @@ use optionstratlib_core::model::{
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_core::utils::Len;
 use optionstratlib_core::utils::rng::get_random_element;
+use optionstratlib_core::utils::time::now;
+use optionstratlib_core::utils::time::{days_to_expiration, expiration_date_string};
 use optionstratlib_math::curves::{Curve, Point2D};
 use optionstratlib_math::geometrics::LinearInterpolation;
 use optionstratlib_pricing::error::GreeksError;
@@ -529,7 +530,7 @@ impl OptionChain {
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
         } else {
-            let days = expiration_date.get_days().map_err(|e| {
+            let days = days_to_expiration(&expiration_date).map_err(|e| {
                 ChainError::invalid_parameters(
                     "expiration_date",
                     &format!("failed to get days: {e}"),
@@ -562,7 +563,7 @@ impl OptionChain {
             )?
         };
 
-        let date_string = expiration_date.get_date_string().map_err(|e| {
+        let date_string = expiration_date_string(&expiration_date).map_err(|e| {
             ChainError::invalid_parameters(
                 "expiration_date",
                 &format!("failed to get date string: {e}"),
@@ -1954,7 +1955,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_ask.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        now()?,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -1985,7 +1986,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_bid.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        now()?,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -2016,7 +2017,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_ask.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        now()?,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -2047,7 +2048,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_bid.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        now()?,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -3251,11 +3252,13 @@ mod tests_chain_base {
         tempfile::tempdir().expect("a temporary directory is available")
     }
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
     use optionstratlib_core::spos;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
     #[test]
@@ -3280,6 +3283,7 @@ mod tests_chain_base {
     /// were "priceless", so the SAME request returned fewer strikes the closer
     /// the expiry got. Measured before the fix at a spot of 5100 with
     /// `chain_size` 20: 41 strikes at one day, 11 at 0.05 days, 5 at 0.01 days.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_build_chain_returns_the_requested_width_at_every_tenor() {
         for days in [30.0, 1.0, 0.3125, 0.05, 0.01] {
@@ -3323,6 +3327,7 @@ mod tests_chain_base {
     /// worth nothing, and reading that as "no price" removed the contract from
     /// the chain. It is a contract that nobody would pay for, which is a price,
     /// so it is quoted: this is issue #439's decision applied one layer up.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_a_worthless_wing_is_quoted_rather_than_dropped() {
         let params = OptionChainBuildParams::new(
@@ -3372,6 +3377,7 @@ mod tests_chain_base {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_new_option_chain_build_chain() {
         let params = OptionChainBuildParams::new(
@@ -3418,6 +3424,7 @@ mod tests_chain_base {
         assert_eq!(last.put_bid.unwrap(), 9.75);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_new_option_chain_build_chain_long() {
         let params = OptionChainBuildParams::new(
@@ -3979,7 +3986,7 @@ mod tests_option_data {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_get_random_positions {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -4889,6 +4896,7 @@ mod tests_filter_options_in_strike {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -5010,6 +5018,7 @@ mod tests_filter_options_in_strike {
         assert!(filtered_options.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
@@ -6567,7 +6576,7 @@ mod tests_option_chain_serde {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_gamma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -6649,7 +6658,7 @@ mod tests_gamma_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_delta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -6725,7 +6734,7 @@ mod tests_delta_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_vega_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -6801,7 +6810,7 @@ mod tests_vega_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_theta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -7146,7 +7155,7 @@ mod tests_color_calculations {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_atm_strike {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -7354,7 +7363,7 @@ mod tests_atm_strike {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_atm_strike_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -7707,13 +7716,17 @@ mod tests_option_chain_utils_bis {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::utils::OptionChainBuildParams;
+    #[cfg(feature = "clock")]
     use crate::chains::utils::OptionDataPriceParams;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard option chain for testing
+    #[cfg(feature = "clock")]
     fn create_standard_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -7774,6 +7787,7 @@ mod tests_option_chain_utils_bis {
         chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_strike_interval_standard_chain() {
         let chain = create_standard_chain();
@@ -7898,7 +7912,7 @@ mod tests_option_chain_utils_bis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_to_build_params_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -8155,7 +8169,7 @@ mod tests_to_build_params_bis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod chain_coverage_tests {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -8395,7 +8409,7 @@ mod chain_coverage_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod chain_coverage_tests_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -8679,7 +8693,7 @@ mod chain_coverage_tests_bis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_get_position_with_delta {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -10721,7 +10735,7 @@ mod tests_title_metadata {
 /// The rayon-pool build and refresh (#861) produce exactly the chain the
 /// serial walk produces: same strikes, same values at the same scale, same
 /// stops and the same errors.
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_parallel_pricing {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -10784,6 +10798,7 @@ mod tests_parallel_pricing {
         }
     }
 
+    #[cfg(feature = "clock")]
     fn assert_refresh_matches_serial(chain: &OptionChain) {
         let mut parallel = chain.clone();
         parallel.update_greeks();
@@ -10804,6 +10819,7 @@ mod tests_parallel_pricing {
         assert_eq!(fingerprint(&parallel), fingerprint(&serial));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_parallel_build_and_refresh_match_serial_on_21_and_201_strikes() {
         for (half_width, strikes) in [(10, 21), (100, 201)] {
@@ -10838,6 +10854,7 @@ mod tests_parallel_pricing {
         assert_build_matches_serial(&params);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_parallel_build_stops_where_the_serial_walk_stops() {
         // A grid of 1 around a spot of 10 runs out below after 9 steps, long
@@ -10867,6 +10884,7 @@ mod tests_parallel_pricing {
         assert!(!serially(|| price_in_parallel(10_000)));
     }
 
+    #[cfg(feature = "clock")]
     /// The seven snapshot-reading exposures equal the per-strike computation
     /// they replaced (#861 K2): a chain whose strikes carry greek snapshots
     /// and the same chain without them give the same sums, digit for digit.
@@ -10896,6 +10914,7 @@ mod tests_parallel_pricing {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_exposures_read_snapshots_bit_for_bit() {
         for half_width in [5, 25, 100] {

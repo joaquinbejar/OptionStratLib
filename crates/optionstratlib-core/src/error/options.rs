@@ -394,6 +394,14 @@ impl OptionsError {
     }
 }
 
+impl From<crate::error::ClockError> for OptionsError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: crate::error::ClockError) -> Self {
+        Self::ExpirationDate(err.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

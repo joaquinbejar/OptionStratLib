@@ -21,6 +21,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::{ExpirationDate, Options};
 use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::time::evaluation_time;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_simulation::error::SimulationError;
 use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
@@ -349,7 +350,7 @@ where
                     unrealized: None,
                     initial_costs: Positive::ZERO,
                     initial_income: Positive::ZERO,
-                    date_time: chrono::Utc::now(),
+                    date_time: evaluation_time()?,
                 };
                 final_pnl = Some(pnl);
                 break;
@@ -511,7 +512,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod test_support {
     //! Fixtures shared by the four single-leg simulation test modules.
     //! Each strategy is built the way its constructor builds it: the
@@ -619,7 +620,7 @@ mod test_support {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_single_leg_contract {
     use super::test_support::*;
     use super::*;
@@ -761,7 +762,7 @@ mod tests_single_leg_contract {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_simulate_long_call {
     use super::test_support::*;
     use super::*;
@@ -829,7 +830,7 @@ mod tests_simulate_long_call {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_simulate_long_put {
     use super::test_support::*;
     use super::*;
@@ -889,7 +890,7 @@ mod tests_simulate_long_put {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_simulate_short_call {
     use super::test_support::*;
     use super::*;
@@ -949,7 +950,7 @@ mod tests_simulate_short_call {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_simulate_short_put {
     use super::test_support::*;
     use super::*;

@@ -15,7 +15,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -31,8 +31,9 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -161,14 +162,70 @@ impl LongButterflySpread {
         open_fee_long_call_high: Positive,
         close_fee_long_call_high: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            low_strike,
+            middle_strike,
+            high_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_low,
+            premium_middle,
+            premium_high,
+            open_fee_short_call,
+            close_fee_short_call,
+            open_fee_long_call_low,
+            close_fee_long_call_low,
+            open_fee_long_call_high,
+            close_fee_long_call_high,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        low_strike: Positive,
+        middle_strike: Positive,
+        high_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_low: Positive,
+        premium_middle: Positive,
+        premium_high: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_long_call_low: Positive,
+        close_fee_long_call_low: Positive,
+        open_fee_long_call_high: Positive,
+        close_fee_long_call_high: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = LongButterflySpread {
             name: "Long Butterfly".to_string(),
             kind: StrategyType::LongButterflySpread,
             description: LONG_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call_low: Position::default(),
-            short_call: Position::default(),
-            long_call_high: Position::default(),
+            long_call_low: Position::blank_at(date),
+            short_call: Position::blank_at(date),
+            long_call_high: Position::blank_at(date),
         };
 
         // Create two short calls at middle strike
@@ -189,7 +246,7 @@ impl LongButterflySpread {
         strategy.short_call = Position::new(
             long_calls,
             premium_middle,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -214,7 +271,7 @@ impl LongButterflySpread {
         strategy.long_call_low = Position::new(
             long_call_low,
             premium_low,
-            Utc::now(),
+            date,
             open_fee_long_call_low,
             close_fee_long_call_low,
             None,
@@ -239,7 +296,7 @@ impl LongButterflySpread {
         strategy.long_call_high = Position::new(
             long_call_high,
             premium_high,
-            Utc::now(),
+            date,
             open_fee_long_call_high,
             close_fee_long_call_high,
             None,
@@ -356,7 +413,7 @@ impl StrategyConstructor for LongButterflySpread {
             short_call: Position::new(
                 middle_strike_position.option.clone(),
                 middle_strike_position.premium,
-                Utc::now(),
+                now_or(middle_strike_position.date),
                 middle_strike_position.open_fee,
                 middle_strike_position.close_fee,
                 middle_strike_position.epic.clone(),
@@ -365,7 +422,7 @@ impl StrategyConstructor for LongButterflySpread {
             long_call_low: Position::new(
                 lower_strike_position.option.clone(),
                 lower_strike_position.premium,
-                Utc::now(),
+                now_or(lower_strike_position.date),
                 lower_strike_position.open_fee,
                 lower_strike_position.close_fee,
                 lower_strike_position.epic.clone(),
@@ -374,7 +431,7 @@ impl StrategyConstructor for LongButterflySpread {
             long_call_high: Position::new(
                 higher_strike_position.option.clone(),
                 higher_strike_position.premium,
-                Utc::now(),
+                now_or(higher_strike_position.date),
                 higher_strike_position.open_fee,
                 higher_strike_position.close_fee,
                 higher_strike_position.epic.clone(),
@@ -1314,13 +1371,13 @@ impl PnLCalculator for LongButterflySpread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(
     LongButterflySpread,
     test_short_call_implementations
 );
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_spread {
     use super::*;
 
@@ -1556,7 +1613,7 @@ mod tests_long_butterfly_spread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_validation {
     use super::*;
 
@@ -1734,7 +1791,7 @@ mod tests_long_butterfly_validation {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_profit {
     use super::*;
 
@@ -1857,7 +1914,7 @@ mod tests_long_butterfly_profit {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -2033,7 +2090,7 @@ mod tests_long_butterfly_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_delta_size {
     use super::*;
 
@@ -2211,7 +2268,7 @@ mod tests_long_butterfly_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_position_management {
     use super::*;
 
@@ -2392,7 +2449,7 @@ mod tests_long_butterfly_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position_long {
     use super::*;
 
@@ -2516,7 +2573,7 @@ mod tests_adjust_option_position_long {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_spread_constructor {
     use super::*;
 
@@ -2814,7 +2871,7 @@ mod tests_long_butterfly_spread_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_spread_pnl {
     use super::*;
 
@@ -3070,7 +3127,7 @@ mod tests_long_butterfly_spread_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_butterfly_strategies {
     use super::*;
 
@@ -3280,7 +3337,7 @@ mod tests_butterfly_strategies {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_butterfly_optimizable {
     use super::*;
     use optionstratlib_core::spos;
@@ -3405,7 +3462,7 @@ mod tests_butterfly_optimizable {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_butterfly_probability {
     use super::*;
     use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;

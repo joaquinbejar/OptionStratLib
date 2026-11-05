@@ -79,6 +79,7 @@ asserts its resolved graph. Core is in every example's graph; this is the smalle
 
 | Feature  | Default | Effect                                                              |
 |----------|---------|---------------------------------------------------------------------|
+| `clock`  | yes     | The wall clock. Without it no package in the build enables `chrono/clock`: `utils::time::now` returns `ClockError`, a `Days` expiration still prices, a `DateTime` needs the thread's reference datetime, and the `*_at` forms take the time as an argument |
 | `schema` | no      | Derives `utoipa::ToSchema` on core types and enables it on `positive`, `expiration_date`, `financial_types` and `option_type` |
 
 Most users depend on the `optionstratlib` facade, which re-exports this crate.

@@ -11,6 +11,8 @@
 //! - Time Decay Profile Curve and Surface
 //! - Price Shock Impact Curve and Surface
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::metrics::{
     PriceShockCurve, PriceShockSurface, TimeDecayCurve, TimeDecaySurface,
     VolatilitySensitivityCurve, VolatilitySensitivitySurface,

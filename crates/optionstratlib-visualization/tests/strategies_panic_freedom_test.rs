@@ -14,6 +14,8 @@
 //! P&L primitive ones to `optionstratlib-analytics`, both as
 //! `tests/panic_freedom_test.rs`.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{OptionStyle, OptionType, Options, Position, Side};

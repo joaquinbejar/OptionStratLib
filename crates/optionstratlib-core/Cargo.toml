@@ -14,7 +14,10 @@ categories = ["finance", "data-structures"]
 include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
-default = []
+default = ["clock"]
+# The wall clock, on by default: without it this crate reads no clock and
+# `chrono/clock` stays off (#944).
+clock = ["chrono/clock", "expiration_date/clock", "option_type/clock"]
 # `ToSchema` derives on every core type, plus the same derives on the
 # foundational crates whose types appear in core fields (ADR-0002).
 schema = [
@@ -56,3 +59,4 @@ criterion = { workspace = true }
 [[bench]]
 name = "core"
 harness = false
+required-features = ["clock"]

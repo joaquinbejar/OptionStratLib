@@ -388,7 +388,7 @@ impl SPANMargin {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_span {
     use super::*;
     use optionstratlib_core::model::types::{OptionStyle, Side};

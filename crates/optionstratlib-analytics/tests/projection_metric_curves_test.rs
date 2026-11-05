@@ -5,6 +5,8 @@
 //! resolves `chain.theta_curve()` to the metric. This pins that both give the
 //! same points, so that switch changes no result.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::analytics::OptionChainProjections;
 use optionstratlib_analytics::metrics::{CharmCurve, ColorCurve, ThetaCurve};
 use optionstratlib_market::chains::chain::OptionChain;

@@ -14,7 +14,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -30,8 +30,9 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::spos;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -186,14 +187,70 @@ impl BullCallLadder {
         open_fee_short_high: Positive,
         close_fee_short_high: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            long_call_strike,
+            short_call_low_strike,
+            short_call_high_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_short_call_low,
+            premium_short_call_high,
+            open_fee_long,
+            close_fee_long,
+            open_fee_short_low,
+            close_fee_short_low,
+            open_fee_short_high,
+            close_fee_short_high,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        long_call_strike: Positive,
+        short_call_low_strike: Positive,
+        short_call_high_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_short_call_low: Positive,
+        premium_short_call_high: Positive,
+        open_fee_long: Positive,
+        close_fee_long: Positive,
+        open_fee_short_low: Positive,
+        close_fee_short_low: Positive,
+        open_fee_short_high: Positive,
+        close_fee_short_high: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = BullCallLadder {
             name: underlying_symbol.to_string(),
             kind: StrategyType::BullCallLadder,
             description: BULL_CALL_LADDER_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            short_call_low: Position::default(),
-            short_call_high: Position::default(),
+            long_call: Position::blank_at(date),
+            short_call_low: Position::blank_at(date),
+            short_call_high: Position::blank_at(date),
         };
         let long_call_option = Options::new(
             OptionType::European,
@@ -212,7 +269,7 @@ impl BullCallLadder {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long,
             close_fee_long,
             None,
@@ -238,7 +295,7 @@ impl BullCallLadder {
         let short_call_low = Position::new(
             short_call_low_option,
             premium_short_call_low,
-            Utc::now(),
+            date,
             open_fee_short_low,
             close_fee_short_low,
             None,
@@ -264,7 +321,7 @@ impl BullCallLadder {
         let short_call_high = Position::new(
             short_call_high_option,
             premium_short_call_high,
-            Utc::now(),
+            date,
             open_fee_short_high,
             close_fee_short_high,
             None,
@@ -363,7 +420,7 @@ impl StrategyConstructor for BullCallLadder {
         let long_call = Position::new(
             long_call_position.option.clone(),
             long_call_position.premium,
-            Utc::now(),
+            now_or(long_call_position.date),
             long_call_position.open_fee,
             long_call_position.close_fee,
             long_call_position.epic.clone(),
@@ -373,7 +430,7 @@ impl StrategyConstructor for BullCallLadder {
         let short_call_low = Position::new(
             low_short_call_position.option.clone(),
             low_short_call_position.premium,
-            Utc::now(),
+            now_or(low_short_call_position.date),
             low_short_call_position.open_fee,
             low_short_call_position.close_fee,
             low_short_call_position.epic.clone(),
@@ -383,7 +440,7 @@ impl StrategyConstructor for BullCallLadder {
         let short_call_high = Position::new(
             high_short_call_position.option.clone(),
             high_short_call_position.premium,
-            Utc::now(),
+            now_or(high_short_call_position.date),
             high_short_call_position.open_fee,
             high_short_call_position.close_fee,
             high_short_call_position.epic.clone(),
@@ -1258,10 +1315,10 @@ impl PnLCalculator for BullCallLadder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BullCallLadder, test_short_call_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder {
     use super::*;
 
@@ -1346,7 +1403,7 @@ mod tests_bull_call_ladder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_validation {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1392,7 +1449,7 @@ mod tests_bull_call_ladder_validation {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1572,7 +1629,7 @@ mod tests_bull_call_ladder_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_delta_size {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1753,7 +1810,7 @@ mod tests_bull_call_ladder_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_optimizable {
     use super::*;
 
@@ -1951,7 +2008,7 @@ mod tests_bull_call_ladder_optimizable {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_probability {
     use super::*;
 
@@ -2211,7 +2268,7 @@ mod tests_bull_call_ladder_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2392,7 +2449,7 @@ mod tests_bull_call_ladder_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2517,7 +2574,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2691,7 +2748,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_pnl {
     use super::*;
     use optionstratlib_core::pos_or_panic;

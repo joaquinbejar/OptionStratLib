@@ -14,7 +14,10 @@ categories = ["finance", "data-structures"]
 include = ["/src/**/*", "/testdata/*.json", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
-default = []
+default = ["clock"]
+# The wall clock, on by default: without it this crate reads no clock and
+# `chrono/clock` stays off (#944).
+clock = ["optionstratlib-core/clock", "optionstratlib-pricing/clock", "optionstratlib-simulation?/clock"]
 # Filesystem I/O: CSV, JSON and ZIP readers and writers (ADR-0003).
 io = ["dep:csv", "dep:zip"]
 # `tokio`-backed `*_async` wrappers over the `io` functions (ADR-0003).

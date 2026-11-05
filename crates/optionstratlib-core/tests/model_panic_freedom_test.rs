@@ -18,6 +18,8 @@
 //! `PnLCalculator::calculate_pnl_at_expiration` over the same inputs belongs
 //! to the P&L layer and stays in the facade's property suite.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::utils::mean_and_std;

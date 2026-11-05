@@ -23,6 +23,8 @@
 //!   normal CDF is evaluated in `f64`, so the last digits follow the
 //!   platform's floating-point library rather than the seeded stream.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_backtest::backtesting::Simulate;
 use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
 use optionstratlib_core::model::position::Position;

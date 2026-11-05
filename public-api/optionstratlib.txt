@@ -35,6 +35,7 @@ pub mod optionstratlib::error
 pub use optionstratlib::error::AdjustmentError
 pub use optionstratlib::error::BacktestError
 pub use optionstratlib::error::ChainError
+pub use optionstratlib::error::ClockError
 pub use optionstratlib::error::CurveError
 pub use optionstratlib::error::CurvesResult
 pub use optionstratlib::error::DecimalError

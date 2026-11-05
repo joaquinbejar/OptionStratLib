@@ -29,7 +29,7 @@ use crate::strategies::{
     probabilities::ProbabilityAnalysis,
     utils::{OptimizationCriteria, calculate_price_range},
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -47,6 +47,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -191,6 +192,53 @@ impl LongStrangle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
+        call_strike: Positive,
+        put_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_long_put: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_long_put: Positive,
+        close_fee_long_put: Positive,
+    ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            call_strike,
+            put_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_long_put,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_long_put,
+            close_fee_long_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
         mut call_strike: Positive,
         mut put_strike: Positive,
         expiration: ExpirationDate,
@@ -204,6 +252,7 @@ impl LongStrangle {
         close_fee_long_call: Positive,
         open_fee_long_put: Positive,
         close_fee_long_put: Positive,
+        date: DateTime<Utc>,
     ) -> Result<Self, StrategyError> {
         // The default strikes sit ten percent either side of the spot. A
         // spot at the top of the `Positive` range has no room above it, and
@@ -219,8 +268,8 @@ impl LongStrangle {
             kind: StrategyType::LongStrangle,
             description: LONG_STRANGLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            long_put: Position::default(),
+            long_call: Position::blank_at(date),
+            long_put: Position::blank_at(date),
         };
 
         let long_call_option = Options::new(
@@ -240,7 +289,7 @@ impl LongStrangle {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long_call,
             close_fee_long_call,
             None,
@@ -265,7 +314,7 @@ impl LongStrangle {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee_long_put,
             close_fee_long_put,
             None,
@@ -361,7 +410,7 @@ impl StrategyConstructor for LongStrangle {
         let long_call = Position::new(
             call_position.option.clone(),
             call_position.premium,
-            Utc::now(),
+            now_or(call_position.date),
             call_position.open_fee,
             call_position.close_fee,
             call_position.epic.clone(),
@@ -371,7 +420,7 @@ impl StrategyConstructor for LongStrangle {
         let long_put = Position::new(
             put_position.option.clone(),
             put_position.premium,
-            Utc::now(),
+            now_or(put_position.date),
             put_position.open_fee,
             put_position.close_fee,
             put_position.epic.clone(),
@@ -1193,7 +1242,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: Utc::now(),
+                                date_time: now()?,
                             }
                         }
                         (Side::Long, OptionStyle::Put) => {
@@ -1206,7 +1255,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: Utc::now(),
+                                date_time: now()?,
                             }
                         }
                         _ => PnL::default(),
@@ -1229,7 +1278,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: Utc::now(),
+                                date_time: now()?,
                             }
                         }
                         (Side::Long, OptionStyle::Put) => {
@@ -1242,7 +1291,7 @@ impl PnLCalculator for LongStrangle {
                                 unrealized: None,
                                 initial_costs: position.total_cost()?,
                                 initial_income: position.premium_received()?,
-                                date_time: Utc::now(),
+                                date_time: now()?,
                             }
                         }
                         _ => PnL::default(),
@@ -1255,10 +1304,10 @@ impl PnLCalculator for LongStrangle {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(LongStrangle, test_short_call_implementations);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_strangle_probability {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -1420,7 +1469,7 @@ mod tests_long_strangle_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_strangle_delta {
     use super::*;
     use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -1567,7 +1616,7 @@ mod tests_long_strangle_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_strangle_delta_size {
     use super::*;
     use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -1870,7 +1919,7 @@ mod tests_long_strangle_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strangle_position_management {
     use super::*;
     use optionstratlib_core::error::position::PositionValidationErrorKind;
@@ -1981,7 +2030,7 @@ mod tests_strangle_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position_long {
     use super::*;
     use optionstratlib_core::model::types::{OptionStyle, Side};
@@ -2104,7 +2153,7 @@ mod tests_adjust_option_position_long {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::model::OptionStyle;
@@ -2256,7 +2305,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_strangle_pnl {
     use super::*;
     use optionstratlib_core::assert_decimal_eq;
@@ -2418,7 +2467,7 @@ mod tests_long_strangle_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod test_valid_premium_for_shorts {
     use super::*;
     use optionstratlib_core::model::utils::create_sample_position;

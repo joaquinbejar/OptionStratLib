@@ -327,7 +327,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -542,7 +542,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_positive {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -981,6 +981,7 @@ mod tests_step {
 mod tests_step_serialization {
     use super::*;
 
+    #[cfg(feature = "clock")]
     use chrono::{TimeZone, Utc};
     use optionstratlib_core::pos_or_panic;
     use serde_json::{self, Value};
@@ -1021,6 +1022,7 @@ mod tests_step_serialization {
         assert_eq!(y["value"], "100");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_with_datetime_is_normalized() {
         // `Step::new` now normalizes `ExpirationDate::DateTime` into

@@ -140,7 +140,7 @@ impl StrategyRequest {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_serialization {
     use super::*;
     use chrono::{DateTime, NaiveDateTime, Utc};
@@ -304,7 +304,7 @@ mod tests_serialization {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategies_build_model {
     use super::*;
     use chrono::{DateTime, NaiveDateTime, Utc};

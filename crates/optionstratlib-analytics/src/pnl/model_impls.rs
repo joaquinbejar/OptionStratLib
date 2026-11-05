@@ -441,7 +441,7 @@ mod tests_options_pnl_calculator {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_transaction_able_default {
     use super::*;
     use chrono::Utc;
@@ -506,7 +506,7 @@ mod tests_transaction_able_default {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_calculator {
     use super::*;
     use chrono::Utc;
@@ -1033,7 +1033,7 @@ mod tests_pnl_calculator {
 /// `Position::calculate_pnl` used to report the unrealized change of one
 /// contract whatever the quantity, and `Options::calculate_pnl_at_expiration`
 /// signed a short's income twice and failed.
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_quantity {
     use super::*;
     use chrono::Utc;
@@ -1253,7 +1253,7 @@ mod tests_pnl_quantity {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_contract_size {
     use super::*;
     use chrono::Utc;

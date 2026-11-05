@@ -1213,7 +1213,7 @@ impl PnLCalculator for CustomStrategy {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_find_optimal_break_evens {
     //! `find_optimal` with a break-even recomputation that fails (#791).
 
@@ -1530,7 +1530,7 @@ mod tests_find_optimal_break_evens {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_empty_legs {
     //! A `CustomStrategy` whose legs were removed through the `pub`
     //! `positions` field (#788).

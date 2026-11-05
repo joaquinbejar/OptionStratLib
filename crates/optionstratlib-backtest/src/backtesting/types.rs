@@ -196,7 +196,8 @@ pub struct TimeSeriesData {
 /// This struct is used to log and analyze the performance and characteristics of specific trades,
 /// particularly in the context of options trading. It includes timestamps, financial details,
 /// associated strategy information, and reasons for exit.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "clock", derive(Default))]
 pub struct TradeRecord {
     /// A unique identifier (`Uuid`) for this specific trade record.
     pub id: Uuid,

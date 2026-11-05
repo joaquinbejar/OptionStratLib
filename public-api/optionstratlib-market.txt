@@ -473,6 +473,8 @@ impl core::convert::From<core::num::error::ParseIntError> for optionstratlib_mar
 pub fn optionstratlib_market::error::chains::ChainError::from(core::num::error::ParseIntError) -> Self
 impl core::convert::From<csv::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(csv::error::Error) -> Self
+impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_market::error::chains::ChainError
+pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_market::error::chains::ChainError
@@ -554,6 +556,8 @@ impl core::convert::From<core::num::error::ParseIntError> for optionstratlib_mar
 pub fn optionstratlib_market::error::chains::ChainError::from(core::num::error::ParseIntError) -> Self
 impl core::convert::From<csv::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(csv::error::Error) -> Self
+impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_market::error::chains::ChainError
+pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_market::error::chains::ChainError

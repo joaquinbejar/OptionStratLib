@@ -1,6 +1,7 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
 use crate::model::types::{OptionStyle, Side};
+use crate::utils::time::now;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -230,7 +231,8 @@ impl Trade {
     ///
     /// # Errors
     /// Returns [`TradeError::ArithmeticOverflow`] when the current time in nanoseconds since the
-    /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds.
+    /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds, and
+    /// [`TradeError::InvalidTrade`] in a build without the `clock` feature: use [`Trade::new_at`].
     ///
     /// # Remarks
     /// - Ensure all `Positive` values are validated and created using the appropriate constructors.
@@ -252,7 +254,50 @@ impl Trade {
         notes: Option<String>,
         status: TradeStatus,
     ) -> Result<Self, TradeError> {
-        let timestamp = timestamp_nanos(&Utc::now(), "Trade::new")?;
+        Self::new_at(
+            id,
+            action,
+            side,
+            option_style,
+            fee,
+            symbol,
+            strike,
+            expiry,
+            quantity,
+            premium,
+            underlying_price,
+            notes,
+            status,
+            now()?,
+        )
+    }
+
+    /// Creates a trade stamped with `timestamp` instead of the current time.
+    ///
+    /// The other parameters are those of [`Trade::new`]. Reads no clock, so it
+    /// exists and gives the same trade with or without the `clock` feature.
+    ///
+    /// # Errors
+    /// Returns [`TradeError::ArithmeticOverflow`] when `timestamp` in nanoseconds since the Unix
+    /// epoch leaves the `i64` range, even when truncated to whole seconds.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_at(
+        id: uuid::Uuid,
+        action: Action,
+        side: Side,
+        option_style: OptionStyle,
+        fee: Positive,
+        symbol: Option<String>,
+        strike: Positive,
+        expiry: DateTime<Utc>,
+        quantity: Positive,
+        premium: Positive,
+        underlying_price: Positive,
+        notes: Option<String>,
+        status: TradeStatus,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Self, TradeError> {
+        let timestamp = timestamp_nanos(&timestamp, "Trade::new")?;
         Ok(Self {
             id,
             action,
@@ -605,7 +650,7 @@ mod ts_ns {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
 

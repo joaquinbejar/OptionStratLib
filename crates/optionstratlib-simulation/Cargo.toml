@@ -14,7 +14,10 @@ categories = ["finance", "mathematics", "simulation"]
 include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
-default = []
+default = ["clock"]
+# The wall clock, on by default: without it this crate reads no clock and
+# `chrono/clock` stays off (#944).
+clock = ["optionstratlib-core/clock", "optionstratlib-pricing/clock"]
 # `ToSchema` derives on the simulation types (ADR-0002).
 schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-pricing/schema"]
 

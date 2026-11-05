@@ -25,6 +25,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::Side;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_market::chains::chain::OptionChain;
 use optionstratlib_pricing::greeks::Greeks;
 use rust_decimal::Decimal;
@@ -588,10 +589,16 @@ impl<'a> AdjustmentOptimizer<'a> {
                 } => {
                     let mut new_option = *option.clone();
                     new_option.quantity = *quantity;
+                    let date = match positions.first() {
+                        Some(leg) => now_or(leg.date),
+                        None => now().map_err(|error| {
+                            AdjustmentError::ConfigurationViolation(error.to_string())
+                        })?,
+                    };
                     positions.push(Position::new(
                         new_option,
                         Positive::ZERO,
-                        chrono::Utc::now(),
+                        date,
                         Positive::ZERO,
                         Positive::ZERO,
                         None,
@@ -609,7 +616,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_optimizer {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -742,7 +749,7 @@ mod tests_optimizer {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_optimizer_contract_size {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;

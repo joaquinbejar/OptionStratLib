@@ -9,7 +9,7 @@
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::pos_or_panic;
 
 use crate::error::strategies::StrategyError;
@@ -559,7 +559,7 @@ fn resolve_volatility<S: ProbabilityAnalysis + ?Sized>(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_probability_analysis {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -713,7 +713,7 @@ mod tests_probability_analysis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_expected_value {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -947,7 +947,7 @@ mod tests_expected_value {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_marginal_probability_inversion {
     use super::*;
     use crate::strategies::BullCallSpread;
@@ -1100,7 +1100,7 @@ mod tests_marginal_probability_inversion {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_reference_volatility {
     use super::*;
     use crate::strategies::BullCallSpread;

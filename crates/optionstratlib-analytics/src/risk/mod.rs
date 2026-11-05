@@ -46,6 +46,7 @@ use optionstratlib_core::pos_or_panic;
 //! ### Basic Margin Calculation
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::{ExpirationDate, Options};
 //! use optionstratlib_core::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib_core::model::Positive;
@@ -93,11 +94,13 @@ use optionstratlib_core::pos_or_panic;
 //!     let margin = span.calculate_margin(&position)?;
 //!     Ok(())
 //! }
+//! # }
 //! ```
 //!
 //! ### Portfolio Analysis
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use chrono::Utc;
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
@@ -155,6 +158,7 @@ use optionstratlib_core::pos_or_panic;
 //!         .collect::<Result<Vec<_>, _>>()?;
 //!     Ok(())
 //! }
+//! # }
 //! ```
 //!
 //! ## Implementation Details

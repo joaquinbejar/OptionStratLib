@@ -134,6 +134,16 @@ impl From<String> for TradeError {
     }
 }
 
+impl From<crate::error::ClockError> for TradeError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: crate::error::ClockError) -> Self {
+        Self::InvalidTrade {
+            reason: err.to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests_trade_errors {
     use super::*;

@@ -111,6 +111,7 @@ LAYER_OF = {
 
 # `src/error/<file>.rs` -> target crate layer (ADR-0001 D6).
 ERROR_FILE_LAYER = {
+    "clock": "core",
     "common": "core",
     "decimal": "core",
     "options": "core",
@@ -254,13 +255,13 @@ def strip_comments(text: str, *, exempt_marked: bool = True) -> str:
 
 
 def production_lines(text: str) -> list[str]:
-    """Drop `#[cfg(test)]` items by brace counting."""
+    """Drop `#[cfg(test)]` and `#[cfg(all(test, ...))]` items by brace counting."""
     out: list[str] = []
     lines = text.splitlines()
     i = 0
     while i < len(lines):
         line = lines[i]
-        if line.strip() == "#[cfg(test)]":
+        if line.strip() == "#[cfg(test)]" or line.strip().startswith("#[cfg(all(test,"):
             depth = 0
             started = False
             i += 1
@@ -1424,8 +1425,10 @@ def plotly_gate_violations(packages: list[dict]) -> list[str]:
                 got = frozenset(features.get(feature, []))
                 if got != expected:
                     found.append(f"{name}: feature `{feature}` is {sorted(got)}, expected {sorted(expected)}")
-            if "default" in features and features["default"]:
-                found.append(f"{name}: default features must stay empty, got {features['default']}")
+            # `clock` is the one default a component may have (#944): it pulls in
+            # no backend, and a direct dependency keeps the time it always had.
+            if set(features.get("default", [])) - {"clock"}:
+                found.append(f"{name}: default features must stay `clock` alone, got {features['default']}")
             continue
         for dep in deps:
             if dep["name"] in PLOTLY_BACKENDS:
@@ -1490,9 +1493,15 @@ FACADE_EXACT = {
         "optionstratlib-analytics?/schema", "optionstratlib-strategies?/schema",
         "optionstratlib-backtest?/schema",
     }),
+    "clock": frozenset({
+        "optionstratlib-core/clock", "optionstratlib-pricing?/clock",
+        "optionstratlib-simulation?/clock", "optionstratlib-market?/clock",
+        "optionstratlib-analytics?/clock", "optionstratlib-strategies?/clock",
+        "optionstratlib-backtest?/clock",
+    }),
     "default": frozenset({
-        "pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization",
-        "synthetic", "io", "schema",
+        "clock", "pricing", "market", "analytics", "strategies", "simulation", "backtest",
+        "visualization", "synthetic", "io", "schema",
     }),
 }
 
@@ -1575,6 +1584,7 @@ def self_test() -> int:
         "allowed edge": ([("pricing/x.rs", "use crate::model::Options;\n")], 0),
         "comment only": ([("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n")], 0),
         "test module only": ([("model/x.rs", "#[cfg(test)]\nmod t {\n    use crate::pricing::black_scholes;\n}\n")], 0),
+        "test module behind a feature": ([("model/x.rs", '#[cfg(all(test, feature = "clock"))]\nmod t {\n    use crate::pricing::black_scholes;\n}\n')], 0),
         "marked compat re-export": ([("model/x.rs", "pub use crate::pricing::black_scholes; // facade-compat: pricing\n")], 0),
         "marked plain import is not exempt": ([("model/x.rs", "use crate::pricing::black_scholes; // facade-compat: pricing\n")], 1),
         "multiline import": ([("model/x.rs", "use crate::{\n    Options,\n    pricing::black_scholes,\n};\n")], 1),

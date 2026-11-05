@@ -21,6 +21,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{decimal_to_f64, p_sqrt};
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::time::years_to_expiration;
 use optionstratlib_pricing::greeks::big_n;
 use rust_decimal::Decimal;
 
@@ -206,7 +207,7 @@ pub fn calculate_single_point_probability(
             },
         ));
     }
-    let time_to_expiry = expiration_date.get_years()?;
+    let time_to_expiry = years_to_expiration(expiration_date)?;
     if time_to_expiry <= 0.0 {
         return Err(ProbabilityError::ExpirationError(
             ExpirationErrorKind::InvalidExpiration {
@@ -410,7 +411,7 @@ pub fn calculate_price_probability(
     Ok((prob_below_range, prob_in_range, prob_above_range))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_single_point_probability {
     use super::*;
     use approx::assert_relative_eq;

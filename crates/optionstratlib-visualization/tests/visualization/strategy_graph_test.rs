@@ -1,3 +1,5 @@
+#![cfg(feature = "clock")]
+
 use chrono::Utc;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{

@@ -44,6 +44,7 @@
 ///
 /// `Graph` is not asserted here: it is a visualization trait, and the visualization layer's
 /// tests assert it for every concrete strategy.
+#[cfg(feature = "clock")]
 macro_rules! test_strategy_traits {
     ($strategy_type:ty, $module_name:ident) => {
         mod $module_name {
@@ -76,4 +77,5 @@ macro_rules! test_strategy_traits {
     };
 }
 
+#[cfg(feature = "clock")]
 pub(crate) use test_strategy_traits;

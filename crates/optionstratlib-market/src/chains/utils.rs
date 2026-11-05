@@ -9,6 +9,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_sqrt, d_sub, decimal_to_f64, p_sqrt,
 };
+use optionstratlib_core::utils::time::{days_to_expiration, years_to_expiration};
 
 /// Calculates the optimal price range for an option based on its underlying price,
 /// strike price, implied volatility, and expiration date.
@@ -61,7 +62,7 @@ pub fn calculate_optimal_price_range(
     implied_volatility: Positive,
     expiration_date: ExpirationDate,
 ) -> Result<(Positive, Positive), ChainError> {
-    let days_to_expiry = expiration_date.get_days()?;
+    let days_to_expiry = days_to_expiration(&expiration_date)?;
     let years_to_expiry = d_div(
         Decimal::from(days_to_expiry),
         dec!(365.0),
@@ -713,7 +714,7 @@ impl Display for OptionDataPriceParams {
         // `get_years` can fail; `Display` cannot return `ChainError`, so the
         // cell reads "n/a" then.
         let years = self.expiration_date.map_or_else(none, |d| {
-            d.get_years()
+            years_to_expiration(&d)
                 .map_or_else(|_| "n/a".to_string(), |y| display_rounded(y.value(), 4))
         });
         let rate = self.risk_free_rate.map_or_else(none, percent_or_na);
@@ -1209,8 +1210,10 @@ mod tests_strike_step {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::OptionChain;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::Len;
     #[test]
     fn basic() {
@@ -1254,6 +1257,7 @@ mod tests_strike_step {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn long_discrepancy() {
         let symbol = "AAPL".to_string();
@@ -1734,7 +1738,7 @@ mod tests_adjust_volatility {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_option_data_price_params {
     use super::*;
 
@@ -2007,10 +2011,13 @@ mod tests_sample {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::chain::OptionChain;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
@@ -2059,6 +2066,7 @@ mod tests_sample {
 #[cfg(test)]
 mod tests_panic_freedom {
     use super::*;
+    #[cfg(feature = "clock")]
     use crate::chains::OptionChain;
     use rust_decimal_macros::dec;
 
@@ -2152,6 +2160,7 @@ mod tests_panic_freedom {
         ));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_random_positions_overflow_and_unallocatable_return_error() {
         let mut chain = OptionChain::new(

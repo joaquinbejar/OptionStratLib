@@ -116,6 +116,7 @@ pub mod error;
 
 /// Deterministic walkers shared by the generator tests.
 #[cfg(test)]
+#[cfg(feature = "clock")]
 #[cfg(feature = "synthetic")]
 mod walk_test_support;
 

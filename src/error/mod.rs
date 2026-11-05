@@ -170,8 +170,8 @@ mod unified;
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
 /// contracts, positions, trades and settlements.
 pub use optionstratlib_core::error::{
-    DecimalError, DecimalResult, OperationErrorKind, OptionsError, OptionsResult, PositionError,
-    SettlementError, TradeError, position,
+    ClockError, DecimalError, DecimalResult, OperationErrorKind, OptionsError, OptionsResult,
+    PositionError, SettlementError, TradeError, position,
 };
 
 /// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and

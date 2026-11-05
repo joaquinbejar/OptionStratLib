@@ -533,6 +533,14 @@ impl PositionError {
     }
 }
 
+impl From<crate::error::ClockError> for PositionError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: crate::error::ClockError) -> Self {
+        Self::Options(err.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

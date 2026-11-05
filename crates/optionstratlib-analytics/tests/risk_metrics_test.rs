@@ -12,6 +12,8 @@
 //! - RiskReversalCurve
 //! - DollarGammaCurve
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::metrics::{
     DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve, RiskReversalCurve,
 };

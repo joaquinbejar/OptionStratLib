@@ -50,6 +50,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln_f64, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, f64_to_decimal,
 };
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use statrs::distribution::{ContinuousCDF, Normal};
 
@@ -459,7 +460,7 @@ pub(crate) fn calculate_d_values_with_yield(
     // `Decimal`'s `-` panics on overflow, which a rate at the edge of the
     // range reaches (`Decimal::MIN` minus any positive yield).
     let b = d_sub(option.risk_free_rate, q, "greeks::carry_rate")?;
-    let years = option.expiration_date.get_years()?;
+    let years = years_to_expiration(&option.expiration_date)?;
     // `d2` is derived from this `d1`: calling [`d2`] recomputed `d1`, so every
     // price paid for its logarithm twice (#859). Same digits either way.
     let d1_value = d1(
@@ -493,7 +494,7 @@ pub(crate) fn calculate_d_values_with_yield(
 pub fn calculate_d_values_black_76(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     // Black-76: cost of carry b = 0 (forward pricing, no carry term in d1/d2)
     let b = Decimal::ZERO;
-    let years = option.expiration_date.get_years()?;
+    let years = years_to_expiration(&option.expiration_date)?;
     // `d1` once, `d2` from it (#859), as in `calculate_d_values_with_yield`.
     let d1_value = d1(
         option.underlying_price,
@@ -1935,7 +1936,7 @@ mod tests_price_greek_consistency {
     }
 
     fn years(option: &Options) -> Positive {
-        ok("years", option.expiration_date.get_years())
+        ok("years", years_to_expiration(&option.expiration_date))
     }
 
     /// The Greek-side `d1`/`d2`, called through the public `greeks` path
@@ -2241,10 +2242,7 @@ mod tests_d_values_single_d1 {
     /// `(d1, d2)` through the public `d1` and `d2`, as the helpers computed
     /// them before #859; an error is kept as its message.
     fn reference(option: &Options, carry: Decimal) -> Result<(Decimal, Decimal), String> {
-        let years = option
-            .expiration_date
-            .get_years()
-            .map_err(|e| e.to_string())?;
+        let years = years_to_expiration(&option.expiration_date).map_err(|e| e.to_string())?;
         let args = (
             option.underlying_price,
             option.strike_price,

@@ -5,6 +5,8 @@ use crate::pnl::utils::PnL;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Position;
 use optionstratlib_core::model::Positive;
+#[cfg(all(test, feature = "clock"))]
+use optionstratlib_core::utils::time::expiration_date_string;
 use optionstratlib_pricing::error::PricingError;
 
 /// Defines the interface for profit and loss (PnL) calculation on financial instruments.
@@ -157,7 +159,7 @@ pub trait TransactionAble {
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError>;
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_calculator {
     use super::*;
 
@@ -252,7 +254,7 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.initial_income, pos_or_panic!(20.0));
         assert_eq!(
             pnl.date_time.format("%Y-%m-%d").to_string(),
-            now.get_date_string().unwrap()
+            expiration_date_string(&now).unwrap()
         );
 
         let pnl_at_expiration = dummy

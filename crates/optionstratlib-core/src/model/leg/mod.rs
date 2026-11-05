@@ -37,6 +37,7 @@
 //! ## Example: Covered Call Strategy
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib_core::model::leg::{Leg, SpotPosition};
 //! use optionstratlib_core::model::Position;
@@ -55,11 +56,13 @@
 //! tracing::info!("Spot P&L at 160: {}", spot_leg.pnl_at_price(pos_or_panic!(160.0))?);
 //! # Ok(())
 //! # }
+//! # }
 //! ```
 //!
 //! ## Example: Cash & Carry Arbitrage (Crypto)
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib_core::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib_core::model::types::Side;
@@ -88,6 +91,7 @@
 //! let net_pnl = spot_leg.pnl_at_price(price)? + perp_leg.pnl_at_price(price)?;
 //! assert_eq!(net_pnl, rust_decimal::Decimal::ZERO);
 //! # Ok(())
+//! # }
 //! # }
 //! ```
 //!

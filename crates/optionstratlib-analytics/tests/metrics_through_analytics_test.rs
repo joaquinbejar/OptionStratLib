@@ -10,6 +10,8 @@
 //! This is the shape of the cross-crate test that survives the extraction of
 //! `optionstratlib-analytics` (ADR-0001 D4, D5; M1-12).
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::analytics::{RNDAnalysis, RNDParameters};
 use optionstratlib_analytics::metrics::ImpliedVolatilityCurve;
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};

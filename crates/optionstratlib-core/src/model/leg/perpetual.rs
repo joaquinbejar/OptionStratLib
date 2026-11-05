@@ -20,6 +20,8 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::{PerpetualPosition, MarginType};
 //! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
@@ -38,12 +40,16 @@
 //!     Utc::now(),
 //!     pos_or_panic!(5.0),           // $5 fees
 //! );
+//! # }
+//! # }
 //! ```
 
 use crate::error::PositionError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::{Fundable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -182,6 +188,7 @@ impl PerpetualPosition {
     /// * `entry_price` - Entry price
     /// * `leverage` - Leverage multiplier
     /// * `margin` - Collateral posted
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn long(
         symbol: String,
@@ -199,7 +206,7 @@ impl PerpetualPosition {
             margin,
             MarginType::Isolated,
             Decimal::ZERO,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -213,6 +220,7 @@ impl PerpetualPosition {
     /// * `entry_price` - Entry price
     /// * `leverage` - Leverage multiplier
     /// * `margin` - Collateral posted
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn short(
         symbol: String,
@@ -230,7 +238,7 @@ impl PerpetualPosition {
             margin,
             MarginType::Isolated,
             Decimal::ZERO,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -571,6 +579,7 @@ impl std::fmt::Display for PerpetualPosition {
     }
 }
 
+#[cfg(feature = "clock")]
 impl Default for PerpetualPosition {
     fn default() -> Self {
         Self {
@@ -582,13 +591,13 @@ impl Default for PerpetualPosition {
             margin: Positive::ZERO,
             margin_type: MarginType::default(),
             funding_rate: Decimal::ZERO,
-            date: Utc::now(),
+            date: wall_clock(),
             fees: Positive::ZERO,
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use positive::pos_or_panic;
@@ -610,7 +619,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -629,7 +638,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -753,7 +762,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         );
 
@@ -773,7 +782,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         );
 

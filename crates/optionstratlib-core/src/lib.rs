@@ -154,6 +154,11 @@
 //!
 //! ## Features
 //!
+//! - `clock` (on by default): the wall clock. Without it no package in the build
+//!   enables `chrono/clock`: [`utils::time::now`] returns
+//!   [`error::ClockError`], a `Days` expiration still prices, a `DateTime` needs
+//!   the thread's reference datetime, and the `*_at` forms such as
+//!   [`model::Trade::new_at`] take the time as an argument.
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the core types
 //!   and enables the same derive on `positive`, `expiration_date`,
 //!   `financial_types` and `option_type`.

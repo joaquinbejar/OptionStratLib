@@ -11,6 +11,8 @@
 //! - Delta-Gamma Profile Curve and Surface
 //! - Smile Dynamics Curve and Surface
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::metrics::{
     DeltaGammaProfileCurve, DeltaGammaProfileSurface, SmileDynamicsCurve, SmileDynamicsSurface,
     VannaVolgaSurface,

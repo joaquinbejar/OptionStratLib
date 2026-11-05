@@ -808,7 +808,7 @@ pub(crate) fn covered_spot_leg<'a>(
     Ok(spot_leg)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_shared {
     use super::*;
     use rust_decimal_macros::dec;

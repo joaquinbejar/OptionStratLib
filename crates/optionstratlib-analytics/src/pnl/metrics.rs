@@ -2,6 +2,8 @@ use crate::pnl::PnL;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use optionstratlib_core::model::Positive;
+#[cfg(feature = "clock")]
+use optionstratlib_core::utils::time::wall_clock;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -127,6 +129,7 @@ pub struct PnLMetrics {
     pub end_time: DateTime<Utc>,
 }
 
+#[cfg(feature = "clock")]
 impl Default for PnLMetrics {
     fn default() -> Self {
         Self {
@@ -147,8 +150,8 @@ impl Default for PnLMetrics {
             recovery_factor: Decimal::ZERO,
             expected_payoff: Decimal::ZERO,
             simulation_duration: Decimal::ZERO,
-            start_time: Utc::now(),
-            end_time: Utc::now(),
+            start_time: wall_clock(),
+            end_time: wall_clock(),
         }
     }
 }
@@ -446,7 +449,7 @@ pub fn save_pnl_metrics_with_document(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_metrics {
     use super::*;
     use crate::pnl::PnL;
@@ -820,7 +823,7 @@ mod tests_pnl_metrics {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_pnl_metrics_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};

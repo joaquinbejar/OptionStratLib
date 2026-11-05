@@ -21,6 +21,8 @@
 //! every count, exit reason and holding period, still matches exactly.
 //! Regenerate only when a numerical change is intended and reviewed.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_backtest::backtesting::Simulate;
 use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
 use optionstratlib_core::model::ExpirationDate;

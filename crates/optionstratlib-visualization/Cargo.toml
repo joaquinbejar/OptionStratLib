@@ -14,7 +14,10 @@ categories = ["finance", "visualization"]
 include = ["/src/**/*", "/assets/OpenSans-Regular.ttf", "/assets/OFL.txt", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
-default = []
+default = ["clock"]
+# The wall clock, on by default: without it this crate reads no clock and
+# `chrono/clock` stays off (#944).
+clock = ["optionstratlib-core/clock", "optionstratlib-pricing/clock", "optionstratlib-simulation/clock", "optionstratlib-market/clock", "optionstratlib-strategies/clock", "optionstratlib-backtest/clock"]
 # Plotly rendering: `Graph::to_plot`, `write_html`, `show`, `render` and the
 # trace builders. `plotly` is declared without `static_export_default`, so
 # this feature resolves no WebDriver, image export or async runtime package
@@ -83,3 +86,4 @@ png = "0.17.16"
 [[bench]]
 name = "visualization"
 harness = false
+required-features = ["clock"]

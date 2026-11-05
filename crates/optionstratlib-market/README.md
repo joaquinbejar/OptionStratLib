@@ -59,6 +59,7 @@ asserts its resolved graph.
 
 | Feature  | Default | Effect                                                               |
 |----------|---------|----------------------------------------------------------------------|
+| `clock`  | yes     | The wall clock, forwarded to the crates below. See the `clock` feature of `optionstratlib-core` |
 | `io`     | no      | CSV/JSON chain files and the OHLCV ZIP reader; adds `csv` and `zip`   |
 | `async`  | no      | `tokio`-backed `*_async` wrappers on `spawn_blocking`; implies `io`   |
 | `synthetic` | no   | `generator_optionchain` / `generator_optionseries`; adds `optionstratlib-simulation` |

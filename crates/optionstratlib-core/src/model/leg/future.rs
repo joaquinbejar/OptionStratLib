@@ -20,6 +20,7 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::FuturePosition;
 //! use optionstratlib_core::model::types::Side;
 //! use optionstratlib_core::model::ExpirationDate;
@@ -38,6 +39,7 @@
 //!     Utc::now(),
 //!     pos_or_panic!(5.0),               // fees
 //! );
+//! # }
 //! ```
 
 use crate::error::{DecimalError, PositionError};
@@ -46,9 +48,13 @@ use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
+use crate::utils::time::{evaluation_time, years_to_expiration};
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
+#[cfg(feature = "clock")]
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
@@ -157,6 +163,7 @@ impl FuturePosition {
     /// * `expiration_date` - Contract expiry
     /// * `contract_size` - Contract multiplier
     /// * `margin` - Margin requirement
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn long(
         symbol: String,
@@ -175,7 +182,7 @@ impl FuturePosition {
             contract_size,
             margin,
             maintenance_from_initial(margin), // 80% of initial margin
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -190,6 +197,7 @@ impl FuturePosition {
     /// * `expiration_date` - Contract expiry
     /// * `contract_size` - Contract multiplier
     /// * `margin` - Margin requirement
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn short(
         symbol: String,
@@ -208,7 +216,7 @@ impl FuturePosition {
             contract_size,
             margin,
             maintenance_from_initial(margin),
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -357,6 +365,7 @@ impl FuturePosition {
 /// [`FuturePosition::short`]: 80% of the initial margin.
 // Scaling a value in `[0, Decimal::MAX]` by `0.8` stays in that range, so the
 // product is representable and keeps the `Positive` invariant.
+#[cfg(feature = "clock")]
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "0.8 times a value in [0, Decimal::MAX] stays in that range"
@@ -492,10 +501,7 @@ impl Expirable for FuturePosition {
     }
 
     fn days_to_expiration(&self) -> Result<Positive, PositionError> {
-        let years = self
-            .expiration_date
-            .get_years()
-            .map_err(DecimalError::from)?;
+        let years = years_to_expiration(&self.expiration_date).map_err(DecimalError::from)?;
         let days = d_mul(
             years.to_dec(),
             Decimal::from(365),
@@ -507,7 +513,7 @@ impl Expirable for FuturePosition {
     fn is_expired(&self) -> Result<bool, PositionError> {
         // An unresolvable date used to read as "not expired" (#810).
         let date = resolve_expiration_date(&self.expiration_date).map_err(DecimalError::from)?;
-        Ok(date < Utc::now())
+        Ok(date < evaluation_time()?)
     }
 }
 
@@ -526,6 +532,7 @@ impl std::fmt::Display for FuturePosition {
     }
 }
 
+#[cfg(feature = "clock")]
 impl Default for FuturePosition {
     fn default() -> Self {
         Self {
@@ -543,13 +550,13 @@ impl Default for FuturePosition {
             contract_size: positive::Positive::ONE,
             initial_margin_req: Positive::ZERO,
             maintenance_margin_req: Positive::ZERO,
-            date: Utc::now(),
+            date: wall_clock(),
             fees: Positive::ZERO,
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use positive::pos_or_panic;
@@ -569,7 +576,7 @@ mod tests {
             pos_or_panic!(50.0),
             Positive::MAX,
             pos_or_panic!(12000.0),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -587,7 +594,7 @@ mod tests {
             pos_or_panic!(50.0),
             pos_or_panic!(15000.0),
             pos_or_panic!(12000.0),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -772,7 +779,7 @@ mod tests {
             Positive::ONE,
             initial_margin_req,
             maintenance_margin_req,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }

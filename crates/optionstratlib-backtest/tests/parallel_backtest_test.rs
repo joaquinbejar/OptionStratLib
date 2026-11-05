@@ -8,6 +8,8 @@
 //! `simulate_single_leg` did before #863. Both runs are serialised without
 //! the `date_time` stamps the P&L takes from the clock and compared whole.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_backtest::backtesting::Simulate;
 use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
 use optionstratlib_backtest::backtesting::strategy_simulation::{

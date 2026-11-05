@@ -10,21 +10,25 @@
 //! ones [`optionstratlib_simulation::simulation::PathStatistics::from_outcomes`] computes.
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::pnl::PnL;
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::time::evaluation_time;
+#[cfg(feature = "clock")]
+use optionstratlib_core::utils::time::wall_clock;
 use optionstratlib_simulation::error::SimulationError;
 use optionstratlib_simulation::simulation::{PathOutcome, PathStatistics};
 use std::collections::HashMap;
 
-impl From<PathOutcome> for SimulationResult {
-    /// Lifts a generic outcome into the strategy-bound result.
+impl SimulationResult {
+    /// Lifts a generic outcome into the strategy-bound result, its P&L stamped
+    /// with `date_time`.
     ///
-    /// The path P&L becomes the realized leg of a [`PnL`] with no costs,
-    /// no income and the current timestamp; `simulation_count` is one and
-    /// the risk fields are empty, exactly as the strategy simulations have
-    /// always filled them.
-    fn from(outcome: PathOutcome) -> Self {
+    /// The path P&L becomes the realized leg of a [`PnL`] with no costs and no
+    /// income; `simulation_count` is one and the risk fields are empty, exactly
+    /// as the strategy simulations have always filled them. Reads no clock.
+    #[must_use]
+    pub fn from_outcome_at(outcome: PathOutcome, date_time: DateTime<Utc>) -> Self {
         Self {
             simulation_count: 1,
             risk_metrics: None,
@@ -41,11 +45,24 @@ impl From<PathOutcome> for SimulationResult {
                 unrealized: None,
                 initial_costs: Positive::ZERO,
                 initial_income: Positive::ZERO,
-                date_time: Utc::now(),
+                date_time,
             },
             holding_period: outcome.holding_period,
             exit_reason: outcome.exit_reason,
         }
+    }
+}
+
+#[cfg(feature = "clock")]
+impl From<PathOutcome> for SimulationResult {
+    /// Lifts a generic outcome into the strategy-bound result.
+    ///
+    /// The path P&L becomes the realized leg of a [`PnL`] with no costs,
+    /// no income and the current timestamp; `simulation_count` is one and
+    /// the risk fields are empty, exactly as the strategy simulations have
+    /// always filled them.
+    fn from(outcome: PathOutcome) -> Self {
+        Self::from_outcome_at(outcome, wall_clock())
     }
 }
 
@@ -90,17 +107,24 @@ impl SimulationStatsResult {
     /// Builds the aggregate from a generic run.
     ///
     /// Each outcome is lifted into a [`SimulationResult`] through
-    /// `From<PathOutcome>`; the statistics are computed on the outcomes
+    /// [`SimulationResult::from_outcome_at`], all stamped with
+    /// [`evaluation_time`]; the statistics are computed on the outcomes
     /// before the lift so a `None` P&L is counted the same way either
     /// entry point is used.
     ///
     /// # Errors
     ///
-    /// Propagates the errors of [`PathStatistics::from_outcomes`].
+    /// Propagates the errors of [`PathStatistics::from_outcomes`], and
+    /// [`SimulationError::ExpirationDate`] in a build with neither the `clock`
+    /// feature nor a reference datetime on this thread.
     #[must_use = "the aggregate is the only product of this call"]
     pub fn from_outcomes(outcomes: Vec<PathOutcome>) -> Result<Self, SimulationError> {
         let stats = PathStatistics::from_outcomes(&outcomes)?;
-        let results = outcomes.into_iter().map(SimulationResult::from).collect();
+        let date_time = evaluation_time()?;
+        let results = outcomes
+            .into_iter()
+            .map(|outcome| SimulationResult::from_outcome_at(outcome, date_time))
+            .collect();
         Ok(Self::from_parts(results, stats))
     }
 
@@ -123,7 +147,7 @@ impl SimulationStatsResult {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use optionstratlib_simulation::simulation::ExitPolicy;

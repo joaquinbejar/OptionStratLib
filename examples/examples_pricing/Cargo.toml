@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 chrono = { workspace = true }
-optionstratlib = { workspace = true, default-features = false, features = ["pricing"] }
+optionstratlib = { workspace = true, default-features = false, features = ["clock", "pricing"] }
 osl-example-support = { path = "../support" }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }

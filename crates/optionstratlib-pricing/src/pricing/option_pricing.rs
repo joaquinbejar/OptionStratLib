@@ -720,7 +720,7 @@ mod tests_time_value {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_calculate_price_binomial {
     use super::*;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};

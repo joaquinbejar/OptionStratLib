@@ -14,6 +14,8 @@
 //! (#534); the strategy properties of that file live in
 //! `optionstratlib-strategies` (`tests/panic_freedom_test.rs`).
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_analytics::analytics::PriceTrend;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::analytics::calculate_price_probability;

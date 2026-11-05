@@ -26,7 +26,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -44,6 +44,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -190,7 +191,7 @@ impl ShortStraddle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
-        mut strike: Positive,
+        strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: Positive,
         risk_free_rate: Decimal,
@@ -203,6 +204,52 @@ impl ShortStraddle {
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_short_call,
+            premium_short_put,
+            open_fee_short_call,
+            close_fee_short_call,
+            open_fee_short_put,
+            close_fee_short_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        mut strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_short_call: Positive,
+        premium_short_put: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_short_put: Positive,
+        close_fee_short_put: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         if strike == Positive::ZERO {
             strike = underlying_price;
         }
@@ -212,8 +259,8 @@ impl ShortStraddle {
             kind: StrategyType::ShortStraddle,
             description: SHORT_STRADDLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_call: Position::default(),
-            short_put: Position::default(),
+            short_call: Position::blank_at(date),
+            short_put: Position::blank_at(date),
         };
 
         let short_call_option = Options::new(
@@ -233,7 +280,7 @@ impl ShortStraddle {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -258,7 +305,7 @@ impl ShortStraddle {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee_short_put,
             close_fee_short_put,
             None,
@@ -347,7 +394,7 @@ impl StrategyConstructor for ShortStraddle {
         let short_call = Position::new(
             call_position.option.clone(),
             call_position.premium,
-            Utc::now(),
+            now_or(call_position.date),
             call_position.open_fee,
             call_position.close_fee,
             call_position.epic.clone(),
@@ -357,7 +404,7 @@ impl StrategyConstructor for ShortStraddle {
         let short_put = Position::new(
             put_position.option.clone(),
             put_position.premium,
-            Utc::now(),
+            now_or(put_position.date),
             put_position.open_fee,
             put_position.close_fee,
             put_position.epic.clone(),
@@ -1115,7 +1162,7 @@ impl PnLCalculator for ShortStraddle {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle {
     use super::*;
     use tracing::info;
@@ -1431,7 +1478,7 @@ mod tests_short_straddle {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_probability {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1573,7 +1620,7 @@ mod tests_short_straddle_probability {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_probability_bis {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -1720,7 +1767,7 @@ mod tests_short_straddle_probability_bis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -1864,7 +1911,7 @@ mod tests_short_straddle_delta {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_delta_size {
     use super::*;
 
@@ -2017,7 +2064,7 @@ mod tests_short_straddle_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2191,7 +2238,7 @@ mod tests_short_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_pnl {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -2311,7 +2358,7 @@ mod tests_short_straddle_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_straddle_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2424,7 +2471,7 @@ mod tests_straddle_position_management {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_adjust_option_position {
     use super::*;
     use optionstratlib_core::pos_or_panic;
