@@ -480,13 +480,21 @@ fn unit_shape(x: Decimal, sigma: Decimal) -> Result<UnitShape, SviError> {
     Ok(UnitShape { scale, unit_root })
 }
 
-/// `first * second / divisor^divisions`, without an intermediate leaving the range or
-/// rounding away what the other factor would have brought back.
+/// `first * second / divisor^divisions`, with no intermediate leaving the range.
 ///
 /// Every step rounds at 28 places, and any factor applied after it multiplies that
 /// rounding, so the next step is whichever keeps the largest intermediate: the product,
 /// or either factor over the divisor. A product of two small factors keeps few digits,
 /// and so does a quotient of a small one, where another order may keep all of them.
+///
+/// That keeps the digits under one precondition: where the product does not fit, a
+/// factor over the divisor is not far below one. Otherwise no step can keep them, and
+/// the result loses what the quotient lost, multiplied by the other factor. Both uses
+/// meet it. For the slope, `b * sigma` fits in valid parameters, so a `b * x` that does
+/// not has `|x| > sigma`, and the divisor is `|x|`, so that `x` over it is exactly one.
+/// For the curvature, the divisor `R / sigma` is at most `1e28 * R` and `1 / R` is a
+/// factor, so with a product of at least `7.9e28` the larger factor over it stays at
+/// `7.9` or more, through each of the two divisions.
 ///
 /// # Errors
 ///
@@ -1999,7 +2007,8 @@ mod tests {
     fn test_total_variance_curvature_at_a_large_b_is_not_rounded_away() {
         // x = 1e-9, sigma = 1e-28, b = 1e20: b / R is 1e29, out of range, and both
         // divisions by R / sigma = 1e19 before b would leave 1e-29, which rounds to
-        // zero. The true w'' = b * sigma^2 / R^3 is 1e-9.
+        // zero. The true w'' = b * sigma^2 / R^3 is 9.99999999999999999999999999999999999985e-10,
+        // which is 1e-9 to all the places a `Decimal` has for it.
         let parameters = SviParameters::try_new(
             dec!(0),
             dec!(100000000000000000000),
@@ -2011,8 +2020,9 @@ mod tests {
         let curvature = parameters
             .total_variance_curvature(dec!(0.000000001))
             .unwrap();
-        assert!(curvature > dec!(0.0000000009), "{curvature}");
-        assert!(curvature < dec!(0.0000000011), "{curvature}");
+        let truth = dec!(0.000000001);
+        let relative = ((curvature - truth) / truth).abs();
+        assert!(relative < dec!(0.00000000000000000001), "{curvature}");
     }
 
     #[test]
