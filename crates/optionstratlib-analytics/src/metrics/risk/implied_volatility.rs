@@ -6,14 +6,14 @@
 
 //! # Implied Volatility Metrics
 //!
-//! This module provides traits for computing implied volatility curves and surfaces,
-//! which are fundamental tools for options analysis and trading.
+//! This module provides traits for computing implied volatility curves and
+//! projecting them over time horizons, for options analysis and trading.
 //!
 //! ## Overview
 //!
 //! Implied volatility (IV) represents the market's expectation of future volatility
 //! and is derived from option prices using models like Black-Scholes. Understanding
-//! IV across different strikes and time horizons is crucial for:
+//! IV across different strikes is crucial for:
 //!
 //! - Options pricing and valuation
 //! - Identifying trading opportunities
@@ -29,14 +29,12 @@
 //! - **Volatility Skew**: Higher IV for OTM puts (common in equity markets)
 //! - **Flat Curve**: Uniform IV across strikes (rare in practice)
 //!
-//! ## Surface Representation
+//! ## Horizon Projection
 //!
-//! The IV surface extends the curve concept to include time, showing IV as a
-//! function of both strike price and time to expiration. This provides:
-//!
-//! - Complete volatility structure visualization
-//! - Term structure analysis
-//! - Calendar spread opportunities identification
+//! [`HorizonVolatilitySurface`] scales each annualized implied volatility by
+//! the square root of time, giving the volatility over each horizon. It is not
+//! annualized, and every horizon comes from the same volatilities, so it says
+//! nothing about the term structure: it is not an implied volatility surface.
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_math::curves::Curve;
@@ -96,62 +94,69 @@ pub trait ImpliedVolatilityCurve {
     fn iv_curve(&self) -> Result<Curve, CurveError>;
 }
 
-/// A trait for computing implied volatility surfaces.
+/// A trait for projecting implied volatility over time horizons.
 ///
-/// The IV surface represents implied volatility as a function of both
-/// strike price and time to expiration, providing a complete view of
-/// the volatility structure across the entire option space.
+/// The result is **not** an implied volatility surface and is not calibrated
+/// to anything: every horizon is projected from the one set of implied
+/// volatilities the source holds, so it carries no observed term structure.
+/// It answers "what standard deviation of returns does this annualized
+/// volatility imply over `T` days?".
 ///
 /// # Mathematical Background
 ///
-/// The surface uses time scaling based on the square root of time rule,
-/// which is derived from the diffusion process underlying option pricing:
+/// The projection uses the square root of time rule, which is derived from the
+/// diffusion process underlying option pricing:
 ///
 /// ```text
-/// σ_adjusted = σ_base × √(T / 365)
+/// σ_horizon = σ_annualized × √(T / 365)
 /// ```
 ///
-/// where T is days to expiration.
+/// where T is the horizon in days.
 ///
 /// # Returns
 ///
 /// A `Surface` where:
 /// - **X-axis**: Strike price in currency units
-/// - **Y-axis**: Days to expiration
-/// - **Z-axis**: Implied volatility as a decimal
+/// - **Y-axis**: Horizon in days
+/// - **Z-axis**: Volatility over that horizon, as a decimal. It is **not**
+///   annualized: 20% annualized over 30 days is about 5.73%.
 ///
 /// # Example
 ///
 /// ```ignore
 /// use optionstratlib_market::chains::chain::OptionChain;
-/// use optionstratlib_analytics::metrics::ImpliedVolatilitySurface;
+/// use optionstratlib_analytics::metrics::HorizonVolatilitySurface;
 /// use optionstratlib_core::pos_or_panic;
 ///
 /// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
-/// let iv_surface = chain.iv_surface(days)?;
+/// let surface = chain.horizon_volatility_surface(days)?;
 /// ```
-pub trait ImpliedVolatilitySurface {
-    /// Computes the implied volatility surface (strike vs time).
+pub trait HorizonVolatilitySurface {
+    /// Projects the implied volatility of each strike over each horizon.
     ///
     /// # Parameters
     ///
-    /// - `days_to_expiry`: Vector of days to expiration values to include
-    ///   in the surface. Each value generates a slice of the surface.
+    /// - `horizon_days`: The horizons, in days, to include in the surface.
+    ///   Each value generates a slice of the surface.
     ///
     /// # Returns
     ///
-    /// - `Ok(Surface)`: The IV surface with strike on x-axis, days on y-axis,
-    ///   and IV on z-axis
+    /// - `Ok(Surface)`: The projection with strike on x-axis, horizon in days
+    ///   on y-axis, and the non-annualized volatility over that horizon on
+    ///   z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
     ///
     /// # Errors
     ///
     /// Returns `SurfaceError::ConstructionError` if:
     /// - No options have valid implied volatility values
-    /// - The days_to_expiry vector is empty
+    /// - The horizon_days vector is empty
     /// - No valid points can be generated
-    fn iv_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, SurfaceError>;
+    fn horizon_volatility_surface(
+        &self,
+        horizon_days: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError>;
 }
 
 #[cfg(test)]
@@ -178,10 +183,13 @@ mod tests_implied_volatility_traits {
         }
     }
 
-    struct TestIVSurface;
+    struct TestHorizonSurface;
 
-    impl ImpliedVolatilitySurface for TestIVSurface {
-        fn iv_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, SurfaceError> {
+    impl HorizonVolatilitySurface for TestHorizonSurface {
+        fn horizon_volatility_surface(
+            &self,
+            horizon_days: Vec<Positive>,
+        ) -> Result<Surface, SurfaceError> {
             let mut points = BTreeSet::new();
             let strikes = [
                 dec!(90.0),
@@ -193,10 +201,10 @@ mod tests_implied_volatility_traits {
             let base_ivs = [dec!(0.25), dec!(0.22), dec!(0.20), dec!(0.21), dec!(0.23)];
 
             for (strike, base_iv) in strikes.iter().zip(base_ivs.iter()) {
-                for days in &days_to_expiry {
+                for days in &horizon_days {
                     let time_factor = (days.to_dec() / dec!(365.0)).sqrt().unwrap_or(Decimal::ONE);
-                    let adjusted_iv = *base_iv * time_factor;
-                    points.insert(Point3D::new(*strike, days.to_dec(), adjusted_iv));
+                    let horizon_volatility = *base_iv * time_factor;
+                    points.insert(Point3D::new(*strike, days.to_dec(), horizon_volatility));
                 }
             }
 
@@ -233,24 +241,24 @@ mod tests_implied_volatility_traits {
     }
 
     #[test]
-    fn test_iv_surface_implementation() {
-        let iv = TestIVSurface;
+    fn test_horizon_volatility_surface_implementation() {
+        let iv = TestHorizonSurface;
         let days = vec![
             pos_or_panic!(30.0),
             pos_or_panic!(60.0),
             pos_or_panic!(90.0),
         ];
-        let surface = iv.iv_surface(days).unwrap();
+        let surface = iv.horizon_volatility_surface(days).unwrap();
 
         // 5 strikes × 3 days = 15 points
         assert_eq!(surface.points.len(), 15);
     }
 
     #[test]
-    fn test_iv_surface_time_scaling() {
-        let iv = TestIVSurface;
+    fn test_horizon_volatility_surface_time_scaling() {
+        let iv = TestHorizonSurface;
         let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
-        let surface = iv.iv_surface(days).unwrap();
+        let surface = iv.horizon_volatility_surface(days).unwrap();
 
         // Find points at same strike but different times
         let points: Vec<&Point3D> = surface.points.iter().collect();
@@ -263,10 +271,10 @@ mod tests_implied_volatility_traits {
     }
 
     #[test]
-    fn test_iv_surface_empty_days() {
-        let iv = TestIVSurface;
+    fn test_horizon_volatility_surface_empty_days() {
+        let iv = TestHorizonSurface;
         let days: Vec<Positive> = vec![];
-        let surface = iv.iv_surface(days).unwrap();
+        let surface = iv.horizon_volatility_surface(days).unwrap();
 
         // With empty days, surface should have no points
         assert!(surface.points.is_empty());

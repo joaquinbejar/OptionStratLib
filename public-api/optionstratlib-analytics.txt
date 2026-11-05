@@ -472,14 +472,14 @@ pub fn optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve::
 impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 pub mod optionstratlib_analytics::metrics::risk::implied_volatility
+pub trait optionstratlib_analytics::metrics::risk::implied_volatility::HorizonVolatilitySurface
+pub fn optionstratlib_analytics::metrics::risk::implied_volatility::HorizonVolatilitySurface::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::HorizonVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub trait optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve
 pub fn optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
-pub trait optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface
-pub fn optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
-impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
-pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub mod optionstratlib_analytics::metrics::risk::risk_reversal
 pub trait optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve
 pub fn optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
@@ -489,14 +489,14 @@ pub trait optionstratlib_analytics::metrics::risk::DollarGammaCurve
 pub fn optionstratlib_analytics::metrics::risk::DollarGammaCurve::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::risk::HorizonVolatilitySurface
+pub fn optionstratlib_analytics::metrics::risk::HorizonVolatilitySurface::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::HorizonVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub trait optionstratlib_analytics::metrics::risk::ImpliedVolatilityCurve
 pub fn optionstratlib_analytics::metrics::risk::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
-pub trait optionstratlib_analytics::metrics::risk::ImpliedVolatilitySurface
-pub fn optionstratlib_analytics::metrics::risk::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
-impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
-pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub trait optionstratlib_analytics::metrics::risk::RiskReversalCurve
 pub fn optionstratlib_analytics::metrics::risk::RiskReversalCurve::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve for optionstratlib_market::chains::chain::OptionChain
@@ -637,14 +637,14 @@ pub trait optionstratlib_analytics::metrics::DollarGammaCurve
 pub fn optionstratlib_analytics::metrics::DollarGammaCurve::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::HorizonVolatilitySurface
+pub fn optionstratlib_analytics::metrics::HorizonVolatilitySurface::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::HorizonVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::horizon_volatility_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub trait optionstratlib_analytics::metrics::ImpliedVolatilityCurve
 pub fn optionstratlib_analytics::metrics::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
 pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
-pub trait optionstratlib_analytics::metrics::ImpliedVolatilitySurface
-pub fn optionstratlib_analytics::metrics::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
-impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
-pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
 pub trait optionstratlib_analytics::metrics::OpenInterestCurve
 pub fn optionstratlib_analytics::metrics::OpenInterestCurve::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
 impl optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve for optionstratlib_market::chains::chain::OptionChain

@@ -351,7 +351,7 @@
 //! Performance, risk, and liquidity metrics analysis:
 //! - **Price Metrics**: Volatility skew curves
 //! - **Risk Metrics**:
-//!   - Implied Volatility curves (by strike) and surfaces (strike vs time)
+//!   - Implied Volatility curves (by strike) and horizon projections (strike vs horizon)
 //!   - Risk Reversal curves (by strike)
 //!   - Dollar Gamma curves (by strike)
 //! - **Composite Metrics**:
@@ -855,7 +855,7 @@
 //!     end
 //!
 //!     subgraph Surfaces["Surface Metrics"]
-//!         IV_S[IV Surface]
+//!         IV_S[Horizon Volatility Surface]
 //!         TH_S[Theta Surface]
 //!         CH_S[Charm Surface]
 //!         VS_S[Vol Sensitivity]
@@ -1502,7 +1502,7 @@
 //! cargo run --manifest-path=examples/examples_simulation/Cargo.toml \
 //!     --bin long_call_strategy_simulation --features plotly
 //! cargo run --manifest-path=examples/examples_metrics/Cargo.toml \
-//!     --bin implied_volatility_surface
+//!     --bin horizon_volatility_surface
 //! ```
 //!
 //! Simulation-heavy demos (`*_strategy_simulation`, `position_simulator`,
@@ -1649,21 +1649,23 @@ pub use optionstratlib_pricing::greeks;
 ///
 /// Comprehensive tools for performance and risk analysis including:
 /// - **Price Metrics**: Volatility skew analysis
-/// - **Risk Metrics**: Implied volatility curves/surfaces, risk reversal curves, dollar gamma curves
+/// - **Risk Metrics**: Implied volatility curves, horizon volatility projections, risk reversal curves, dollar gamma curves
 ///
 /// ## Risk Metrics
 ///
 /// The risk metrics module provides key tools for assessing market risk, sentiment, and exposure:
 ///
-/// | Metric | Curve (by strike) | Surface (strike vs time) |
-/// |--------|-------------------|--------------------------|
-/// | Implied Volatility | `iv_curve()` | `iv_surface(days)` |
+/// | Metric | Curve (by strike) | Surface (strike vs horizon) |
+/// |--------|-------------------|-----------------------------|
+/// | Implied Volatility | `iv_curve()` | `horizon_volatility_surface(days)` |
 /// | Risk Reversal | `risk_reversal_curve()` | - |
 /// | Dollar Gamma | `dollar_gamma_curve(style)` | - |
 ///
 /// ### Implied Volatility
-/// Shows how IV varies across strikes and time horizons. Essential for understanding
-/// market expectations and pricing options.
+/// Shows how IV varies across strikes. Essential for understanding market
+/// expectations and pricing options. `horizon_volatility_surface` projects it over
+/// time horizons with the square root of time: the result is the volatility over
+/// each horizon, not annualized and not a calibrated surface.
 ///
 /// ### Risk Reversal
 /// Measures the difference between call and put implied volatilities, indicating

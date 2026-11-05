@@ -15,7 +15,7 @@ use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{RandomPositionsParams, calculate_optimal_price_range};
 use optionstratlib::metrics::{
     BidAskSpreadCurve, CharmSurface, ColorSurface, DeltaGammaProfileCurve,
-    DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilitySurface, PriceShockCurve,
+    DeltaGammaProfileSurface, DollarGammaCurve, HorizonVolatilitySurface, PriceShockCurve,
     PutCallRatioCurve, SmileDynamicsSurface, StrikeConcentrationCurve, ThetaSurface,
     TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivitySurface, VolatilitySkewCurve,
     VolumeProfileSurface,
@@ -207,7 +207,7 @@ proptest! {
         day in extreme_positive(),
     ) {
         let days = vec![day];
-        let _ = chain.iv_surface(days.clone());
+        let _ = chain.horizon_volatility_surface(days.clone());
         let _ = chain.vanna_volga_surface(price_range, vol_range, steps, steps);
         let _ = chain.delta_gamma_surface(price_range, days.clone(), steps);
         let _ = chain.smile_dynamics_surface(days.clone());

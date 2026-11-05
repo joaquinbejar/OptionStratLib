@@ -8,7 +8,7 @@ use optionstratlib_core::pos_or_panic;
 //! # Risk Metrics Module
 //!
 //! Provides comprehensive risk metrics tools for financial applications,
-//! including implied volatility curves and surfaces, risk reversal curves,
+//! including implied volatility curves, horizon volatility projections, risk reversal curves,
 //! and dollar gamma curves.
 //!
 //! ## Core Features
@@ -17,8 +17,9 @@ use optionstratlib_core::pos_or_panic;
 //!
 //! - **Curve representation by strike price**: Shows how IV varies across
 //!   different strike prices for options with the same expiration.
-//! - **Surface representation (strike vs time)**: Provides a complete view
-//!   of the volatility structure across both strikes and time horizons.
+//! - **Horizon projection (strike vs horizon)**: Scales each annualized IV by
+//!   the square root of time. It is the volatility over the horizon, not
+//!   annualized, and not an observed or calibrated term structure.
 //!
 //! ### Risk Reversal
 //!
@@ -71,5 +72,5 @@ pub mod implied_volatility;
 pub mod risk_reversal;
 
 pub use dollar_gamma::DollarGammaCurve;
-pub use implied_volatility::{ImpliedVolatilityCurve, ImpliedVolatilitySurface};
+pub use implied_volatility::{HorizonVolatilitySurface, ImpliedVolatilityCurve};
 pub use risk_reversal::RiskReversalCurve;

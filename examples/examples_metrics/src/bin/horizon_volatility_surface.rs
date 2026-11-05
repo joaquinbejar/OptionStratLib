@@ -4,18 +4,19 @@
    Date: 24/12/25
 ******************************************************************************/
 
-//! # Implied Volatility Surface Example
+//! # Horizon Volatility Surface Example
 //!
-//! This example demonstrates how to generate and visualize an implied volatility
-//! surface from an option chain. The IV surface shows how implied volatility
-//! varies across both strike prices and time to expiration.
+//! This example projects the implied volatility of an option chain over several
+//! time horizons with the square root of time rule. The result is the
+//! volatility over each horizon, not annualized and not a calibrated implied
+//! volatility surface: every horizon comes from one chain.
 //!
 //! ## Output
-//! - PNG image: `./Draws/Metrics/implied_volatility_surface.png`
-//! - HTML interactive: `./Draws/Metrics/implied_volatility_surface.html`
+//! - PNG image: `./Draws/Metrics/horizon_volatility_surface.png`
+//! - HTML interactive: `./Draws/Metrics/horizon_volatility_surface.html`
 
 use optionstratlib::error::SurfaceError;
-use optionstratlib::metrics::ImpliedVolatilitySurface;
+use optionstratlib::metrics::HorizonVolatilitySurface;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
@@ -36,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Underlying price: {}", option_chain.underlying_price);
 
     // Define days to expiration for the surface
-    let days_to_expiry = vec![
+    let horizon_days = vec![
         pos_or_panic!(7.0),  // 1 week
         pos_or_panic!(14.0), // 2 weeks
         pos_or_panic!(21.0), // 3 weeks
@@ -47,24 +48,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     tracing::info!(
-        "Generating IV surface for {} time horizons",
-        days_to_expiry.len()
+        "Projecting volatility over {} time horizons",
+        horizon_days.len()
     );
 
-    // Generate the implied volatility surface
-    let iv_surface = option_chain.iv_surface(days_to_expiry)?;
+    // Project the implied volatility over each horizon
+    let horizon_volatility_surface = option_chain.horizon_volatility_surface(horizon_days)?;
 
     tracing::info!(
-        "IV Surface generated with {} points",
-        iv_surface.points.len()
+        "Horizon volatility surface generated with {} points",
+        horizon_volatility_surface.points.len()
     );
 
     // Display some sample points
-    tracing::info!("Sample IV surface points (Strike, Days, IV):");
-    for (i, point) in iv_surface.points.iter().enumerate() {
-        if i < 5 || i >= iv_surface.points.len().saturating_sub(3) {
+    tracing::info!("Sample points (Strike, Days, Volatility over the horizon):");
+    for (i, point) in horizon_volatility_surface.points.iter().enumerate() {
+        if i < 5 || i >= horizon_volatility_surface.points.len().saturating_sub(3) {
             tracing::info!(
-                "  Strike: {:.2}, Days: {:.0}, IV: {:.4}",
+                "  Strike: {:.2}, Days: {:.0}, Volatility: {:.4}",
                 point.x,
                 point.y,
                 point.z
@@ -75,22 +76,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Plot and save the surface
-    iv_surface
+    horizon_volatility_surface
         .plot()
-        .title("Implied Volatility Surface (SP500)")
+        .title("Volatility over the Horizon (SP500)")
         .x_label("Strike Price")
-        .y_label("Days to Expiration")
-        .z_label("Implied Volatility")
+        .y_label("Horizon (days)")
+        .z_label("Volatility over the horizon")
         .dimensions(1600, 1200)
-        .save("./Draws/Metrics/implied_volatility_surface.png")
+        .save("./Draws/Metrics/horizon_volatility_surface.png")
         .map_err(|e| SurfaceError::ConstructionError(e.to_string()))?;
 
-    iv_surface
-        .write_html("./Draws/Metrics/implied_volatility_surface.html".as_ref())
+    horizon_volatility_surface
+        .write_html("./Draws/Metrics/horizon_volatility_surface.html".as_ref())
         .map_err(|e| SurfaceError::ConstructionError(e.to_string()))?;
 
-    tracing::info!("IV surface saved to ./Draws/Metrics/implied_volatility_surface.png");
-    tracing::info!("Interactive HTML saved to ./Draws/Metrics/implied_volatility_surface.html");
+    tracing::info!(
+        "Horizon volatility surface saved to ./Draws/Metrics/horizon_volatility_surface.png"
+    );
+    tracing::info!("Interactive HTML saved to ./Draws/Metrics/horizon_volatility_surface.html");
 
     Ok(())
 }

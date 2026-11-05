@@ -8,12 +8,12 @@
 //!
 //! These tests verify the correct behavior of:
 //! - ImpliedVolatilityCurve
-//! - ImpliedVolatilitySurface
+//! - HorizonVolatilitySurface
 //! - RiskReversalCurve
 //! - DollarGammaCurve
 
 use optionstratlib_analytics::metrics::{
-    DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
+    DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve, RiskReversalCurve,
 };
 use optionstratlib_core::model::{ExpirationDate, OptionStyle};
 use optionstratlib_core::{model::Positive, pos_or_panic, spos};
@@ -119,14 +119,14 @@ mod tests_implied_volatility_curve {
 }
 
 #[cfg(test)]
-mod tests_implied_volatility_surface {
+mod tests_horizon_volatility_surface {
     use super::*;
 
     #[test]
-    fn test_iv_surface_basic() {
+    fn test_horizon_volatility_surface_basic() {
         let chain = create_test_chain();
         let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
-        let result = chain.iv_surface(days);
+        let result = chain.horizon_volatility_surface(days);
 
         assert!(result.is_ok());
         let surface = result.unwrap();
@@ -138,36 +138,35 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
-    fn test_iv_surface_single_day() {
+    fn test_horizon_volatility_surface_single_day() {
         let chain = create_test_chain();
         let days = vec![pos_or_panic!(30.0)];
-        let result = chain.iv_surface(days);
+        let result = chain.horizon_volatility_surface(days);
 
         assert!(result.is_ok());
         let surface = result.unwrap();
 
-        // Surface with single day should have same points as IV curve
+        // A single horizon has the same points as the IV curve
         let iv_curve = chain.iv_curve().unwrap();
         assert_eq!(surface.points.len(), iv_curve.points.len());
     }
 
     #[test]
-    fn test_iv_surface_empty_days() {
+    fn test_horizon_volatility_surface_empty_days() {
         let chain = create_test_chain();
         let days: Vec<Positive> = vec![];
-        let result = chain.iv_surface(days);
+        let result = chain.horizon_volatility_surface(days);
 
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_iv_surface_time_scaling() {
+    fn test_horizon_volatility_surface_time_scaling() {
         let chain = create_test_chain();
         let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
-        let surface = chain.iv_surface(days).unwrap();
+        let surface = chain.horizon_volatility_surface(days).unwrap();
 
-        // Verify that longer-dated IVs are scaled appropriately
-        // sqrt(90/365) / sqrt(30/365) ≈ 1.73
+        // Longer horizons scale up: sqrt(90/365) / sqrt(30/365) ≈ 1.73
         let points: Vec<_> = surface.points.iter().collect();
 
         // Find points at same strike but different times
@@ -180,10 +179,46 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
-    fn test_iv_surface_empty_chain() {
+    fn test_horizon_volatility_surface_pins_the_non_annualized_value() {
+        // One option at 20% annualized: over 30 days the projection is
+        // 0.2 * sqrt(30 / 365), not 20%.
+        let mut chain = create_empty_chain();
+        chain.add_option(
+            Positive::HUNDRED,
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.0),
+            spos!(1.1),
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let surface = chain
+            .horizon_volatility_surface(vec![pos_or_panic!(30.0), pos_or_panic!(365.0)])
+            .unwrap();
+        let at = |days: Decimal| {
+            surface
+                .points
+                .iter()
+                .find(|p| p.y == days)
+                .map(|p| p.z)
+                .unwrap()
+        };
+
+        assert!((at(dec!(30)) - dec!(0.0573382179081)).abs() < dec!(1e-12));
+        assert!((at(dec!(365)) - dec!(0.2)).abs() < dec!(1e-12));
+    }
+
+    #[test]
+    fn test_horizon_volatility_surface_empty_chain() {
         let chain = create_empty_chain();
         let days = vec![pos_or_panic!(30.0)];
-        let result = chain.iv_surface(days);
+        let result = chain.horizon_volatility_surface(days);
 
         assert!(result.is_err());
     }
