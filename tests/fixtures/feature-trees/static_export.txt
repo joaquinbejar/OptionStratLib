@@ -387,7 +387,6 @@ tracing-core -> once_cell
 uuid -> getrandom
 uuid -> serde_core
 wasm-bindgen -> cfg-if
-wasm-bindgen -> once_cell
 wasm-bindgen -> rustversion
 wasm-bindgen -> wasm-bindgen-macro
 wasm-bindgen -> wasm-bindgen-shared

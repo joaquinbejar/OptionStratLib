@@ -6,6 +6,7 @@
 aes -> cipher
 aes -> cpubits
 aes -> cpufeatures
+aes -> zeroize
 android_system_properties -> libc
 approx -> num-traits
 askama -> askama_macros
@@ -470,7 +471,6 @@ tracing-core -> once_cell
 uuid -> getrandom
 uuid -> serde_core
 wasm-bindgen -> cfg-if
-wasm-bindgen -> once_cell
 wasm-bindgen -> rustversion
 wasm-bindgen -> wasm-bindgen-macro
 wasm-bindgen -> wasm-bindgen-shared
@@ -527,6 +527,7 @@ zip -> flate2
 zip -> getrandom
 zip -> hmac
 zip -> indexmap
+zip -> libc
 zip -> lzma-rust2
 zip -> memchr
 zip -> nix
@@ -550,7 +551,7 @@ zstd-sys -> pkg-config
 
 ab_glyph_rasterizer [default,std]
 adler2 []
-aes []
+aes [zeroize]
 android_system_properties []
 approx [default,std]
 arrayvec [std]
