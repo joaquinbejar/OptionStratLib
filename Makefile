@@ -70,7 +70,7 @@ test-visual:
 # is the quick local check after touching the renderer (#929).
 .PHONY: test-export
 test-export:
-	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --no-default-features --features static_export -- png svg export native
+	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --no-default-features --features clock,static_export -- png svg export native
 	@for fixture in visualization-static-export facade-static-export; do \
 		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
 	done
@@ -470,6 +470,23 @@ check-feature-trees:
 .PHONY: feature-trees-update
 feature-trees-update:
 	@python3 scripts/check_feature_trees.py --update
+
+# The library without the wall clock (#944): for each published crate and for
+# the facade with no capability, each capability alone and all of them, asserts
+# that `cargo tree -e features -i chrono` shows no `clock`, and that the default
+# builds keep it; then lints, builds and tests the crates and the facade
+# combinations in `scripts/check_no_clock.py` with the clock off. Each crate's
+# `tests/no_clock.rs` fails if a dependency turned the clock on behind the
+# script's back. `check-no-clock-trees` runs the assertions alone.
+.PHONY: check-no-clock
+check-no-clock:
+	@python3 scripts/check_no_clock.py --self-test > /dev/null || (python3 scripts/check_no_clock.py --self-test; exit 1)
+	@python3 scripts/check_no_clock.py
+
+.PHONY: check-no-clock-trees
+check-no-clock-trees:
+	@python3 scripts/check_no_clock.py --self-test > /dev/null || (python3 scripts/check_no_clock.py --self-test; exit 1)
+	@python3 scripts/check_no_clock.py --trees
 
 # Reports the public API changes of a pull request per feature surface
 # (#606). `check-api-report` runs the parser's self-test only; the comparison
