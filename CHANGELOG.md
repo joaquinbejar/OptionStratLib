@@ -41,6 +41,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `optionstratlib::error::Error` has no variant for it yet, since adding one to that exhaustive enum is breaking; #944
   adds it with the 0.24.0 bump. Runnable example: `svi_calibration` in
   `examples_pricing`.
+- **Butterfly and calendar checks of volatility slices and surfaces, on a grid**
+  (#946), following Gatheral and Jacquier (arXiv:1204.0646). In
+  `optionstratlib_pricing::volatility` (also `optionstratlib::volatility`).
+  `check_butterfly` evaluates `g(k)` of equation (2.1) on one slice,
+  `check_calendar` compares total variance between adjacent expiries at fixed log
+  moneyness, and `check_static_arbitrage` runs both. They read any
+  `TotalVarianceSlice`, which `SviSlice` implements with the new analytic
+  `total_variance_slope` and `total_variance_curvature`. The result is a
+  `StaticArbitrageReport`, not a boolean: each `StaticArbitrageViolation` names its
+  kind, log moneyness, strike, expiry (both expiries, and both strikes, for a
+  calendar one, since each slice has its own forward) and size, which is `-g` for a
+  butterfly and the decrease in total variance for a calendar. **Passing means only
+  that these two checks found nothing at the grid points supplied**: a violation
+  between grid points or between expiries is not detected, the wing limit of Lemma
+  2.2 is not tested, and no slice or surface is declared free of arbitrage. A check
+  that cannot be evaluated never reads as clean. A point whose total variance is
+  zero or smaller than its rounding can resolve has no `g`, and a pair of expiries
+  whose declared rounding could hide a decrease has no verdict: each is reported as
+  a `StaticArbitrageUnevaluatedPoint`, neither a violation nor a pass. An empty grid,
+  fewer than two slices for a calendar check, two slices sharing an expiry and
+  `Decimal` overflow are a new `#[non_exhaustive]` `StaticArbitrageError`; slices
+  may come in any order and are sorted by expiry. The tolerances are conservative
+  bounds on the rounding of the arithmetic, declared and pinned from both sides by
+  the tests, so a violation smaller than its band goes unreported. The
+  aggregate `optionstratlib::error::Error` has no variant for this error yet; #944
+  adds it with the 0.24.0 bump. Runnable example: `static_arbitrage` in
+  `examples_pricing`.
 
 - **`settlement_obligation`: what expiry, exercise or assignment obliges an
   option position to pay, receive or deliver** (#949). A pure function in

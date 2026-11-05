@@ -37,3 +37,7 @@ path = "src/bin/svi_calibration.rs"
 [[bin]]
 name = "settlement_obligations"
 path = "src/bin/settlement_obligations.rs"
+
+[[bin]]
+name = "static_arbitrage"
+path = "src/bin/static_arbitrage.rs"

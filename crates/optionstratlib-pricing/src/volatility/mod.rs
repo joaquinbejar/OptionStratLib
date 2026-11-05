@@ -21,6 +21,8 @@
 //! - Heston Stochastic Volatility
 //! - Implied Volatility
 //! - Raw SVI slices and their weighted calibration (`SviSlice`, `calibrate_svi`)
+//! - Butterfly and calendar checks on a grid (`check_static_arbitrage`), which
+//!   test only those two conditions at the points supplied
 //! - Uncertain Volatility Bounds
 //! - Volatility Surface Interpolation
 //!
@@ -172,9 +174,15 @@
 //! - Heston (1993) stochastic volatility model
 //! - GARCH by Bollerslev (1986)
 
+mod arbitrage;
 mod svi;
 mod traits;
 mod utils;
+
+pub use arbitrage::{
+    StaticArbitrageReport, StaticArbitrageUnevaluatedPoint, StaticArbitrageViolation,
+    TotalVarianceSlice, check_butterfly, check_calendar, check_static_arbitrage,
+};
 
 pub use svi::{
     SviCalibrationConfig, SviFit, SviObservation, SviParameters, SviResidual, SviSlice,
