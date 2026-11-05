@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Raw SVI volatility slice with weighted calibration** (#945), following
+  Gatheral and Jacquier, "Arbitrage-free SVI volatility surfaces"
+  (arXiv:1204.0646). In `optionstratlib_pricing::volatility` (also
+  `optionstratlib::volatility`). `SviParameters::try_new(a, b, rho, m, sigma)`
+  validates `b >= 0`, `|rho| < 1`, `sigma > 0` and
+  `a + b * sigma * sqrt(1 - rho^2) >= 0`. `SviSlice` adds a forward and a time
+  to expiry, and gives total variance and implied volatility by log moneyness
+  or by strike. `calibrate_svi` takes `SviObservation`s (strike, implied
+  volatility, weight) and an `SviCalibrationConfig`, and returns an `SviFit`
+  with the slice, one residual per observation, the weighted RMSE in implied
+  volatility and the iterations run. The method is quasi-explicit and
+  deterministic, with no random numbers and no new dependency: a weighted least
+  squares in total variance for fixed `(m, sigma)`, with the parameter bounds
+  enforced on the boundary, under a Nelder-Mead on `(m, ln sigma)` from a fixed
+  grid of starts. On noiseless quotes from a known slice the tests recover the
+  parameters within `1e-6` and the implied volatility within `1e-8`, wings
+  included. A fit never falls back to a flat smile: a fit above `max_rmse`
+  (default two volatility points) is an error naming both values. A calibrated
+  slice is not claimed free of arbitrage. Failures are a new
+  `#[non_exhaustive]` `SviError`: invalid parameters, too few observations or
+  distinct strikes, zero total weight, no convergence, no feasible point, RMSE
+  above the limit and non-finite kernel values. The aggregate
+  `optionstratlib::error::Error` has no variant for it yet, since adding one to
+  that exhaustive enum is breaking; it lands with the 0.24.0 bump. Runnable
+  example: `svi_calibration` in `examples_pricing`.
+
 ### Changed — breaking
 
 - **`ImpliedVolatilitySurface::iv_surface` is now

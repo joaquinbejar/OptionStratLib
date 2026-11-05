@@ -310,6 +310,7 @@
 //! Volatility modeling and analysis:
 //! - `utils.rs`: Implied volatility calculation (Newton-Raphson method)
 //! - `traits.rs`: Volatility model interfaces
+//! - `svi.rs`: Raw SVI slices and their weighted calibration
 //! - Advanced volatility surface construction
 //!
 //! ### **Greeks** (`greeks/`)
@@ -431,7 +432,7 @@
 //! | --- | --- | --- | --- | --- |
 //! | `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
 //! | `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
-//! | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility | `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError` and the `error::greeks` module) |
+//! | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices | `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError` and the `error::greeks` module) |
 //! | `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
 //! | `optionstratlib-market` | option chains, option series, OHLCV candles | `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
 //! | `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |

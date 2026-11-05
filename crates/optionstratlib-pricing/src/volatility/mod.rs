@@ -20,6 +20,7 @@
 //! - GARCH(1,1)
 //! - Heston Stochastic Volatility
 //! - Implied Volatility
+//! - Raw SVI slices and their weighted calibration (`SviSlice`, `calibrate_svi`)
 //! - Uncertain Volatility Bounds
 //! - Volatility Surface Interpolation
 //!
@@ -171,8 +172,14 @@
 //! - Heston (1993) stochastic volatility model
 //! - GARCH by Bollerslev (1986)
 
+mod svi;
 mod traits;
 mod utils;
+
+pub use svi::{
+    SviCalibrationConfig, SviFit, SviObservation, SviParameters, SviResidual, SviSlice,
+    calibrate_svi,
+};
 
 pub use utils::{
     adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,

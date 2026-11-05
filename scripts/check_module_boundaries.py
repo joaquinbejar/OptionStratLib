@@ -122,6 +122,7 @@ ERROR_FILE_LAYER = {
     "greeks": "pricing",
     "volatility": "pricing",
     "pricing": "pricing",
+    "svi": "pricing",
     "simulation": "simulation",
     "chains": "market",
     "csv": "market",

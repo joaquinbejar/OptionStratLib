@@ -28,3 +28,7 @@ path = "src/bin/garman_kohlhagen.rs"
 [[bin]]
 name = "garman_kohlhagen_greeks"
 path = "src/bin/garman_kohlhagen_greeks.rs"
+
+[[bin]]
+name = "svi_calibration"
+path = "src/bin/svi_calibration.rs"
