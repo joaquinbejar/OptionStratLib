@@ -1123,10 +1123,12 @@
 //! - **A `DateTime` expiration needs a time for any time to expiry**: the thread's
 //!   reference datetime, from `ExpirationDate::set_reference_datetime`. Parallel sections
 //!   carry the caller's reference to their workers. With none, a result that depends on
-//!   that time to expiry and can report an error does, with
-//!   `ExpirationDateError::InvalidDateTime` inside the crate's error (for example
-//!   `PricingError::Options`) or a `Clock` variant, and is never computed from a made-up
-//!   instant. What cannot report an error is listed below. A path that does not measure
+//!   that time to expiry and can report an error does, and is never computed from a
+//!   made-up instant. The error is usually `ExpirationDateError::InvalidDateTime` inside
+//!   the crate's error (for example `PricingError::Options`) or a `Clock` variant. A metric
+//!   curve with no point left returns its construction error instead, and
+//!   `AdjustmentOptimizer::optimize` carries the message in an `AdjustmentError`. What
+//!   cannot report an error is listed below. A path that does not measure
 //!   the expiry succeeds with no time: a search over quotes, a rebuild from positions, or a
 //!   refresh from a chain row, whose record keeps the date it already carries.
 //! - **The `*_at` forms take the time as an argument** and exist in every build:

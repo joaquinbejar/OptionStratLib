@@ -28,8 +28,8 @@ pub enum ClockError {
     /// stamped.
     #[error(
         "the wall clock is unavailable: this build has no `clock` feature, so pass the time \
-         to the `*_at` form of the call; a time to expiry can also measure from the thread's \
-         reference datetime"
+         explicitly, through a date argument or the `*_at` form of the call where there is \
+         one; a time to expiry can also measure from the thread's reference datetime"
     )]
     Unavailable,
 }

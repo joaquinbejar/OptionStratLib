@@ -157,7 +157,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   build with it adds zero, a single-leg simulation whose steps cannot read their
   days returns the error instead of reporting the path as expired,
   `OptionData::calculate_prices` returns it instead of wiping the quotes, and
-  `AdjustmentOptimizer::optimize` returns it instead of an empty plan.
+  `AdjustmentOptimizer::optimize` returns it instead of an empty plan. With the feature,
+  `OptionChain::get_random_positions` opens all its positions at one instant, read once
+  per call, where each position used to read the clock itself.
 - **`TradeError`, `PositionError`, `ChainError`, `StrategyError` and
   `TransactionError` gain a `Clock(ClockError)` variant** (#944). Breaking, since
   they are exhaustive, and released with the 0.24.0 bump (#947). The aggregate
