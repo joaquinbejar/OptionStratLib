@@ -4,12 +4,16 @@
 //! decimal in every build: the build without `clock` runs the same assertions
 //! as the default one. A `DateTime` needs a time to measure from.
 
+use chrono::{DateTime, TimeDelta, TimeZone, Utc};
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Positive, Side,
 };
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::delta;
 use optionstratlib_pricing::pricing::black_scholes_model::black_scholes;
+use optionstratlib_pricing::volatility::{
+    ImpliedVolatilitySurface, ImpliedVolatilitySurfaceConfig, OptionQuote, SviParameters, SviSlice,
+};
 use rust_decimal_macros::dec;
 
 fn option(expiration_date: ExpirationDate) -> Options {
@@ -41,6 +45,76 @@ fn test_days_expiration_prices_identically_in_every_build() {
         option.time_to_expiration().unwrap(),
         pos_or_panic!(30.0 / 365.0)
     );
+}
+
+/// A surface measures every expiry from its as-of time, so the same quotes give the same
+/// answer whatever the build and whatever the reference datetime, and with no `cfg` here:
+/// this test runs without the clock exactly as it runs with it.
+#[test]
+fn test_calibrated_surface_measures_from_as_of_in_every_build() {
+    let as_of: DateTime<Utc> = Utc.with_ymd_and_hms(2030, 1, 1, 12, 0, 0).unwrap();
+    let forward = Positive::HUNDRED;
+    let known = SviSlice::try_new(
+        SviParameters::try_new(dec!(0.02), dec!(0.1), dec!(-0.4), dec!(0.05), dec!(0.2)).unwrap(),
+        forward,
+        Positive::ONE,
+    )
+    .unwrap();
+    let mut quotes = Vec::new();
+    for strike in [70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 135.0] {
+        let strike = pos_or_panic!(strike);
+        let mut quoted = option(ExpirationDate::Days(pos_or_panic!(365.0)));
+        quoted.strike_price = strike;
+        quoted.risk_free_rate = dec!(0);
+        quoted.implied_volatility = known.implied_volatility_at_strike(strike).unwrap();
+        let price = Positive::new_decimal(black_scholes(&quoted).unwrap()).unwrap();
+        quotes.push(OptionQuote {
+            expiry: as_of + TimeDelta::try_days(365).unwrap(),
+            strike,
+            style: OptionStyle::Call,
+            bid: price,
+            ask: price,
+            quoted_at: as_of,
+        });
+    }
+    let calibrate = || {
+        ImpliedVolatilitySurface::calibrate(
+            &quotes,
+            forward,
+            dec!(0),
+            Positive::ZERO,
+            as_of,
+            &ImpliedVolatilitySurfaceConfig::default(),
+        )
+        .unwrap()
+    };
+
+    let surface = calibrate();
+    let expiry = surface.expiries().first().unwrap();
+    assert_eq!(expiry.time_to_expiry(), Positive::ONE);
+    assert!(surface.rejections().is_empty());
+    let point = surface.point(dec!(0), Positive::ONE).unwrap();
+    let miss =
+        point.implied_volatility.to_dec() - known.implied_volatility(dec!(0)).unwrap().to_dec();
+    assert!(miss.abs() < dec!(0.00000001), "{point:?}");
+    assert_eq!(
+        surface
+            .age_at(as_of + TimeDelta::try_hours(2).unwrap())
+            .unwrap(),
+        TimeDelta::try_hours(2).unwrap()
+    );
+    let shocked = surface
+        .shock(optionstratlib_pricing::volatility::SurfaceShock::Level {
+            volatility: dec!(0.01),
+        })
+        .unwrap();
+    assert_eq!(shocked.as_of(), as_of);
+
+    // A reference datetime, which a `DateTime` expiration would read, changes nothing.
+    ExpirationDate::set_reference_datetime(Some(as_of + TimeDelta::try_days(100).unwrap()));
+    let referenced = calibrate();
+    ExpirationDate::set_reference_datetime(None);
+    assert_eq!(referenced, surface);
 }
 
 #[cfg(not(feature = "clock"))]
