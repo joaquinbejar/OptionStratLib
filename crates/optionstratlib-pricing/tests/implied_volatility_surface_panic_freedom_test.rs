@@ -241,6 +241,30 @@ proptest! {
                         prop_assert_eq!(point.expiry_region, region);
                     }
                 }
+                // The derivatives read the same place: their value is the point's exactly, and
+                // where the point is an error so are they.
+                for k in [k, -k, dec!(0)] {
+                    for time in surface
+                        .expiries()
+                        .iter()
+                        .map(|expiry| expiry.time_to_expiry())
+                        .chain([time])
+                    {
+                        match (surface.point(k, time), surface.point_with_derivatives(k, time)) {
+                            (Ok(point), Ok(read)) => prop_assert_eq!(point, read.point),
+                            (Err(point), Err(read)) => {
+                                prop_assert_eq!(point.to_string(), read.to_string());
+                            }
+                            // A derivative can leave the range where the value does not.
+                            (Ok(_), Err(_)) => {}
+                            (Err(error), Ok(read)) => {
+                                prop_assert!(false, "{error} against {read:?}");
+                            }
+                        }
+                    }
+                }
+                let expiry = as_of() + TimeDelta::nanoseconds(1);
+                let _ = surface.point_at_strike_with_derivatives(Positive::HUNDRED, expiry);
                 // At a fitted expiry the read is that slice, and inside the expiries.
                 for expiry in surface.expiries() {
                     if let Ok(point) = surface.point(k, expiry.time_to_expiry()) {
@@ -253,6 +277,7 @@ proptest! {
                 let _ = surface.check_on_grid(&[k]);
                 let _ = surface.age_at(as_of());
                 if let Ok(shocked) = surface.shock(shock) {
+                    let _ = shocked.point_with_derivatives(k, time);
                     prop_assert_eq!(shocked.shocks(), [shock]);
                     prop_assert_eq!(shocked.rejections(), surface.rejections());
                     prop_assert_eq!(shocked.residuals().count(), surface.residuals().count());
