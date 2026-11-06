@@ -12,6 +12,7 @@ use crate::chains::utils::{
 };
 use crate::chains::{OptionData, OptionsInStrike};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
+use chrono::{DateTime, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
@@ -2009,10 +2010,26 @@ impl OptionChain {
     /// selected strikes into [`Position`] instances. Returns
     /// [`ChainError::ChainBuildError`] naming `total_positions` when the
     /// quantities sum to zero, sum past `usize::MAX`, or ask for more
-    /// positions than can be allocated.
+    /// positions than can be allocated. Returns [`ChainError::Clock`] in a build without
+    /// the `clock` feature: use [`Self::get_random_positions_at`].
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
+    ) -> Result<Vec<Position>, ChainError> {
+        self.get_random_positions_at(params, now()?)
+    }
+
+    /// Creates random positions, as [`Self::get_random_positions`] does, all opened at `date`.
+    ///
+    /// Reads no clock, so it exists and works with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::get_random_positions`], except that it cannot fail for a missing clock.
+    pub fn get_random_positions_at(
+        &self,
+        params: RandomPositionsParams,
+        date: DateTime<Utc>,
     ) -> Result<Vec<Position>, ChainError> {
         let total_positions = params.total_positions()?;
         if total_positions == 0 {
@@ -2053,7 +2070,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_ask.unwrap_or(Positive::ZERO),
-                        now()?,
+                        date,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -2084,7 +2101,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_bid.unwrap_or(Positive::ZERO),
-                        now()?,
+                        date,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -2115,7 +2132,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_ask.unwrap_or(Positive::ZERO),
-                        now()?,
+                        date,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -2146,7 +2163,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_bid.unwrap_or(Positive::ZERO),
-                        now()?,
+                        date,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -4177,7 +4194,7 @@ mod tests_get_random_positions {
             None,
             None,
         );
-        let result = chain.get_random_positions(params);
+        let result = chain.get_random_positions_at(params, chrono::DateTime::UNIX_EPOCH);
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
@@ -4401,7 +4418,7 @@ mod tests_get_random_positions {
             None,
             None,
         );
-        let result = chain.get_random_positions(params);
+        let result = chain.get_random_positions_at(params, chrono::DateTime::UNIX_EPOCH);
 
         assert!(result.is_ok());
         let positions = result.unwrap();

@@ -13,7 +13,7 @@ use optionstratlib_core::model::Position;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::utils::sub_floor_zero;
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, Options, Side};
-use optionstratlib_core::utils::time::now;
+use optionstratlib_core::utils::time::{now, years_to_expiration};
 use optionstratlib_pricing::greeks::{Greeks, GreeksSnapshot, delta, gamma};
 use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
@@ -1044,7 +1044,16 @@ impl OptionData {
     /// May return:
     /// * `ChainError` variants if there are issues creating the options contracts
     /// * Errors propagated from the Black-Scholes calculation functions
+    /// * [`ChainError::ExpirationDate`] when the time to expiry cannot be measured: a
+    ///   `DateTime` expiration in a build with neither the `clock` feature nor a reference
+    ///   datetime on this thread. The quotes are left as they were.
     pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
+        // A price that fails below only clears its quote, which is how an unpriceable
+        // strike is represented. A missing time is not that: nothing is known about the
+        // strike, and wiping quotes that may have come from the market would hide it.
+        if let Some(expiration_date) = &self.expiration_date {
+            years_to_expiration(expiration_date)?;
+        }
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
         match call_option.calculate_price_black_scholes() {
             Ok(price) => {
@@ -1239,6 +1248,11 @@ impl OptionData {
     /// Delta measures the rate of change of the option price with respect to changes in the
     /// underlying asset's price. This method creates a Call option and uses it to calculate
     /// the delta value.
+    ///
+    /// With no way to report a failure, a Greek that cannot be computed becomes `None`, also
+    /// for lack of a time to measure from: a value kept from earlier inputs could be wrong
+    /// without showing it. `OptionChain::try_update_greeks` reports a missing time, and an
+    /// aggregate exposure fails on `None` in a build without the `clock` feature.
     pub fn calculate_delta(&mut self) {
         let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,
@@ -1277,6 +1291,8 @@ impl OptionData {
     /// Gamma measures the rate of change of delta with respect to changes in the
     /// underlying asset's price. This method creates a Call option and uses it to calculate
     /// the gamma value.
+    ///
+    /// A gamma that cannot be computed becomes `None`; see [`Self::calculate_delta`].
     pub fn calculate_gamma(&mut self) {
         let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,

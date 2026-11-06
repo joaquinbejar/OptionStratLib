@@ -131,6 +131,7 @@ mod without_clock {
     use optionstratlib_strategies::error::AdjustmentError;
     use optionstratlib_strategies::strategies::StrategyConstructor;
     use optionstratlib_strategies::strategies::base::Optimizable;
+    use optionstratlib_strategies::strategies::custom::CustomStrategy;
     use optionstratlib_strategies::strategies::delta_neutral::{
         AdjustmentConfig, AdjustmentOptimizer, AdjustmentTarget,
     };
@@ -240,6 +241,34 @@ mod without_clock {
         .optimize()
         .unwrap();
         assert!(!plan.actions.is_empty());
+    }
+
+    /// The search refreshes each position from a strike, and that needs no time: it used to
+    /// fail on the clock on every combination, even with a reference.
+    #[test]
+    fn test_custom_strategy_find_optimal_searches_without_a_time() {
+        let chain = chain();
+        let mut strategy = CustomStrategy::new(
+            "custom".to_string(),
+            "TEST".to_string(),
+            "a custom strategy".to_string(),
+            Positive::HUNDRED,
+            long_call_leg(),
+            pos_or_panic!(0.01),
+            10,
+            Positive::ONE,
+        )
+        .unwrap();
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
+        assert!(
+            strategy
+                .get_positions()
+                .unwrap()
+                .iter()
+                .all(|leg| leg.date == date())
+        );
     }
 
     /// With no time to measure the chain from, every candidate would be dropped and the

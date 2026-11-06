@@ -22,11 +22,14 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum ClockError {
-    /// The crate was built without the `clock` feature, and the operation has
-    /// no explicit time and no reference datetime to use instead.
+    /// The crate was built without the `clock` feature, and the operation has no
+    /// explicit time to use instead. A reference datetime stands in for the clock only
+    /// where a time to expiry or an expiry date is measured, not where a new record is
+    /// stamped.
     #[error(
         "the wall clock is unavailable: this build has no `clock` feature, so pass the time \
-         explicitly or set the thread's reference datetime"
+         to the `*_at` form of the call; a time to expiry can also measure from the thread's \
+         reference datetime"
     )]
     Unavailable,
 }

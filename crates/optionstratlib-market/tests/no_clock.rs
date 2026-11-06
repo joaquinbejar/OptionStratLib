@@ -3,15 +3,14 @@
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use optionstratlib_core::model::{ExpirationDate, Positive};
 use optionstratlib_core::pos_or_panic;
-#[cfg(not(feature = "clock"))]
 use optionstratlib_core::spos;
 use optionstratlib_market::chains::OptionChain;
+use optionstratlib_market::chains::utils::RandomPositionsParams;
 #[cfg(not(feature = "clock"))]
 use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib_market::series::OptionSeries;
 #[cfg(not(feature = "clock"))]
 use rust_decimal::Decimal;
-#[cfg(not(feature = "clock"))]
 use rust_decimal_macros::dec;
 
 fn base() -> DateTime<Utc> {
@@ -103,6 +102,52 @@ fn test_odte_days_earlier_than_a_datetime_is_found() {
     );
 }
 
+fn random_params() -> RandomPositionsParams {
+    RandomPositionsParams::new(
+        None,
+        None,
+        Some(2),
+        None,
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        Positive::ONE,
+        dec!(0.05),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        None,
+        None,
+    )
+}
+
+/// The dated form opens every position at the given date, in every build.
+#[test]
+fn test_get_random_positions_at_opens_at_the_given_date() {
+    let mut built = chain("TEST");
+    for strike in [pos_or_panic!(95.0), Positive::HUNDRED, pos_or_panic!(105.0)] {
+        built.add_option(
+            strike,
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.0),
+            spos!(4.5),
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+    }
+    let positions = built
+        .get_random_positions_at(random_params(), base())
+        .unwrap();
+    assert_eq!(positions.len(), 2);
+    assert!(positions.iter().all(|position| position.date == base()));
+}
+
 /// The expiration is 40 hours from `base`, so a later base brings it within a day.
 #[test]
 fn test_odte_at_depends_only_on_the_base() {
@@ -138,10 +183,10 @@ fn test_odte_delegates_to_odte_at() {
 #[cfg(not(feature = "clock"))]
 mod without_clock {
     use super::*;
-    use optionstratlib_core::error::{ClockError, PositionError};
+    use optionstratlib_core::error::ClockError;
     use optionstratlib_core::model::{OptionStyle, OptionType, Options, Position, Side};
     use optionstratlib_core::utils::time::now;
-    use optionstratlib_market::chains::{OptionData, UpdateFromOptionData};
+    use optionstratlib_market::chains::UpdateFromOptionData;
     use optionstratlib_market::error::ChainError;
 
     /// Fails if anything in this configuration turned the clock on, the
@@ -287,9 +332,12 @@ mod without_clock {
         assert!(chain.gamma_exposure().is_err());
     }
 
-    /// Refreshing a position re-stamps its open date, and there is no time to give it.
+    /// Refreshing a position re-stamps its open date with the current time, and without a
+    /// clock it keeps the date it has. The refresh needs no reference.
     #[test]
-    fn test_update_from_option_data_is_a_typed_error() {
+    fn test_update_from_option_data_keeps_the_date_of_the_position() {
+        let chain = chain_without_greeks(3);
+        let row = chain.options.iter().next().unwrap().clone();
         let mut position = Position::new(
             Options::new(
                 OptionType::European,
@@ -312,8 +360,46 @@ mod without_clock {
             None,
             None,
         );
-        let updated = position.update_from_option_data(&OptionData::default());
-        assert!(matches!(updated, Err(PositionError::Clock(_))));
+        position.update_from_option_data(&row).unwrap();
+        assert_eq!(position.date, base());
+        assert_eq!(Some(position.premium), row.call_ask);
+    }
+
+    /// A failed time to expiry used to wipe the quotes and report success.
+    #[test]
+    fn test_calculate_prices_without_a_time_keeps_the_quotes_and_reports_it() {
+        let chain = chain_without_greeks(3);
+        let mut row = chain.options.iter().nth(3).unwrap().clone();
+        let before = (row.call_bid, row.call_ask, row.put_bid, row.put_ask);
+        assert!(before.0.is_some());
+        assert!(matches!(
+            row.calculate_prices(None),
+            Err(ChainError::ExpirationDate(_))
+        ));
+        assert_eq!(
+            (row.call_bid, row.call_ask, row.put_bid, row.put_ask),
+            before
+        );
+    }
+
+    #[test]
+    fn test_calculate_prices_with_a_reference_prices_the_row() {
+        let chain = chain_without_greeks(3);
+        let mut row = chain.options.iter().nth(3).unwrap().clone();
+        ExpirationDate::set_reference_datetime(Some(base()));
+        let priced = row.calculate_prices(None);
+        ExpirationDate::set_reference_datetime(None);
+        priced.unwrap();
+        assert!(row.call_bid.is_some());
+    }
+
+    #[test]
+    fn test_get_random_positions_needs_the_dated_form() {
+        let chain = chain_without_greeks(3);
+        assert!(matches!(
+            chain.get_random_positions(random_params()),
+            Err(ChainError::Clock(ClockError::Unavailable))
+        ));
     }
 
     #[test]
