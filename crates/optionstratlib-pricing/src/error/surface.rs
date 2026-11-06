@@ -86,7 +86,7 @@ pub enum QuoteRejectionReason {
         /// What failed.
         reason: String,
     },
-    /// Its vega is zero, or its weight does not fit in a `Decimal`.
+    /// Its vega is zero, or its weight has no value in a `Decimal`.
     NoWeight,
 }
 

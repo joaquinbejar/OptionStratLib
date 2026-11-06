@@ -540,7 +540,7 @@ pub struct SurfaceExport {
 ///    `max(K e^(-rT) - S e^(-qT), 0) <= P <= K e^(-rT)` for a put.
 /// 9. No implied volatility: the mid prices at or below the volatility floor, above
 ///    a volatility of 500%, or the solve did not converge.
-/// 10. No weight: its vega is zero, or the weight below does not fit in a `Decimal`.
+/// 10. No weight: its vega is zero, or the weight below has no value in a `Decimal`.
 ///
 /// Every quote is priced as a European option under Black-Scholes, whichever way it
 /// really exercises. For an American option that bias is in the implied volatility,
@@ -767,17 +767,7 @@ impl ImpliedVolatilitySurface {
         if spot.is_zero() {
             return Err(ImpliedVolatilitySurfaceError::ZeroSpot);
         }
-        if config.max_quote_age < TimeDelta::zero() {
-            return Err(ImpliedVolatilitySurfaceError::NegativeQuoteAgeLimit {
-                limit: config.max_quote_age,
-            });
-        }
-        if config.arbitrage_grid_points.get() > MAX_ARBITRAGE_GRID_POINTS {
-            return Err(ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge {
-                points: config.arbitrage_grid_points.get(),
-                limit: MAX_ARBITRAGE_GRID_POINTS,
-            });
-        }
+        check_config(config)?;
         let market = Market {
             spot,
             rate,
@@ -1247,6 +1237,25 @@ impl ImpliedVolatilitySurface {
             extrapolated,
         })
     }
+}
+
+/// Rejects the limits of a configuration that could not be applied. Those of the fit are
+/// [`calibrate_svi`]'s to check.
+fn check_config(
+    config: &ImpliedVolatilitySurfaceConfig,
+) -> Result<(), ImpliedVolatilitySurfaceError> {
+    if config.max_quote_age < TimeDelta::zero() {
+        return Err(ImpliedVolatilitySurfaceError::NegativeQuoteAgeLimit {
+            limit: config.max_quote_age,
+        });
+    }
+    if config.arbitrage_grid_points.get() > MAX_ARBITRAGE_GRID_POINTS {
+        return Err(ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge {
+            points: config.arbitrage_grid_points.get(),
+            limit: MAX_ARBITRAGE_GRID_POINTS,
+        });
+    }
+    Ok(())
 }
 
 /// Where a time to expiry lies against the fitted expiries.
@@ -2123,6 +2132,24 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
+    fn test_expiries_closer_than_the_resolution_of_t_are_reported_as_sharing_it() {
+        let one = chain(&known(365), 365);
+        let other: Vec<OptionQuote> = one
+            .iter()
+            .map(|quote| OptionQuote {
+                expiry: quote.expiry + TimeDelta::nanoseconds(1),
+                ..*quote
+            })
+            .collect();
+        assert!(matches!(
+            calibrate(&[one, other].concat()),
+            Err(ImpliedVolatilitySurfaceError::StaticArbitrage(
+                StaticArbitrageError::DuplicateExpiry { .. }
+            ))
+        ));
+    }
+
+    #[test]
     fn test_calibrate_sub_day_expiries_use_their_own_hours() {
         // Quotes of one implied volatility at six and at seven hours: a time rounded to a
         // whole day, or to zero, would give each a different volatility or none.
@@ -2341,6 +2368,31 @@ mod tests_implied_volatility_surface {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn test_mid_exactly_at_the_top_of_the_band_is_inside_it_and_above_the_cap() {
+        let quote = call_at_mid(dec!(50));
+        let time = time_to_expiry(as_of(), quote.expiry).unwrap().unwrap();
+        let (_, upper) = european_price_band(&Options::new(
+            OptionType::European,
+            Side::Long,
+            String::new(),
+            quote.strike,
+            ExpirationDate::Days(time.days),
+            *MIN_VOLATILITY,
+            Positive::ONE,
+            Positive::HUNDRED,
+            RATE,
+            quote.style,
+            pos(YIELD),
+            None,
+        ))
+        .unwrap();
+        assert_eq!(
+            rejection_of(call_at_mid(upper)),
+            QuoteRejectionReason::AboveVolatilityCap
+        );
     }
 
     #[test]
@@ -2892,6 +2944,44 @@ mod tests_implied_volatility_surface {
         );
     }
 
+    /// A wide short expiry and a long one with only its five middle strikes, so the later
+    /// slice is the one with the narrower quotes.
+    fn narrower_later_expiry(config: &ImpliedVolatilitySurfaceConfig) -> ImpliedVolatilitySurface {
+        let middle: Vec<OptionQuote> = chain(&known(365), 365)
+            .into_iter()
+            .skip(5)
+            .take(5)
+            .collect();
+        calibrate_with(&[chain(&known(182), 182), middle].concat(), config).unwrap()
+    }
+
+    #[test]
+    fn test_wing_extension_between_expiries_is_measured_from_the_later_when_it_is_further() {
+        let surface = narrower_later_expiry(&ImpliedVolatilitySurfaceConfig::default());
+        let [earlier, later] = surface.expiries() else {
+            panic!("two expiries");
+        };
+        let k = later.highest_log_moneyness() + dec!(0.005);
+        assert!(k < earlier.highest_log_moneyness());
+        let t = pos(dec!(0.75));
+        match surface.point(k, t).unwrap_err() {
+            ImpliedVolatilitySurfaceError::WingOutOfPolicy {
+                extension, highest, ..
+            } => {
+                assert_eq!(highest, later.highest_log_moneyness());
+                assert_close(extension.to_dec(), dec!(0.005), dec!(0.0000000000001));
+            }
+            other => panic!("{other:?}"),
+        }
+        let flagged = narrower_later_expiry(&flexible());
+        let point = flagged.point(k, t).unwrap();
+        assert_close(
+            point.wing_extension.to_dec(),
+            dec!(0.005),
+            dec!(0.0000000000001),
+        );
+    }
+
     #[test]
     fn test_read_before_the_first_or_after_the_last_expiry_of_the_default_policy_is_an_error() {
         let surface = two_expiries(&ImpliedVolatilitySurfaceConfig::default());
@@ -3147,6 +3237,34 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
+    fn test_unfitted_expiry_sharing_the_time_of_a_fitted_one_is_not_bridged() {
+        // One nanosecond after each fitted expiry, below the resolution of their `T`: such
+        // an unfitted expiry sits at an end of the gap and not inside it.
+        let near = |days: i64| {
+            chain(&known(days), days)
+                .into_iter()
+                .take(3)
+                .map(move |quote| OptionQuote {
+                    expiry: in_days(days) + TimeDelta::nanoseconds(1),
+                    ..quote
+                })
+        };
+        let quotes: Vec<OptionQuote> = quotes_of(&[91, 365])
+            .into_iter()
+            .chain(near(91))
+            .chain(near(365))
+            .collect();
+        let surface = calibrate(&quotes).unwrap();
+        let [first, second] = surface.unfitted() else {
+            panic!("two unfitted: {:?}", surface.unfitted());
+        };
+        assert_eq!(first.time_to_expiry, Some(years(91)));
+        assert_eq!(second.time_to_expiry, Some(years(365)));
+        let point = surface.point(dec!(0), pos(dec!(0.5))).unwrap();
+        assert!(!point.bridges_unfitted_expiry);
+    }
+
+    #[test]
     fn test_no_expiry_fitted_is_an_error_carrying_both_lists() {
         let good = good_quote();
         let crossed = OptionQuote {
@@ -3229,6 +3347,15 @@ mod tests_implied_volatility_surface {
             calibrate_with(&quotes_of(&[365]), &config),
             Err(ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge { .. })
         ));
+    }
+
+    #[test]
+    fn test_grid_of_exactly_the_limit_is_allowed() {
+        let config = ImpliedVolatilitySurfaceConfig {
+            arbitrage_grid_points: NonZeroUsize::new(MAX_ARBITRAGE_GRID_POINTS).unwrap(),
+            ..ImpliedVolatilitySurfaceConfig::default()
+        };
+        assert!(check_config(&config).is_ok());
     }
 
     #[test]
