@@ -129,7 +129,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   points it read outside the data and across an expiry without a slice.
   `check_static_arbitrage` runs on the fitted slices and on a slice in the middle of
   each gap, on one grid: the sorted union of `arbitrage_grid_points`, at least 5, across
-  the quotes of each expiry. **The surface is not claimed free of arbitrage**: findings
+  the quotes of each expiry, and the log moneyness of every clean quote. That setting limits
+  each expiry and not the total, so the cost of the check is roughly quadratic in the
+  expiries. **The surface is not claimed free of arbitrage**: findings
   and points the check could not resolve are reported and do not stop the surface,
   `passed` means only those checks on that grid, and a check that cannot finish is an
   error. Failures are a new `#[non_exhaustive]` `ImpliedVolatilitySurfaceError`; the

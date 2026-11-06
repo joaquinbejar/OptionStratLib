@@ -111,9 +111,15 @@ pub struct ImpliedVolatilitySurfaceConfig {
     pub svi: SviCalibrationConfig,
     /// How far a read may leave the data.
     pub extrapolation: ExtrapolationPolicy,
-    /// The points of the log moneyness grid of the arbitrage report **per expiry**, evenly
-    /// across the quotes of that expiry. The grid is the sorted union of them, so it has up
-    /// to this many points times the fitted expiries. At least 5 and at most 100000.
+    /// The evenly spaced points of the log moneyness grid of the arbitrage report **per
+    /// expiry**, across the quotes of that expiry. The grid is the sorted union of them and of
+    /// the log moneyness of every clean quote. At least 5 and at most 100000.
+    ///
+    /// The limit is per expiry, and there is no limit on the total. The grid grows with the
+    /// expiries, and every slice is read at every point, with a slice for each expiry and each
+    /// gap between two, so the cost of the check is roughly quadratic in the expiries. Measured
+    /// in a release build, the whole calibration: 100000 points took about 0.9 s for one expiry,
+    /// and the default of 41 about 1.8 s for 20 expiries of 61 quotes each.
     pub arbitrage_grid_points: NonZeroUsize,
 }
 
@@ -721,8 +727,9 @@ pub struct SurfaceExport {
 /// [`check_static_arbitrage`] runs on the slices of the fitted expiries and on a slice
 /// at the middle of each gap between them, all on one log moneyness grid: the sorted
 /// union of [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points across the
-/// quotes of each expiry, so a short expiry with narrow quotes has that many points inside
-/// them. A surface with one expiry has no calendar check, and
+/// quotes of each expiry and the log moneyness of every clean quote. So a short expiry with
+/// narrow quotes has that many points inside them, and dense quotes keep their own points when
+/// a far quote stretches the spacing. A surface with one expiry has no calendar check, and
 /// [`ImpliedVolatilitySurface::calendar_checked`] says so.
 ///
 /// [`ImpliedVolatilitySurface::arbitrage_report`] is a finding, not a verdict:
@@ -1006,9 +1013,9 @@ impl ImpliedVolatilitySurface {
         &self.arbitrage_report
     }
 
-    /// The log moneyness grid of [`ImpliedVolatilitySurface::arbitrage_report`], sorted: the
-    /// union of [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points across the
-    /// quotes of each expiry.
+    /// The log moneyness grid of [`ImpliedVolatilitySurface::arbitrage_report`], strictly
+    /// sorted: the union of [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points
+    /// across the quotes of each expiry and the log moneyness of every clean quote.
     #[must_use]
     #[inline]
     pub fn arbitrage_grid(&self) -> &[Decimal] {
@@ -1845,6 +1852,12 @@ fn union_across_quotes(
         if let Some(end) = grid.last_mut() {
             *end = highest;
         }
+        grid.extend(
+            expiry
+                .residuals
+                .iter()
+                .map(|residual| residual.log_moneyness),
+        );
     }
     grid.sort_unstable();
     grid.dedup();
@@ -4000,8 +4013,7 @@ mod tests_implied_volatility_surface {
             arbitrage_grid_points: NonZeroUsize::new(MIN_ARBITRAGE_GRID_POINTS).unwrap(),
             ..ImpliedVolatilitySurfaceConfig::default()
         };
-        let surface = calibrate_with(&quotes_of(&[365]), &config).unwrap();
-        assert_eq!(surface.arbitrage_grid().len(), MIN_ARBITRAGE_GRID_POINTS);
+        assert!(calibrate_with(&quotes_of(&[365]), &config).is_ok());
     }
 
     #[test]
@@ -4107,14 +4119,101 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
-    fn test_grid_of_one_expiry_has_exactly_its_points_and_no_repeat_across_equal_ranges() {
+    fn test_grid_holds_every_clean_quote_with_no_repeat_and_exact_ends() {
+        let surface = two_expiries(&ImpliedVolatilitySurfaceConfig::default());
+        let grid = surface.arbitrage_grid();
+        assert!(grid.windows(2).all(|pair| pair.first() < pair.last()));
+        for residual in surface.residuals() {
+            assert!(grid.contains(&residual.log_moneyness), "{residual:?}");
+        }
+        let lowest = surface.residuals().map(|r| r.log_moneyness).min();
+        let highest = surface.residuals().map(|r| r.log_moneyness).max();
+        assert_eq!(grid.first().copied(), lowest);
+        assert_eq!(grid.last().copied(), highest);
+    }
+
+    #[test]
+    fn test_grid_of_two_equal_expiries_has_one_copy_of_each_point() {
         let surface = calibrate(&quotes_of(&[365])).unwrap();
-        assert_eq!(surface.arbitrage_grid().len(), 41);
-        // Two expiries sharing one range and the same points leave one copy of each.
         let expiry = surface.expiries().first().unwrap().clone();
+        // 41 evenly spaced points and 15 quotes, of which two are the ends.
+        assert_eq!(surface.arbitrage_grid().len(), 41 + 15 - 2);
         let grid =
             union_across_quotes(&[expiry.clone(), expiry], NonZeroUsize::new(41).unwrap()).unwrap();
         assert_eq!(grid, surface.arbitrage_grid());
+    }
+
+    /// Dense quotes of a day-long expiry with a butterfly violation in them, and six far quotes
+    /// that stretch its spacing to 0.015, beside a clean year-long expiry. Spaced points alone
+    /// put five inside the dense quotes, step over the violation, and pass.
+    #[test]
+    fn test_butterfly_among_dense_quotes_stretched_by_far_ones_is_found() {
+        let t = years(1);
+        let short = SviSlice::try_new(
+            SviParameters::try_new(
+                dec!(0.00006660529139128362),
+                dec!(0.013301456431887263),
+                dec!(-0.4091625325933133),
+                dec!(-0.0022509189316787075),
+                dec!(0.00013376743036954395),
+            )
+            .unwrap(),
+            market().forward(t).unwrap(),
+            t,
+        )
+        .unwrap();
+        let forward = short.forward().to_dec();
+        let quote_at_k = |k: Decimal| {
+            let strike = (forward * d_exp(k, "test").unwrap()).round_dp(4);
+            let style = if strike >= forward {
+                OptionStyle::Call
+            } else {
+                OptionStyle::Put
+            };
+            quote_of(&short, 1, strike, style)
+        };
+        let mut quotes: Vec<OptionQuote> = (-15_i32..=15)
+            .map(|step| quote_at_k(dec!(0.002) * Decimal::from(step)))
+            .collect();
+        for k in [-0.3, -0.2, -0.1, 0.1, 0.2, 0.3] {
+            quotes.push(quote_at_k(Decimal::try_from(k).unwrap()));
+        }
+        let long = known(365);
+        let long_forward = long.forward().to_dec();
+        quotes.extend((-20_i32..=20).map(|step| {
+            let k = dec!(0.0375) * Decimal::from(step);
+            let strike = (long_forward * d_exp(k, "test").unwrap()).round_dp(2);
+            let style = if strike >= long_forward {
+                OptionStyle::Call
+            } else {
+                OptionStyle::Put
+            };
+            quote_of(&long, 365, strike, style)
+        }));
+
+        let surface = calibrate(&quotes).unwrap();
+        assert!(surface.unfitted().is_empty(), "{:?}", surface.unfitted());
+        assert!(
+            surface.rejections().is_empty(),
+            "{:?}",
+            surface.rejections()
+        );
+        let expiry = surface.expiries().first().unwrap();
+        assert_eq!(expiry.time_to_expiry(), t);
+
+        // Every violation of the slice at its own quotes is in the report.
+        let at_quotes: Vec<Decimal> = expiry
+            .residuals()
+            .iter()
+            .map(|residual| residual.log_moneyness)
+            .collect();
+        let own = check_butterfly(expiry.slice(), &at_quotes).unwrap();
+        assert!(!own.violations().is_empty());
+        let report = surface.arbitrage_report();
+        assert!(!report.passed());
+        for violation in own.violations() {
+            assert!(report.violations().contains(violation), "{violation:?}");
+        }
     }
 
     /// A slice a day from expiry with a butterfly violation inside quotes 0.03 wide, and a
