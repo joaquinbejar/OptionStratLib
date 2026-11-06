@@ -235,6 +235,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         extrapolated = inside.is_extrapolated(),
         "at the money spot, 200 days, between 91 and 365 where 182 has no slice"
     );
+    let read = surface.point_at_strike_with_derivatives(spot, expiry)?;
+    info!(
+        dw_dk = %read.total_variance_slope.round_dp(6),
+        d2w_dk2 = %read.total_variance_curvature.round_dp(6),
+        dw_dt = %read.total_variance_time_slope.round_dp(6),
+        "the same point: derivatives of total variance, dw/dt at fixed log moneyness"
+    );
     let last = surface.expiries().last().ok_or("a surface has an expiry")?;
     let wing = surface.point(
         last.highest_log_moneyness() + dec!(0.1),

@@ -103,6 +103,18 @@ fn test_calibrated_surface_measures_from_as_of_in_every_build() {
             .unwrap(),
         TimeDelta::try_hours(2).unwrap()
     );
+    let read = surface
+        .point_at_strike_with_derivatives(forward, as_of + TimeDelta::try_days(365).unwrap())
+        .unwrap();
+    assert_eq!(read.point, point);
+    assert_eq!(
+        read.total_variance_slope,
+        expiry.slice().total_variance_slope(dec!(0)).unwrap()
+    );
+    assert_eq!(
+        read.total_variance_time_slope,
+        point.total_variance.to_dec() / expiry.time_to_expiry().to_dec()
+    );
     let shocked = surface
         .shock(optionstratlib_pricing::volatility::SurfaceShock::Level {
             volatility: dec!(0.01),
