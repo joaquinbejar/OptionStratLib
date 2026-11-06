@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version.workspace = true
+version = "0.24.1"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -123,7 +123,8 @@ features = ["plotly", "async", "static_export"]
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true, optional = true }
-optionstratlib-pricing = { workspace = true, optional = true }
+# Re-exports `ImpliedVolatilitySurface::point_with_derivatives`, new in 0.24.1.
+optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.24.1", default-features = false, optional = true }
 optionstratlib-simulation = { workspace = true, optional = true }
 optionstratlib-market = { workspace = true, optional = true }
 optionstratlib-analytics = { workspace = true, optional = true }
