@@ -54,6 +54,7 @@ pub enum QuoteRejectionReason {
     /// Its bid is zero.
     ZeroBid,
     /// It is older than the limit at the as-of time.
+    #[non_exhaustive]
     Stale {
         /// Its age at the as-of time.
         age: TimeDelta,
@@ -64,6 +65,7 @@ pub enum QuoteRejectionReason {
     /// tighter, or as tight with a lower bid, or identical.
     Superseded,
     /// Its mid is outside the no-arbitrage band of a European option.
+    #[non_exhaustive]
     OutsideNoArbitrageBand {
         /// The mid of the quote.
         mid: Decimal,
@@ -77,11 +79,13 @@ pub enum QuoteRejectionReason {
     /// Its mid prices above the price at a volatility of 500%.
     AboveVolatilityCap,
     /// The implied volatility solve did not converge.
+    #[non_exhaustive]
     NoConvergence {
         /// The last volatility evaluated.
         last_volatility: Positive,
     },
     /// The arithmetic of its band, its mid or its solve failed.
+    #[non_exhaustive]
     NumericalFailure {
         /// What failed.
         reason: String,
@@ -92,6 +96,7 @@ pub enum QuoteRejectionReason {
 
 /// A quote that is not in the surface, and why.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct QuoteRejection {
     /// The quote as it was supplied.
     pub quote: OptionQuote,
@@ -103,7 +108,10 @@ pub struct QuoteRejection {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum UnfittedReason {
+    /// The expiry is not after the as-of time, so none of its quotes could be used.
+    ExpiredAtAsOf,
     /// Too few of its quotes are clean, or have a weight, to fix five parameters.
+    #[non_exhaustive]
     TooFewCleanQuotes {
         /// The usable quotes.
         clean: usize,
@@ -111,6 +119,7 @@ pub enum UnfittedReason {
         required: usize,
     },
     /// Its clean quotes repeat strikes, leaving too few distinct ones.
+    #[non_exhaustive]
     TooFewDistinctStrikes {
         /// The distinct strikes among the usable quotes.
         distinct: usize,
@@ -118,6 +127,7 @@ pub enum UnfittedReason {
         required: usize,
     },
     /// The best fit is further from the quotes than the limit.
+    #[non_exhaustive]
     RmseAboveLimit {
         /// The weighted RMSE of the best fit over the weighted mean observed implied
         /// volatility.
@@ -128,6 +138,7 @@ pub enum UnfittedReason {
         rmse: Positive,
     },
     /// The calibration failed some other way, as [`calibrate_svi`](crate::volatility::calibrate_svi) reported it.
+    #[non_exhaustive]
     CalibrationFailed {
         /// The message of the error.
         reason: String,
@@ -162,6 +173,7 @@ impl From<SviError> for UnfittedReason {
 
 /// An expiry with a quote at or before the as-of time and no slice.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct UnfittedExpiry {
     /// The expiry.
     pub expiry: DateTime<Utc>,

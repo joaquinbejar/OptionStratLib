@@ -11,8 +11,7 @@ use super::arbitrage::{
     StaticArbitrageReport, TotalVarianceSlice, check_butterfly, check_static_arbitrage,
 };
 use super::svi::{
-    MIN_OBSERVATIONS, SviCalibrationConfig, SviObservation, SviParameters, SviSlice, calibrate_svi,
-    log_moneyness,
+    SviCalibrationConfig, SviObservation, SviParameters, SviSlice, calibrate_svi, log_moneyness,
 };
 use crate::error::surface::{
     OptionQuote, QuoteRejection, QuoteRejectionReason, UnfittedExpiry, UnfittedReason,
@@ -648,8 +647,8 @@ pub struct SurfaceExport {
 /// # An expiry that cannot be fitted
 ///
 /// An expiry with a quote at or before the as-of time either has a slice or is an
-/// [`UnfittedExpiry`] with its [`UnfittedReason`]: too few clean quotes, too few
-/// distinct strikes, a best fit above the limit, or a failed calibration. It never
+/// [`UnfittedExpiry`] with its [`UnfittedReason`]: expired at the as-of time, too few clean
+/// quotes, too few distinct strikes, a best fit above the limit, or a failed calibration. It never
 /// disappears, and the rest of the surface is still built. A
 /// [`SurfacePoint`] read between two expiries with an unfitted one between them says
 /// so in [`SurfacePoint::bridges_unfitted_expiry`]. Only a surface with no slice at
@@ -1716,10 +1715,7 @@ fn fit_expiry(
     config: &SviCalibrationConfig,
 ) -> Result<SurfaceExpiry, FitFailure> {
     let Some(years) = group.years else {
-        return Err(FitFailure::Expiry(UnfittedReason::TooFewCleanQuotes {
-            clean: group.clean.len(),
-            required: MIN_OBSERVATIONS,
-        }));
+        return Err(FitFailure::Expiry(UnfittedReason::ExpiredAtAsOf));
     };
     let forward = market.forward(years)?;
     let quotes = quotes_with_weights(&group.clean)?;
@@ -3478,13 +3474,8 @@ mod tests_implied_volatility_surface {
         let surface = calibrate(&quotes).unwrap();
         let unfitted = surface.unfitted().first().unwrap();
         assert_eq!(unfitted.time_to_expiry, None);
-        assert_eq!(
-            unfitted.reason,
-            UnfittedReason::TooFewCleanQuotes {
-                clean: 0,
-                required: 5
-            }
-        );
+        assert_eq!(unfitted.clean_quotes, 0);
+        assert_eq!(unfitted.reason, UnfittedReason::ExpiredAtAsOf);
     }
 
     #[test]

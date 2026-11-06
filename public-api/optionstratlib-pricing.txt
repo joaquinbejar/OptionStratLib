@@ -699,16 +699,16 @@ pub optionstratlib_pricing::volatility::QuoteRejectionReason::BelowVolatilityFlo
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::Crossed
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::ExpiredAtAsOf
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::LaterThanAsOf
-pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoConvergence
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoConvergence
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoConvergence::last_volatility: positive::positive::Positive
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoWeight
-pub optionstratlib_pricing::volatility::QuoteRejectionReason::NumericalFailure
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::NumericalFailure
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::NumericalFailure::reason: alloc::string::String
-pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::lower: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::mid: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::upper: rust_decimal::decimal::Decimal
-pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale::age: chrono::time_delta::TimeDelta
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale::limit: chrono::time_delta::TimeDelta
 pub optionstratlib_pricing::volatility::QuoteRejectionReason::Superseded
@@ -765,16 +765,17 @@ pub optionstratlib_pricing::volatility::SurfaceShock::Term
 pub optionstratlib_pricing::volatility::SurfaceShock::Term::pivot: positive::positive::Positive
 pub optionstratlib_pricing::volatility::SurfaceShock::Term::slope: rust_decimal::decimal::Decimal
 #[non_exhaustive] pub enum optionstratlib_pricing::volatility::UnfittedReason
-pub optionstratlib_pricing::volatility::UnfittedReason::CalibrationFailed
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::CalibrationFailed
 pub optionstratlib_pricing::volatility::UnfittedReason::CalibrationFailed::reason: alloc::string::String
-pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit
+pub optionstratlib_pricing::volatility::UnfittedReason::ExpiredAtAsOf
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit
 pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::limit: positive::positive::Positive
 pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::relative_rmse: positive::positive::Positive
 pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::rmse: positive::positive::Positive
-pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes
 pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes::clean: usize
 pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes::required: usize
-pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes
 pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes::distinct: usize
 pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes::required: usize
 impl core::convert::From<optionstratlib_pricing::error::SviError> for optionstratlib_pricing::volatility::UnfittedReason
@@ -827,7 +828,7 @@ pub optionstratlib_pricing::volatility::OptionQuote::expiry: chrono::datetime::D
 pub optionstratlib_pricing::volatility::OptionQuote::quoted_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib_pricing::volatility::OptionQuote::strike: positive::positive::Positive
 pub optionstratlib_pricing::volatility::OptionQuote::style: financial_types::OptionStyle
-pub struct optionstratlib_pricing::volatility::QuoteRejection
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::QuoteRejection
 pub optionstratlib_pricing::volatility::QuoteRejection::quote: optionstratlib_pricing::volatility::OptionQuote
 pub optionstratlib_pricing::volatility::QuoteRejection::reason: optionstratlib_pricing::volatility::QuoteRejectionReason
 pub struct optionstratlib_pricing::volatility::StaticArbitrageReport
@@ -931,7 +932,7 @@ pub fn optionstratlib_pricing::volatility::SviSlice::total_variance(&self, rust_
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_curvature(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::StaticArbitrageError>
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_rounding(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::StaticArbitrageError>
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_slope(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::StaticArbitrageError>
-pub struct optionstratlib_pricing::volatility::UnfittedExpiry
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::UnfittedExpiry
 pub optionstratlib_pricing::volatility::UnfittedExpiry::clean_quotes: usize
 pub optionstratlib_pricing::volatility::UnfittedExpiry::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib_pricing::volatility::UnfittedExpiry::reason: optionstratlib_pricing::volatility::UnfittedReason
