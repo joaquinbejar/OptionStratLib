@@ -61,8 +61,8 @@ pub enum QuoteRejectionReason {
         /// [`ImpliedVolatilitySurfaceConfig::max_quote_age`](crate::volatility::ImpliedVolatilitySurfaceConfig::max_quote_age).
         limit: TimeDelta,
     },
-    /// Another quote of the same expiry, strike and style is later, or as late and
-    /// tighter, or as tight with a lower bid, or identical.
+    /// Another quote of the same expiry, strike and style, one that passed the rules before
+    /// this one, is later, or as late and tighter, or as tight with a lower bid, or identical.
     Superseded,
     /// Its mid is outside the no-arbitrage band of a European option.
     #[non_exhaustive]

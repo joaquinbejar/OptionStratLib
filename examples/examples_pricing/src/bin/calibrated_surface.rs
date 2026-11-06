@@ -8,10 +8,11 @@
 //!
 //! Builds a surface from bid and ask quotes across strikes and expiries as of one
 //! instant. The quotes come from a known SSVI surface, with a few bad ones among them
-//! and one expiry shaped like a frown, which a raw SVI slice cannot fit. The example
-//! reads what was refused and why, the residuals, the comparison with a flat volatility
-//! per expiry, the arbitrage report, values inside and outside the data, three shocks
-//! and an export. It reads no clock: every time is measured from the as-of time. The
+//! and one expiry shaped like a frown, which a raw SVI slice cannot follow: with these even
+//! spreads the limit on its RMSE refuses it. The example reads what was refused and why, the
+//! residuals, the figures that ignore the weights, the comparison with a flat volatility per
+//! expiry, the arbitrage report, values inside and outside the data, three shocks and an
+//! export. It reads no clock: every time is measured from the as-of time. The
 //! report says only what its checks found on its grid, and the surface is not claimed
 //! free of arbitrage.
 
@@ -198,6 +199,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rmse = %expiry.rmse().to_dec().round_dp(8),
             flat_volatility = %baseline.baseline_implied_volatility.to_dec().round_dp(4),
             flat_rmse = %baseline.baseline_rmse.to_dec().round_dp(6),
+            unweighted_rmse = %expiry.unweighted_rmse().to_dec().round_dp(8),
+            quotes_outside_bid_ask = expiry.quotes_outside_bid_ask(),
             "in sample, five parameters against one"
         );
     }
@@ -293,12 +296,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .first()
                 .ok_or("a surface has an expiry")?
                 .time_to_expiry(),
+            inside.time_to_expiry,
             last.time_to_expiry(),
         ],
     )?;
     info!(
         points = export.surface.points.len(),
         extrapolated = export.extrapolated.len(),
+        bridging_unfitted = export.bridging_unfitted.len(),
         "x is log moneyness, y is years, z is implied volatility"
     );
     Ok(())

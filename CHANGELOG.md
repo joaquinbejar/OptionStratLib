@@ -110,17 +110,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_relative_rmse`. An expiry that cannot be fitted never disappears: it is an
   `UnfittedExpiry` with its `UnfittedReason`, the rest is still built, and a value read
   across it says so; only a surface with no slice at all is an error, carrying both
-  lists. On the defaults, noise above about half a volatility point starts to lose
-  expiries, and a frown cannot be fitted. Between expiries total variance is linear in
-  `T` at fixed log moneyness. `ExtrapolationPolicy` declares how far a read may leave
+  lists. The limit is relative to the level of volatility and on the weighted RMSE: at a
+  volatility of 20%, noise above about half a volatility point starts to lose expiries,
+  and at 60% noise of 0.8 points loses none. A raw SVI slice cannot follow a frown, and
+  with even spreads such an expiry comes back unfitted, but with a tight centre and wide
+  wings the weights hide it: one fits at a relative RMSE of 0.0046 with residuals up to 21
+  volatility points. So each expiry also reports `unweighted_rmse` and
+  `quotes_outside_bid_ask`, which ignore the weights, gate nothing and do not enter the
+  arbitrage report. Between expiries total variance is linear in `T` at fixed log
+  moneyness. `ExtrapolationPolicy` declares how far a read may leave
   the data, in wings and in short and long expiries: within it the `SurfacePoint` is
-  flagged, beyond it the read is a typed error, and the default allows nothing. The
-  surface also gives residuals by strike and expiry, `age_at`, shocks of level, skew and
+  flagged, beyond it the read is a typed error, and the default allows nothing. A wider
+  limit is not a safer one: a slice on few quotes can read far above its quotes just beyond
+  them, and the flag is the only signal. The surface also gives residuals by strike and expiry, `age_at`, shocks of level, skew and
   term with their formulas stated (`SurfaceShock`, where invalid parameters are a typed
   error and the shocked surface has its own report), a `BaselineComparison` against a
-  flat volatility per expiry, and `export_surface` to a generic `Surface`.
+  flat volatility per expiry, and `export_surface` to a generic `Surface`, which lists the
+  points it read outside the data and across an expiry without a slice.
   `check_static_arbitrage` runs on the fitted slices and on a slice in the middle of
-  each gap, on one grid. **The surface is not claimed free of arbitrage**: findings
+  each gap, on one grid: the sorted union of `arbitrage_grid_points`, at least 5, across
+  the quotes of each expiry. **The surface is not claimed free of arbitrage**: findings
   and points the check could not resolve are reported and do not stop the surface,
   `passed` means only those checks on that grid, and a check that cannot finish is an
   error. Failures are a new `#[non_exhaustive]` `ImpliedVolatilitySurfaceError`; the

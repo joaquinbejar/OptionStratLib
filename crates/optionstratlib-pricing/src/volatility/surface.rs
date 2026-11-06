@@ -83,6 +83,12 @@ const BLEND_ROUNDING_FLOOR: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
 /// Within these distances the point comes back with a flag. See
 /// [`ImpliedVolatilitySurface`] for the formulas read there. The default, zero on all
 /// three, makes every read outside the data an error.
+///
+/// **A wider limit is not a safer one.** Beyond its quotes a slice is only its raw SVI formula,
+/// and on few quotes its wings can explode with nothing to contain them. Measured: a fit of five
+/// quotes spanning `k` from -0.1 to 0.1, within the limit on its RMSE, with noise of one
+/// volatility point, reads 26% at `k = -0.1`, 36% at `-0.15` and 896% at `-0.2`. The flag,
+/// [`SurfacePoint::is_extrapolated`], is the only signal: nothing bounds the value read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ExtrapolationPolicy {
     /// How far beyond the log moneyness of the quotes a slice may be read, in log
@@ -618,7 +624,9 @@ pub struct SurfaceExport {
 /// 6. Stale: older than [`ImpliedVolatilitySurfaceConfig::max_quote_age`].
 /// 7. Superseded: another quote of the same expiry, strike and style that passed
 ///    the rules above is later, or as late and tighter, or as tight with a lower
-///    bid. So the result does not depend on the order of the input.
+///    bid. So the result does not depend on the order of the input. Only a quote that
+///    passed them can supersede: a newer quote that is crossed, for one, is rejected and
+///    leaves an older clean quote of that option in the fit, up to the age limit.
 /// 8. A mid outside the no-arbitrage band of a European option:
 ///    `max(S e^(-qT) - K e^(-rT), 0) <= C <= S e^(-qT)` for a call and
 ///    `max(K e^(-rT) - S e^(-qT), 0) <= P <= K e^(-rT)` for a put.
@@ -2470,6 +2478,31 @@ mod tests_implied_volatility_surface {
             ..good
         };
         assert_eq!(standing(higher, good), good);
+    }
+
+    #[test]
+    fn test_newer_quote_a_rule_rejects_leaves_the_older_one_in_the_fit() {
+        let older: Vec<OptionQuote> = chain(&known(365), 365)
+            .into_iter()
+            .map(|quote| OptionQuote {
+                quoted_at: as_of() - seconds(200),
+                ..quote
+            })
+            .collect();
+        let base = calibrate(&older).unwrap();
+        let first = *older.first().unwrap();
+        let crossed = OptionQuote {
+            bid: first.ask,
+            ask: first.bid,
+            quoted_at: as_of(),
+            ..first
+        };
+        let with = calibrate(&[older, vec![crossed]].concat()).unwrap();
+        assert_eq!(with.expiries(), base.expiries());
+        let rejection = with.rejections().first().unwrap();
+        assert_eq!(with.rejections().len(), 1);
+        assert_eq!(rejection.quote, crossed);
+        assert_eq!(rejection.reason, QuoteRejectionReason::Crossed);
     }
 
     #[test]
