@@ -144,6 +144,10 @@ pub enum Error {
     #[error(transparent)]
     ImpliedVolatilitySurface(#[from] crate::error::ImpliedVolatilitySurfaceError),
 
+    /// A quadratic rough Heston kernel, simulation or price that cannot be produced.
+    #[error(transparent)]
+    QuadraticRoughHeston(#[from] crate::error::QuadraticRoughHestonError),
+
     /// Empty input collection supplied to a utility that requires at least one element.
     #[error("empty collection: {context}")]
     EmptyCollection {
@@ -161,7 +165,8 @@ pub enum Error {
 mod tests {
     use super::*;
     use crate::error::{
-        ClockError, ImpliedVolatilitySurfaceError, SettlementError, StaticArbitrageError, SviError,
+        ClockError, ImpliedVolatilitySurfaceError, QuadraticRoughHestonError, SettlementError,
+        StaticArbitrageError, SviError,
     };
 
     #[test]
@@ -178,5 +183,6 @@ mod tests {
         converts::<SviError>();
         converts::<StaticArbitrageError>();
         converts::<ImpliedVolatilitySurfaceError>();
+        converts::<QuadraticRoughHestonError>();
     }
 }

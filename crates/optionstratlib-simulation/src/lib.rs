@@ -48,12 +48,17 @@
 //!   [`simulation::walk_steps_par`], [`simulation::generator_positive`]);
 //!   [`simulation::randomwalk::RandomWalk`] and
 //!   [`simulation::simulator::Simulator`]; the Ornstein-Uhlenbeck process
-//!   ([`simulation::generate_ou_process`]); exit policies
+//!   ([`simulation::generate_ou_process`]); the multi-factor quadratic rough
+//!   Heston model and its Monte Carlo vanilla prices
+//!   ([`simulation::QuadraticRoughHestonParams`],
+//!   [`simulation::simulate_quadratic_rough_heston_path`],
+//!   [`simulation::price_vanilla_quadratic_rough_heston`]); exit policies
 //!   ([`simulation::ExitPolicy`], [`simulation::check_exit_policy`]); and the
 //!   generic path evaluation ([`simulation::PathEvaluator`],
 //!   [`simulation::PathOutcome`], [`simulation::PathStatistics`],
 //!   [`simulation::evaluate_paths`]).
-//! - [`error`]: [`error::SimulationError`] and [`error::SimulationResult`].
+//! - [`error`]: [`error::SimulationError`], [`error::SimulationResult`] and
+//!   [`error::QuadraticRoughHestonError`].
 //!
 //! Prices along a path are `Positive`, drifts and statistics `Decimal`;
 //! `f64` stays inside the kernels, and a non-finite value at an
@@ -79,7 +84,8 @@
 //!   `-backtest` and `-visualization`; `make check-graph` enforces the layering
 //!   (ADR-0001 D9).
 //! - **In the facade:** `optionstratlib::simulation` and `SimulationError` /
-//!   `SimulationResult` in `optionstratlib::error`, under the facade feature
+//!   `SimulationResult` / `QuadraticRoughHestonError` in `optionstratlib::error`,
+//!   under the facade feature
 //!   `simulation`. The facade paths are the same types as the paths here; the
 //!   [ownership
 //!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)

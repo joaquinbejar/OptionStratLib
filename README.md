@@ -319,6 +319,7 @@ Strategy performance analysis:
 Monte Carlo and stochastic simulations:
 - Random walk implementations
 - Telegraph process modeling
+- The quadratic rough Heston model and Monte Carlo vanilla prices on it
 - Custom simulation frameworks
 - Parametrized simulation tools
 
@@ -417,7 +418,7 @@ compatibility with 0.21.
 | `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `clock`, `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`ClockError`, `DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
 | `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
 | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks, calibrated volatility surfaces | `clock`, `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError`, `ImpliedVolatilitySurfaceError` and the `error::greeks` module) |
-| `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
+| `optionstratlib-simulation` | random walks, stochastic processes, the quadratic rough Heston model and its Monte Carlo vanilla prices, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError`, `SimulationResult` and `QuadraticRoughHestonError` in `error` |
 | `optionstratlib-market` | option chains, option series, OHLCV candles | `clock`, `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
 | `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `clock`, `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |
 | `optionstratlib-strategies` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis | `clock`, `schema` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult`, `AdjustmentError` and the `error::strategies` module in `error` |

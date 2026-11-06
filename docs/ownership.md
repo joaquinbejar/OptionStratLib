@@ -49,7 +49,7 @@ the tables with the code; the check names the row that drifted.
 | Pricing models (Black-Scholes, binomial, Monte Carlo, telegraph, exotics) | `optionstratlib_pricing::pricing` | `optionstratlib::pricing` | `BinomialPricingParams` | pricing | public |
 | Greeks | `optionstratlib_pricing::greeks` | `optionstratlib::greeks` | `GreeksSnapshot` | pricing | public |
 | Volatility: implied-volatility solvers, estimators, smiles, SVI slices, static arbitrage checks on a grid, surfaces calibrated from quotes | `optionstratlib_pricing::volatility` | `optionstratlib::volatility` | `VolatilitySmile` | pricing | public |
-| Simulation: random walks, stochastic processes, simulators, exit policies | `optionstratlib_simulation::simulation` | `optionstratlib::simulation` | `ExitPolicy` | simulation | public |
+| Simulation: random walks, stochastic processes, the quadratic rough Heston model, simulators, exit policies | `optionstratlib_simulation::simulation` | `optionstratlib::simulation` | `ExitPolicy` | simulation | public |
 | Market data: option chains | `optionstratlib_market::chains` | `optionstratlib::chains` | `OptionChain` | market | public |
 | Market data: option series | `optionstratlib_market::series` | `optionstratlib::series` | `OptionSeries` | market | public |
 | Analytics: probability kernels, profit ranges, projections, RND | `optionstratlib_analytics::analytics` | `optionstratlib::analytics` | `PriceTrend` | analytics | public |
@@ -109,6 +109,7 @@ and `optionstratlib::error::OperationErrorKind`.
 | `StaticArbitrageError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::StaticArbitrageError` | `optionstratlib::error::StaticArbitrageError` | pricing | — |
 | `ImpliedVolatilitySurfaceError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::ImpliedVolatilitySurfaceError` | `optionstratlib::error::ImpliedVolatilitySurfaceError` | pricing | — |
 | `SimulationError` | `optionstratlib-simulation` | `optionstratlib_simulation::error::SimulationError` | `optionstratlib::error::SimulationError` | simulation | — |
+| `QuadraticRoughHestonError` | `optionstratlib-simulation` | `optionstratlib_simulation::error::QuadraticRoughHestonError` | `optionstratlib::error::QuadraticRoughHestonError` | simulation | — |
 | `ChainError` | `optionstratlib-market` | `optionstratlib_market::error::ChainError` | `optionstratlib::error::ChainError` | market | `chains` |
 | `OhlcvError` | `optionstratlib-market` | `optionstratlib_market::error::OhlcvError` | `optionstratlib::error::OhlcvError` | market | — |
 | `ProbabilityError` | `optionstratlib-analytics` | `optionstratlib_analytics::error::ProbabilityError` | `optionstratlib::error::ProbabilityError` | analytics | `probability` |
