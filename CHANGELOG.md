@@ -171,9 +171,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   more than its strike. The variance is the plain square, not the truncated one of the
   paper's footnote, and a state that stops being finite is an error with its step. A
   price has no rates, as with `r = q = 0`. It does not depend on the number of threads.
-  No parameter set is a default, because the papers' values are for SPX and VIX. Tests
+  No parameter set is a default, because the papers' values are for SPX and VIX. One run
+  does not show that a price has converged: with a strong feedback, a small standard
+  error, a low count of non positive paths and a mean of `S_T` close to `S_0` can all
+  come with a wrong price, so compare several seeds and step counts. Tests
   compare `a = 0` with Black-Scholes at `sigma^2 = c`, the mean of `S_T` with `S_0`, and
-  halve the step on stated parameters. New `#[non_exhaustive]`
+  halve the step on coupled increments on stated parameters. New `#[non_exhaustive]`
   `QuadraticRoughHestonError`, also a variant of the aggregate
   `optionstratlib::error::Error`. `rand_distr` becomes a direct dependency of
   `optionstratlib-simulation`, and `statrs` a dev-dependency. Runnable example:

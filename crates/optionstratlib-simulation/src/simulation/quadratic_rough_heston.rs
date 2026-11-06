@@ -244,18 +244,26 @@ impl QuadraticRoughHestonKernel {
 /// - **The spot can go negative.** Scheme (A.1) is an arithmetic Euler step, so `S_(k+1)` is
 ///   not above zero when `sqrt(V_k) dW_k <= -1`. It is not clamped, since a clamp would break
 ///   the martingale property. [`QuadraticRoughHestonEstimate::non_positive_paths`] counts the
-///   affected paths, and on one of them a put can pay more than its strike. A count that is
-///   not small relative to the paths means the step is too coarse for these parameters.
+///   affected paths, and on one of them a put can pay more than its strike. A low count does
+///   not show that the step is fine enough, as the last point below shows.
 /// - **The variance is not truncated.** The calibration paper's footnote 1 mentions a
 ///   truncated square that secures the martingale property. This is the plain square, so a
 ///   path whose state stops being finite returns [`QuadraticRoughHestonError::NonFinite`]
-///   with its step, and no value is replaced. Before that point, a strong feedback gives
-///   heavy tails: a few paths can dominate a mean, so read
-///   [`QuadraticRoughHestonEstimate::standard_error`] before trusting a price.
+///   with its step, and no value is replaced.
 /// - **There are no rates or dividends.** `S` is driftless, and a price is the undiscounted
 ///   mean payoff, as with `r = q = 0`.
 /// - **No parameter set is a default.** The papers' values are for SPX and VIX, and nothing
 ///   here is calibrated to any underlying.
+/// - **One run does not show that a price has converged.** A strong feedback gives heavy
+///   tails, and neither a small standard error, a low count of non positive paths nor a mean
+///   of `S_T` close to `S_0` rules out a wrong price. Take `alpha = 0.51`, `n = 10`, `x = 3.92`,
+///   `a = 1`, `b = 0.1`, `c = 0.01`, `lambda = 1.5`, `eta = 1`, `Z^i_0 = -0.05`,
+///   `S_0 = K = 100`, `T = 0.25` and 100,000 paths, as an illustration. At `N = 100`, about
+///   0.15% of the paths are non positive, and an ATM call is `150589 +/- 150584` at seed 1 and
+///   `5.32 +/- 0.02` at seed 3, while `N = 800` gives about `4.89`. So the small standard error
+///   at seed 3 hides a bias of about 20 of them, and the blown-up run has a mean of `S_T` about
+///   one standard error from `S_0`, because the standard error grows with the mean. **Compare
+///   several seeds and several step counts before trusting a price.**
 ///
 /// # References
 ///
@@ -738,13 +746,13 @@ impl<'a> Walk<'a> {
     #[inline]
     fn advance(&mut self, to: usize) -> Result<(), NonFiniteValue> {
         let normal: f64 = StandardNormal.sample(&mut self.rng);
-        step(
-            self.params,
-            &self.state,
-            self.sqrt_dt * normal,
-            self.dt,
-            &mut self.scratch,
-        );
+        self.apply(self.sqrt_dt * normal, to)
+    }
+
+    /// Moves to grid step `to` on the increment `dw`.
+    #[inline]
+    fn apply(&mut self, dw: f64, to: usize) -> Result<(), NonFiniteValue> {
+        step(self.params, &self.state, dw, self.dt, &mut self.scratch);
         std::mem::swap(&mut self.state, &mut self.scratch);
         self.state.ensure_finite(to)
     }
@@ -758,8 +766,9 @@ fn raw_step(grid: &QuadraticRoughHestonGrid) -> Result<(f64, f64), QuadraticRoug
 
 /// Simulates one path of the model by the scheme (A.1), from `seed`.
 ///
-/// The same arguments give the same path, in every build and on every machine that reads the
-/// same `rand` stream. See [`QuadraticRoughHestonParams`] for the model and the scheme.
+/// The same arguments give the same path on the same build and platform. Across platforms the
+/// `f64` `exp`, `ln` and `sin` may round differently. See [`QuadraticRoughHestonParams`] for
+/// the model and the scheme.
 ///
 /// # Errors
 ///
@@ -1262,6 +1271,59 @@ mod tests {
         assert_eq!(next.spot, state.spot);
         let expected = (0.1 - 2.0 * state.z * 0.25) / (1.0 + SMALL_DISCOUNTS[0] * 0.25);
         assert!(close(next.factors[0], expected));
+    }
+
+    /// Halving the step on one Brownian path, without the noise of two independent estimates:
+    /// each coarse `dW` is the sum of two fine ones.
+    ///
+    /// `alpha = 0.6`, `n = 5`, `x = 5`, `a = 0.5`, `b = 0.1`, `c = 0.01`, `lambda = 1.5`,
+    /// `eta = 1`, `Z^i_0 = -0.05`, `S_0 = K = 100`, `T = 0.25`, an ATM call, `N = 100` against
+    /// `2N = 200`, on 20,000 paths. The change measures `0.0087`, with a standard error of
+    /// `0.0013`, against a tolerance of `0.02`.
+    ///
+    /// The coarse side goes through [`Walk`], and the fine side drives [`step`] with its own
+    /// `dt`. If both went through `Walk`, a wrong `dt` there would pass: it is a consistent
+    /// scheme for another model, and halving its step changes the price just as little.
+    #[test]
+    fn test_walk_halving_the_step_on_coupled_increments_stays_within_its_tolerance() {
+        const COARSE_STEPS: usize = 100;
+        const PATHS: usize = 20_000;
+        const TOLERANCE: f64 = 0.02;
+        let kernel = QuadraticRoughHestonKernel::try_new(dec!(0.6), 5, dec!(5)).unwrap();
+        let params = QuadraticRoughHestonParams::try_new(
+            dec!(0.5),
+            dec!(0.1),
+            dec!(0.01),
+            dec!(1.5),
+            dec!(1),
+            kernel,
+            vec![dec!(-0.05); 5],
+            Positive::HUNDRED,
+        )
+        .unwrap();
+        let coarse_grid = QuadraticRoughHestonGrid::try_new(dec!(0.25), COARSE_STEPS).unwrap();
+        let coarse_step = raw_step(&coarse_grid).unwrap();
+        let fine_dt = 0.25 / (2.0 * COARSE_STEPS as f64);
+        let fine_sqrt_dt = fine_dt.sqrt();
+
+        let mut rng = deterministic_rng(958);
+        let mut change = Moments::default();
+        for _ in 0..PATHS {
+            let mut coarse = Walk::new(&params, coarse_step, 0);
+            let mut fine = params.raw_initial.clone();
+            let mut scratch = fine.clone();
+            for to in 1..=COARSE_STEPS {
+                let first: f64 = StandardNormal.sample(&mut rng);
+                let second: f64 = StandardNormal.sample(&mut rng);
+                let (first, second) = (fine_sqrt_dt * first, fine_sqrt_dt * second);
+                step(&params, &fine, first, fine_dt, &mut scratch);
+                step(&params, &scratch, second, fine_dt, &mut fine);
+                coarse.apply(first + second, to).unwrap();
+            }
+            let payoff = |spot: f64| (spot - 100.0).max(0.0);
+            change.add(payoff(coarse.state.spot) - payoff(fine.spot));
+        }
+        assert!(change.mean.abs() < TOLERANCE, "{change:?}");
     }
 
     #[test]

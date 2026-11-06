@@ -7,7 +7,9 @@
 //! # Quadratic rough Heston
 //!
 //! Builds the multi-factor kernel, simulates one path by the scheme (A.1) and prices an ATM
-//! call and put by Monte Carlo, at two step sizes.
+//! call and put by Monte Carlo, at two seeds and two step sizes. One run does not show that a
+//! price has converged, even with a small standard error: compare seeds and step counts, as
+//! `QuadraticRoughHestonParams` explains.
 //!
 //! **Every parameter here is illustrative.** None of them is calibrated to any underlying,
 //! and the papers' values are for SPX and VIX. The price has no discounting, as with
@@ -23,8 +25,11 @@ use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
 use tracing::info;
 
-/// The seed of the path and of the prices.
+/// The seed of the path and of the first prices.
 const SEED: u64 = 958;
+
+/// The seed to compare the first prices with.
+const OTHER_SEED: u64 = 959;
 
 /// The horizon, in years.
 const HORIZON: Decimal = dec!(0.25);
@@ -58,7 +63,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let paths = NonZeroUsize::try_from(100_000_usize)?;
-    for steps in [100, 200] {
+    for (seed, steps) in [
+        (SEED, 100),
+        (OTHER_SEED, 100),
+        (SEED, 200),
+        (OTHER_SEED, 200),
+    ] {
         let grid = QuadraticRoughHestonGrid::try_new(HORIZON, steps)?;
         for style in [OptionStyle::Call, OptionStyle::Put] {
             let estimate = price_vanilla_quadratic_rough_heston(
@@ -67,9 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 style,
                 Positive::HUNDRED,
                 paths,
-                SEED,
+                seed,
             )?;
             info!(
+                seed,
                 steps,
                 style = ?style,
                 price = %estimate.price(),

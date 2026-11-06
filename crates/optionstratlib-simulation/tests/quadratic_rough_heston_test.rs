@@ -7,6 +7,7 @@ use num_traits::ToPrimitive;
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::deterministic_rng;
 use optionstratlib_pricing::pricing::black_scholes;
 use optionstratlib_simulation::error::QuadraticRoughHestonError;
 use optionstratlib_simulation::simulation::{
@@ -14,6 +15,8 @@ use optionstratlib_simulation::simulation::{
     QuadraticRoughHestonParams, price_vanilla_quadratic_rough_heston,
     simulate_quadratic_rough_heston_path,
 };
+use rand::RngExt;
+use rand_distr::{Distribution, StandardNormal};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use statrs::function::gamma::gamma;
@@ -222,10 +225,17 @@ fn test_price_put_call_parity_holds_on_the_same_paths() {
     assert!(parity.abs() < dec!(0.000000001), "{parity}");
 }
 
-/// A step so coarse that `sqrt(V) dW <= -1` happens: the spot goes negative, it is counted
+/// Two steps so coarse that `sqrt(V) dW <= -1` happens: the spot goes negative, it is counted
 /// and not clamped, and a put on such a path pays more than its strike.
+///
+/// `S_1 = 100 (1 + 2 Z_1)` and `S_2 = S_1 (1 + 2 Z_2)`. A negative `S_1` turns positive again
+/// when `1 + 2 Z_2` is negative too, so the count of a run that read only `S_2` would be lower:
+/// with `p = Phi(-1/2) = 0.3085`, a share of `p + (1 - p) p = 0.5218` of the paths is non
+/// positive at some step, and `2 p (1 - p) = 0.4267` at the last one. The increments are drawn
+/// here as the price draws them, which pins the count.
 #[test]
-fn test_price_non_positive_paths_are_counted_and_not_clamped() {
+fn test_price_non_positive_paths_are_counted_at_every_step_and_not_clamped() {
+    const PATHS: usize = 10_000;
     let params = QuadraticRoughHestonParams::try_new(
         Decimal::ZERO,
         Decimal::ZERO,
@@ -237,20 +247,42 @@ fn test_price_non_positive_paths_are_counted_and_not_clamped() {
         Positive::HUNDRED,
     )
     .unwrap();
-    let grid = QuadraticRoughHestonGrid::try_new(dec!(1), 1).unwrap();
+    let grid = QuadraticRoughHestonGrid::try_new(dec!(2), 2).unwrap();
     let estimate = price_vanilla_quadratic_rough_heston(
         &params,
         &grid,
         OptionStyle::Put,
         Positive::ONE,
-        paths(10_000),
+        paths(PATHS),
         SEED,
     )
     .unwrap();
-    // `S_1 = 100 (1 + 2 N(0, 1))`, not above zero with probability `Phi(-1/2)`, about 0.31.
-    let share = estimate.non_positive_paths() as f64 / 10_000.0;
-    assert!((share - 0.3085).abs() < 0.02, "{share}");
-    // The mean of a clamped `S_1` would be well above `S_0`, and this one is on it.
+
+    let mut master = deterministic_rng(SEED);
+    let (mut at_some_step, mut at_the_last_step) = (0_usize, 0_usize);
+    for _ in 0..PATHS {
+        let mut rng = deterministic_rng(master.random::<u64>());
+        let mut factor = || {
+            let normal: f64 = StandardNormal.sample(&mut rng);
+            1.0 + 2.0 * normal
+        };
+        let first = 100.0 * factor();
+        let second = first * factor();
+        at_some_step += usize::from(first <= 0.0 || second <= 0.0);
+        at_the_last_step += usize::from(second <= 0.0);
+    }
+    assert_eq!(estimate.non_positive_paths(), at_some_step);
+    let share = |count: usize| count as f64 / PATHS as f64;
+    assert!(
+        (share(at_some_step) - 0.5218).abs() < 0.02,
+        "{at_some_step}"
+    );
+    assert!(
+        (share(at_the_last_step) - 0.4267).abs() < 0.02,
+        "{at_the_last_step}"
+    );
+
+    // The mean of a clamped `S_2` would be well above `S_0`, and this one is on it.
     assert!(
         (estimate.mean_terminal_spot() - dec!(100)).abs()
             < Z_SCORE * estimate.terminal_spot_standard_error(),
@@ -258,6 +290,68 @@ fn test_price_non_positive_paths_are_counted_and_not_clamped() {
     );
     // A put of strike 1 pays only below it, so a clamp would cap this price at `1`.
     assert!(estimate.price() > Decimal::ONE, "{estimate:?}");
+}
+
+/// A seeded path with `a > 0` against the recursion (A.1), written out here on plain vectors,
+/// with the kernel from `Gamma` and powers of `x` and the same stream of normal increments. It
+/// sees `Z`, which the zero feedback and martingale checks cannot.
+#[test]
+fn test_path_matches_an_independent_recursion() {
+    const TOLERANCE: f64 = 1e-9;
+    const STEPS: usize = 50;
+    let (alpha, x, n) = (0.6_f64, 5.0_f64, 5.0_f64);
+    let (a, b, c, lambda, eta) = (0.5_f64, 0.1_f64, 0.01_f64, 1.5_f64, 1.0_f64);
+    let dt = 0.25 / STEPS as f64;
+
+    let normalizer = (1.0 - alpha) * gamma(alpha) * gamma(1.0 - alpha);
+    let weights: Vec<f64> = (1..=5)
+        .map(|i| {
+            x.powf((1.0 - alpha) * (f64::from(i) - n / 2.0)) * (1.0 - x.powf(alpha - 1.0))
+                / normalizer
+        })
+        .collect();
+    let discounts: Vec<f64> = (1..=5)
+        .map(|i| {
+            (1.0 - alpha) * x.powf(f64::from(i) - 1.0 - n / 2.0) * (x.powf(2.0 - alpha) - 1.0)
+                / ((2.0 - alpha) * (x.powf(1.0 - alpha) - 1.0))
+        })
+        .collect();
+
+    let path = simulate_quadratic_rough_heston_path(
+        &feedback_params(),
+        &QuadraticRoughHestonGrid::try_new(dec!(0.25), STEPS).unwrap(),
+        SEED,
+    )
+    .unwrap();
+
+    let close = |actual: &Decimal, expected: f64, what: &str, k: usize| {
+        let actual = actual.to_f64().unwrap();
+        assert!(
+            (actual - expected).abs() < TOLERANCE,
+            "{what} at step {k}: {actual} against {expected}"
+        );
+    };
+    let mut rng = deterministic_rng(SEED);
+    let mut spot = 100.0_f64;
+    let mut factors = vec![-0.05_f64; 5];
+    for k in 0..=STEPS {
+        let z: f64 = weights.iter().zip(&factors).map(|(w, f)| w * f).sum();
+        let variance = a * (z - b) * (z - b) + c;
+        close(&path.spot()[k], spot, "spot", k);
+        close(&path.z()[k], z, "z", k);
+        close(&path.variance()[k], variance, "variance", k);
+        for (actual, expected) in path.factors_at(k).unwrap().iter().zip(&factors) {
+            close(actual, *expected, "factor", k);
+        }
+
+        let normal: f64 = StandardNormal.sample(&mut rng);
+        let dw = dt.sqrt() * normal;
+        spot += spot * variance.sqrt() * dw;
+        for (factor, discount) in factors.iter_mut().zip(&discounts) {
+            *factor =
+                (*factor - lambda * z * dt + eta * variance.sqrt() * dw) / (1.0 + discount * dt);
+        }
+    }
 }
 
 #[test]
@@ -334,12 +428,13 @@ fn test_price_does_not_depend_on_the_number_of_threads() {
     assert_ne!(one.price(), other_seed.price());
 }
 
-/// Halving the step, on the parameters of [`feedback_params`]: `alpha = 0.6`, `n = 5`, `x = 5`,
-/// `a = 0.5`, `b = 0.1`, `c = 0.01`, `lambda = 1.5`, `eta = 1`, `Z^i_0 = -0.05`, `S_0 = K = 100`,
-/// `T = 0.25`, an ATM call. `V_0 = 0.0497`. The two estimates draw different increments, so the
-/// tolerance of `0.07` holds their Monte Carlo noise, four standard errors of a difference at
-/// these `100_000` paths, and the discretization error between the steps. The averages of the
-/// two prices over 40 seeds differ by about `0.006`.
+/// A noise bound on halving the step, through the public API, on the parameters of
+/// [`feedback_params`]: `alpha = 0.6`, `n = 5`, `x = 5`, `a = 0.5`, `b = 0.1`, `c = 0.01`,
+/// `lambda = 1.5`, `eta = 1`, `Z^i_0 = -0.05`, `S_0 = K = 100`, `T = 0.25`, an ATM call. The two
+/// estimates draw different increments, so the tolerance of `0.07` is about four standard errors
+/// of their difference at these `100_000` paths. It says little about the discretization: a
+/// change from `N = 25` to `N = 200` of about `0.05` also passes it. The bound on the
+/// discretization is the coupled test in `quadratic_rough_heston.rs`.
 #[test]
 fn test_price_halving_the_step_stays_within_its_tolerance() {
     const TOLERANCE: Decimal = dec!(0.07);
