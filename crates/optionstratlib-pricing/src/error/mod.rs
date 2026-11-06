@@ -56,6 +56,16 @@ mod arbitrage;
 /// * SVI calibration failures
 mod svi;
 
+/// ### Implied Volatility Surface Errors (`ImpliedVolatilitySurfaceError`)
+/// Handles:
+/// * A surface with no fitted expiry, an invalid configuration
+/// * Reads beyond the extrapolation policy
+/// * Shocks that give invalid SVI parameters
+///
+/// Crate-visible for the quote and reason types it carries, which are public at
+/// `volatility`.
+pub(crate) mod surface;
+
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
 /// * Implied volatility calculation failures
@@ -66,5 +76,6 @@ mod volatility;
 pub use arbitrage::StaticArbitrageError;
 pub use greeks::{GreeksError, GreeksResult};
 pub use pricing::{PricingError, PricingResult};
+pub use surface::ImpliedVolatilitySurfaceError;
 pub use svi::SviError;
 pub use volatility::VolatilityError;

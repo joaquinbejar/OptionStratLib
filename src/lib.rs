@@ -312,6 +312,7 @@
 //! - `traits.rs`: Volatility model interfaces
 //! - `svi.rs`: Raw SVI slices and their weighted calibration
 //! - `arbitrage.rs`: Butterfly and calendar checks of slices and surfaces, on a grid
+//! - `surface.rs`: A calibrated implied volatility surface built from bid and ask quotes
 //! - Advanced volatility surface construction
 //!
 //! ### **Greeks** (`greeks/`)
@@ -434,7 +435,7 @@
 //! | --- | --- | --- | --- | --- |
 //! | `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `clock`, `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`ClockError`, `DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
 //! | `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
-//! | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks | `clock`, `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError` and the `error::greeks` module) |
+//! | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks, calibrated volatility surfaces | `clock`, `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError`, `ImpliedVolatilitySurfaceError` and the `error::greeks` module) |
 //! | `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
 //! | `optionstratlib-market` | option chains, option series, OHLCV candles | `clock`, `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
 //! | `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `clock`, `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |
@@ -452,7 +453,7 @@
 //! ```toml
 //! [dependencies]
 //! # pricing, greeks and volatility, without market data, I/O or charts
-//! optionstratlib = { version = "0.23.0", default-features = false, features = ["pricing"] }
+//! optionstratlib = { version = "0.24.0", default-features = false, features = ["pricing"] }
 //! rust_decimal = "1.43" # for `dec!`
 //! ```
 //!
@@ -460,8 +461,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib-core = "0.23.0"
-//! optionstratlib-pricing = "0.23.0"
+//! optionstratlib-core = "0.24.0"
+//! optionstratlib-pricing = "0.24.0"
 //! ```
 //!
 //! ## Canonical paths
@@ -989,7 +990,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.23.0"
+//! optionstratlib = "0.24.0"
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1009,7 +1010,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.23.0", features = ["plotly"] }
+//! optionstratlib = { version = "0.24.0", features = ["plotly"] }
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1099,7 +1100,7 @@
 //! feature flag: `pricing`, `market`, `analytics`, `strategies`,
 //! `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`,
 //! plus `clock`, which those capabilities always had before it was a feature, so a
-//! plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
+//! plain `optionstratlib = "0.24.0"` keeps the whole library and resolves no
 //! Plotly, image-export, async-runtime or HTTP package. The default is a
 //! compatibility contract since the 0.22 line, not a statement that a consumer
 //! needs all of it: opt out with `default-features = false` and name only the

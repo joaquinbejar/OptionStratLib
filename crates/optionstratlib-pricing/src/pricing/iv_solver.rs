@@ -186,7 +186,7 @@ pub(crate) fn long_residual(
 /// answer. Anything it cannot form is `0`, which makes the solver bisect.
 /// For a non-European option it is the European vega, an approximation
 /// that the bracket keeps safe.
-fn vega_slope(option: &Options) -> Decimal {
+pub(crate) fn vega_slope(option: &Options) -> Decimal {
     let slope = || -> Option<Decimal> {
         let (d1, _) = calculate_d_values(option).ok()?;
         let d1 = decimal_to_f64(d1).ok()?;

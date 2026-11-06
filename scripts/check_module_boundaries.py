@@ -126,6 +126,7 @@ ERROR_FILE_LAYER = {
     "pricing": "pricing",
     "svi": "pricing",
     "arbitrage": "pricing",
+    "surface": "pricing",
     "simulation": "simulation",
     "chains": "market",
     "csv": "market",

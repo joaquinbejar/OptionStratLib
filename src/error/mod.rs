@@ -17,6 +17,7 @@
 //! * `VolatilityError` - Errors in volatility calculations including implied volatility
 //! * `SviError` - Raw SVI parameter validation and slice calibration failures
 //! * `StaticArbitrageError` - A butterfly or calendar check that cannot be evaluated
+//! * `ImpliedVolatilitySurfaceError` - A calibrated surface that cannot be built, read or shocked
 //!
 //! ### Trading and Analysis
 //! * `ChainError` - Option chain operations and data management
@@ -145,7 +146,7 @@
 //! | --- | --- |
 //! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `settlement.rs`, `trade.rs`, now in `optionstratlib-core` |
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
-//! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, `svi.rs`, `arbitrage.rs`, now in `optionstratlib-pricing` |
+//! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, `svi.rs`, `arbitrage.rs`, `surface.rs`, now in `optionstratlib-pricing` |
 //! | simulation | `simulation.rs`, now in `optionstratlib-simulation` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs`, now in `optionstratlib-analytics` |
@@ -185,8 +186,8 @@ pub use optionstratlib_math::error::{
 /// volatility solvers.
 #[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::error::{
-    GreeksError, GreeksResult, PricingError, PricingResult, StaticArbitrageError, SviError,
-    VolatilityError, greeks,
+    GreeksError, GreeksResult, ImpliedVolatilitySurfaceError, PricingError, PricingResult,
+    StaticArbitrageError, SviError, VolatilityError, greeks,
 };
 
 /// Simulation errors (`optionstratlib-simulation`): random walk generation,

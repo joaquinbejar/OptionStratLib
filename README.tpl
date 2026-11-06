@@ -18,6 +18,16 @@
 {{readme}}
 
 
+## Upgrading from 0.23
+
+0.24 makes the wall clock optional, renames `iv_surface` to say what it computes,
+and adds a calibrated implied volatility surface, SVI slices, static arbitrage
+checks and settlement obligations. A build that sets
+`default-features = false` must add the `clock` feature to keep reading the time.
+The [0.24 migration
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.24.md)
+lists what to change.
+
 ## Upgrading from 0.22
 
 0.23 changes one area: PNG and SVG export under `static_export` are drawn

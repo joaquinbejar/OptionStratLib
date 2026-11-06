@@ -111,6 +111,53 @@ impl core::convert::From<optionstratlib_pricing::error::VolatilityError> for opt
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::VolatilityError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind> for optionstratlib_pricing::error::greeks::GreeksError
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind) -> Self
+#[non_exhaustive] pub enum optionstratlib_pricing::error::ImpliedVolatilitySurfaceError
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::maximum: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::minimum: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::points: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::EmptyExportGrid
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ExpiryNotAfterAsOf
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ExpiryNotAfterAsOf::as_of: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ExpiryNotAfterAsOf::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InstantBeforeAsOf
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InstantBeforeAsOf::as_of: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InstantBeforeAsOf::instant: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InvalidShockedParameters
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InvalidShockedParameters::source: optionstratlib_pricing::error::SviError
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::InvalidShockedParameters::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::LongExpiryOutOfPolicy
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::LongExpiryOutOfPolicy::last: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::LongExpiryOutOfPolicy::limit: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::LongExpiryOutOfPolicy::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NegativeQuoteAgeLimit
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NegativeQuoteAgeLimit::limit: chrono::time_delta::TimeDelta
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry::rejections: alloc::vec::Vec<optionstratlib_pricing::volatility::QuoteRejection>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry::unfitted: alloc::vec::Vec<optionstratlib_pricing::volatility::UnfittedExpiry>
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Positive(positive::error::PositiveError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Pricing(optionstratlib_pricing::error::PricingError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive::at_the_money: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive::shift: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShortExpiryOutOfPolicy
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShortExpiryOutOfPolicy::first: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShortExpiryOutOfPolicy::limit: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShortExpiryOutOfPolicy::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::StaticArbitrage(optionstratlib_pricing::error::StaticArbitrageError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Svi(optionstratlib_pricing::error::SviError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::extension: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::highest: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::limit: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::log_moneyness: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::lowest: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::WingOutOfPolicy::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ZeroSpot
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ZeroTimeToExpiry
 pub enum optionstratlib_pricing::error::PricingError
 pub optionstratlib_pricing::error::PricingError::BinomialNodeMissing
 pub optionstratlib_pricing::error::PricingError::BinomialNodeMissing::node: &'static str
@@ -219,6 +266,8 @@ pub optionstratlib_pricing::error::SviError::ZeroStrike::strike: positive::posit
 pub optionstratlib_pricing::error::SviError::ZeroTimeToExpiry
 impl optionstratlib_pricing::error::SviError
 pub fn optionstratlib_pricing::error::SviError::non_finite(&'static str, f64) -> Self
+impl core::convert::From<optionstratlib_pricing::error::SviError> for optionstratlib_pricing::volatility::UnfittedReason
+pub fn optionstratlib_pricing::volatility::UnfittedReason::from(optionstratlib_pricing::error::SviError) -> Self
 pub enum optionstratlib_pricing::error::VolatilityError
 pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable
 pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable::source: alloc::boxed::Box<optionstratlib_pricing::error::VolatilityError>
@@ -644,6 +693,27 @@ pub fn optionstratlib_pricing::pricing::spread_black_scholes(&optionstratlib_cor
 pub fn optionstratlib_pricing::pricing::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub type optionstratlib_pricing::pricing::ClosedFormEngine = optionstratlib_pricing::pricing::unified::GenericPricingEngine<optionstratlib_pricing::pricing::unified::NoMonteCarlo>
 pub mod optionstratlib_pricing::volatility
+#[non_exhaustive] pub enum optionstratlib_pricing::volatility::QuoteRejectionReason
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::AboveVolatilityCap
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::BelowVolatilityFloor
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::Crossed
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::ExpiredAtAsOf
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::LaterThanAsOf
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoConvergence
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoConvergence::last_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::NoWeight
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::NumericalFailure
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::NumericalFailure::reason: alloc::string::String
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::lower: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::mid: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::OutsideNoArbitrageBand::upper: rust_decimal::decimal::Decimal
+#[non_exhaustive] pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale::age: chrono::time_delta::TimeDelta
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::Stale::limit: chrono::time_delta::TimeDelta
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::Superseded
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::ZeroBid
+pub optionstratlib_pricing::volatility::QuoteRejectionReason::ZeroStrike
 #[non_exhaustive] pub enum optionstratlib_pricing::volatility::StaticArbitrageUnevaluatedPoint
 #[non_exhaustive] pub optionstratlib_pricing::volatility::StaticArbitrageUnevaluatedPoint::Butterfly
 pub optionstratlib_pricing::volatility::StaticArbitrageUnevaluatedPoint::Butterfly::log_moneyness: rust_decimal::decimal::Decimal
@@ -682,11 +752,133 @@ pub optionstratlib_pricing::volatility::StaticArbitrageViolation::Calendar::size
 impl optionstratlib_pricing::volatility::StaticArbitrageViolation
 pub fn optionstratlib_pricing::volatility::StaticArbitrageViolation::log_moneyness(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_pricing::volatility::StaticArbitrageViolation::size(&self) -> positive::positive::Positive
+#[non_exhaustive] #[repr(u8)] pub enum optionstratlib_pricing::volatility::SurfaceExpiryRegion
+pub optionstratlib_pricing::volatility::SurfaceExpiryRegion::AfterLastExpiry
+pub optionstratlib_pricing::volatility::SurfaceExpiryRegion::BeforeFirstExpiry
+pub optionstratlib_pricing::volatility::SurfaceExpiryRegion::WithinExpiries
+#[non_exhaustive] pub enum optionstratlib_pricing::volatility::SurfaceShock
+pub optionstratlib_pricing::volatility::SurfaceShock::Level
+pub optionstratlib_pricing::volatility::SurfaceShock::Level::volatility: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfaceShock::Skew
+pub optionstratlib_pricing::volatility::SurfaceShock::Skew::rho: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfaceShock::Term
+pub optionstratlib_pricing::volatility::SurfaceShock::Term::pivot: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceShock::Term::slope: rust_decimal::decimal::Decimal
+#[non_exhaustive] pub enum optionstratlib_pricing::volatility::UnfittedReason
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::CalibrationFailed
+pub optionstratlib_pricing::volatility::UnfittedReason::CalibrationFailed::reason: alloc::string::String
+pub optionstratlib_pricing::volatility::UnfittedReason::ExpiredAtAsOf
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit
+pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::limit: positive::positive::Positive
+pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::relative_rmse: positive::positive::Positive
+pub optionstratlib_pricing::volatility::UnfittedReason::RmseAboveLimit::rmse: positive::positive::Positive
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes
+pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes::clean: usize
+pub optionstratlib_pricing::volatility::UnfittedReason::TooFewCleanQuotes::required: usize
+#[non_exhaustive] pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes
+pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes::distinct: usize
+pub optionstratlib_pricing::volatility::UnfittedReason::TooFewDistinctStrikes::required: usize
+impl core::convert::From<optionstratlib_pricing::error::SviError> for optionstratlib_pricing::volatility::UnfittedReason
+pub fn optionstratlib_pricing::volatility::UnfittedReason::from(optionstratlib_pricing::error::SviError) -> Self
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::BaselineComparison
+pub optionstratlib_pricing::volatility::BaselineComparison::baseline_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::BaselineComparison::baseline_rmse: positive::positive::Positive
+pub optionstratlib_pricing::volatility::BaselineComparison::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::volatility::BaselineComparison::surface_rmse: positive::positive::Positive
+pub optionstratlib_pricing::volatility::BaselineComparison::time_to_expiry: positive::positive::Positive
+impl optionstratlib_pricing::volatility::BaselineComparison
+pub fn optionstratlib_pricing::volatility::BaselineComparison::improvement(&self) -> rust_decimal::decimal::Decimal
+pub struct optionstratlib_pricing::volatility::ExtrapolationPolicy
+pub optionstratlib_pricing::volatility::ExtrapolationPolicy::max_long_extension: positive::positive::Positive
+pub optionstratlib_pricing::volatility::ExtrapolationPolicy::max_short_extension: positive::positive::Positive
+pub optionstratlib_pricing::volatility::ExtrapolationPolicy::max_wing_extension: positive::positive::Positive
+pub struct optionstratlib_pricing::volatility::ImpliedVolatilitySurface
+impl optionstratlib_pricing::volatility::ImpliedVolatilitySurface
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::age_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<chrono::time_delta::TimeDelta, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::arbitrage_grid(&self) -> &[rust_decimal::decimal::Decimal]
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::arbitrage_report(&self) -> &optionstratlib_pricing::volatility::StaticArbitrageReport
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::as_of(&self) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::baseline_comparison(&self) -> impl core::iter::traits::iterator::Iterator<Item = &optionstratlib_pricing::volatility::BaselineComparison>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::calendar_checked(&self) -> bool
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::calibrate(&[optionstratlib_pricing::volatility::OptionQuote], positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, &optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig) -> core::result::Result<Self, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::check_on_grid(&self, &[rust_decimal::decimal::Decimal]) -> core::result::Result<optionstratlib_pricing::volatility::StaticArbitrageReport, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::dividend_yield(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::expiries(&self) -> &[optionstratlib_pricing::volatility::SurfaceExpiry]
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::export_surface(&self, &[rust_decimal::decimal::Decimal], &[positive::positive::Positive]) -> core::result::Result<optionstratlib_pricing::volatility::SurfaceExport, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point(&self, rust_decimal::decimal::Decimal, positive::positive::Positive) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePoint, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point_at_strike(&self, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePoint, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::rate(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::rejections(&self) -> &[optionstratlib_pricing::volatility::QuoteRejection]
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::residuals(&self) -> impl core::iter::traits::iterator::Iterator<Item = &optionstratlib_pricing::volatility::SurfaceResidual>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::shock(&self, optionstratlib_pricing::volatility::SurfaceShock) -> core::result::Result<Self, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::shocks(&self) -> &[optionstratlib_pricing::volatility::SurfaceShock]
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::spot(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::unfitted(&self) -> &[optionstratlib_pricing::volatility::UnfittedExpiry]
+pub struct optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig
+pub optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig::arbitrage_grid_points: core::num::nonzero::NonZeroUsize
+pub optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig::extrapolation: optionstratlib_pricing::volatility::ExtrapolationPolicy
+pub optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig::max_quote_age: chrono::time_delta::TimeDelta
+pub optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig::svi: optionstratlib_pricing::volatility::SviCalibrationConfig
+impl core::default::Default for optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurfaceConfig::default() -> Self
+pub struct optionstratlib_pricing::volatility::OptionQuote
+pub optionstratlib_pricing::volatility::OptionQuote::ask: positive::positive::Positive
+pub optionstratlib_pricing::volatility::OptionQuote::bid: positive::positive::Positive
+pub optionstratlib_pricing::volatility::OptionQuote::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::volatility::OptionQuote::quoted_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::volatility::OptionQuote::strike: positive::positive::Positive
+pub optionstratlib_pricing::volatility::OptionQuote::style: financial_types::OptionStyle
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::QuoteRejection
+pub optionstratlib_pricing::volatility::QuoteRejection::quote: optionstratlib_pricing::volatility::OptionQuote
+pub optionstratlib_pricing::volatility::QuoteRejection::reason: optionstratlib_pricing::volatility::QuoteRejectionReason
 pub struct optionstratlib_pricing::volatility::StaticArbitrageReport
 impl optionstratlib_pricing::volatility::StaticArbitrageReport
 pub fn optionstratlib_pricing::volatility::StaticArbitrageReport::passed(&self) -> bool
 pub fn optionstratlib_pricing::volatility::StaticArbitrageReport::unevaluated(&self) -> &[optionstratlib_pricing::volatility::StaticArbitrageUnevaluatedPoint]
 pub fn optionstratlib_pricing::volatility::StaticArbitrageReport::violations(&self) -> &[optionstratlib_pricing::volatility::StaticArbitrageViolation]
+pub struct optionstratlib_pricing::volatility::SurfaceExpiry
+impl optionstratlib_pricing::volatility::SurfaceExpiry
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::baseline(&self) -> &optionstratlib_pricing::volatility::BaselineComparison
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::expiry(&self) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::forward(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::highest_log_moneyness(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::lowest_log_moneyness(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::quotes_outside_bid_ask(&self) -> usize
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::relative_rmse(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::residuals(&self) -> &[optionstratlib_pricing::volatility::SurfaceResidual]
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::rmse(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::slice(&self) -> &optionstratlib_pricing::volatility::SviSlice
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::time_to_expiry(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::unweighted_rmse(&self) -> positive::positive::Positive
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceExport
+pub optionstratlib_pricing::volatility::SurfaceExport::bridging_unfitted: alloc::vec::Vec<optionstratlib_pricing::volatility::SurfacePoint>
+pub optionstratlib_pricing::volatility::SurfaceExport::extrapolated: alloc::vec::Vec<optionstratlib_pricing::volatility::SurfacePoint>
+pub optionstratlib_pricing::volatility::SurfaceExport::surface: optionstratlib_math::surfaces::surface::Surface
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfacePoint
+pub optionstratlib_pricing::volatility::SurfacePoint::bridges_unfitted_expiry: bool
+pub optionstratlib_pricing::volatility::SurfacePoint::expiry_region: optionstratlib_pricing::volatility::SurfaceExpiryRegion
+pub optionstratlib_pricing::volatility::SurfacePoint::forward: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfacePoint::implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfacePoint::log_moneyness: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfacePoint::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfacePoint::total_variance: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfacePoint::wing_extension: positive::positive::Positive
+impl optionstratlib_pricing::volatility::SurfacePoint
+pub fn optionstratlib_pricing::volatility::SurfacePoint::is_extrapolated(&self) -> bool
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceResidual
+pub optionstratlib_pricing::volatility::SurfaceResidual::ask: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::bid: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::volatility::SurfaceResidual::fitted_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::fitted_price: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfaceResidual::log_moneyness: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfaceResidual::observed_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::outside_bid_ask: bool
+pub optionstratlib_pricing::volatility::SurfaceResidual::residual: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfaceResidual::strike: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::style: financial_types::OptionStyle
+pub optionstratlib_pricing::volatility::SurfaceResidual::time_to_expiry: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::weight: positive::positive::Positive
 pub struct optionstratlib_pricing::volatility::SviCalibrationConfig
 pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_iterations: core::num::nonzero::NonZeroU64
 pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_relative_rmse: positive::positive::Positive
@@ -741,6 +933,11 @@ pub fn optionstratlib_pricing::volatility::SviSlice::total_variance(&self, rust_
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_curvature(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::StaticArbitrageError>
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_rounding(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::StaticArbitrageError>
 pub fn optionstratlib_pricing::volatility::SviSlice::total_variance_slope(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::StaticArbitrageError>
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::UnfittedExpiry
+pub optionstratlib_pricing::volatility::UnfittedExpiry::clean_quotes: usize
+pub optionstratlib_pricing::volatility::UnfittedExpiry::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_pricing::volatility::UnfittedExpiry::reason: optionstratlib_pricing::volatility::UnfittedReason
+pub optionstratlib_pricing::volatility::UnfittedExpiry::time_to_expiry: core::option::Option<positive::positive::Positive>
 pub trait optionstratlib_pricing::volatility::AtmIvProvider
 pub fn optionstratlib_pricing::volatility::AtmIvProvider::atm_iv(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
 impl optionstratlib_pricing::volatility::AtmIvProvider for positive::positive::Positive

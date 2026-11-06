@@ -678,7 +678,7 @@ impl SviSlice {
 }
 
 /// `ln(strike / forward)`, with both checked to be non-zero.
-fn log_moneyness(strike: Positive, forward: Positive) -> Result<Decimal, SviError> {
+pub(super) fn log_moneyness(strike: Positive, forward: Positive) -> Result<Decimal, SviError> {
     if strike.is_zero() {
         return Err(SviError::ZeroStrike { strike });
     }

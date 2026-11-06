@@ -62,9 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   claimed free of arbitrage. Failures are a new `#[non_exhaustive]` `SviError`:
   invalid parameters or configuration, too few observations or distinct strikes,
   zero total weight, no convergence, no feasible point, relative RMSE above the
-  limit and non-finite kernel values. The aggregate
-  `optionstratlib::error::Error` has no variant for it yet, since adding one to that exhaustive enum is breaking; #944
-  adds it with the 0.24.0 bump. Runnable example: `svi_calibration` in
+  limit and non-finite kernel values. Runnable example: `svi_calibration` in
   `examples_pricing`.
 - **Butterfly and calendar checks of volatility slices and surfaces, on a grid**
   (#946), following Gatheral and Jacquier (arXiv:1204.0646). In
@@ -89,10 +87,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Decimal` overflow are a new `#[non_exhaustive]` `StaticArbitrageError`; slices
   may come in any order and are sorted by expiry. The tolerances are conservative
   bounds on the rounding of the arithmetic, declared and pinned from both sides by
-  the tests, so a violation smaller than its band goes unreported. The
-  aggregate `optionstratlib::error::Error` has no variant for this error yet; #944
-  adds it with the 0.24.0 bump. Runnable example: `static_arbitrage` in
+  the tests, so a violation smaller than its band goes unreported. Runnable example: `static_arbitrage` in
   `examples_pricing`.
+
+- **A calibrated implied volatility surface, built from bid and ask quotes** (#947),
+  for consumers that only feed quotes in. In `optionstratlib_pricing::volatility`
+  (also `optionstratlib::volatility`). `ImpliedVolatilitySurface::calibrate` takes
+  `OptionQuote`s (expiry, strike, style, bid, ask, `quoted_at`), the spot, a rate, a
+  dividend yield and an as-of `DateTime<Utc>`, and reads no clock: `T` is `expiry -
+  as_of` on Actual/365 Fixed through `ExpirationDate::Days`, so sub-day expiries keep
+  their hours, to about `1e-15` of `T`, and the whole feature gives the same answer
+  without the `clock` feature. Every quote is clean or rejected with a
+  `QuoteRejectionReason`, never smoothed: later than the as-of time, expired, zero
+  strike, crossed, zero bid, stale, superseded, outside its no-arbitrage band, no
+  implied volatility, or no weight. **A quote later than the as-of time cannot change
+  the surface**, which the tests assert by exact equality. Each expiry gets one raw SVI
+  slice, weighted by `(vega / (iv * spread))^2`, and the caller sets
+  `max_relative_rmse`. An expiry that cannot be fitted never disappears: it is an
+  `UnfittedExpiry` with its `UnfittedReason`, the rest is still built, and a value read
+  across it says so; only a surface with no slice at all is an error, carrying both
+  lists. The limit is relative to the level of volatility and on the weighted RMSE: at a
+  volatility of 20%, noise above about half a volatility point starts to lose expiries,
+  and at 60% noise of 0.8 points loses none. A raw SVI slice cannot follow a frown, and
+  with even spreads such an expiry comes back unfitted, but with a tight centre and wide
+  wings the weights hide it: one fits at a relative RMSE of 0.0046 with residuals up to 21
+  volatility points. So each expiry also reports `unweighted_rmse` and
+  `quotes_outside_bid_ask`, which ignore the weights, gate nothing and do not enter the
+  arbitrage report. Between expiries total variance is linear in `T` at fixed log
+  moneyness. `ExtrapolationPolicy` declares how far a read may leave
+  the data, in wings and in short and long expiries: within it the `SurfacePoint` is
+  flagged, beyond it the read is a typed error, and the default allows nothing. A wider
+  limit is not a safer one: a slice on few quotes can read far above its quotes just beyond
+  them, and the flag is the only signal. The surface also gives residuals by strike and expiry, `age_at`, shocks of level, skew and
+  term with their formulas stated (`SurfaceShock`, where invalid parameters are a typed
+  error and the shocked surface has its own report), a `BaselineComparison` against a
+  flat volatility per expiry, and `export_surface` to a generic `Surface`, which lists the
+  points it read outside the data and across an expiry without a slice.
+  `check_static_arbitrage` runs on the fitted slices and on a slice in the middle of
+  each gap, on one grid: the sorted union of `arbitrage_grid_points`, at least 5, across
+  the quotes of each expiry, and the log moneyness of every clean quote. That setting limits
+  each expiry and not the total, so the cost of the check is roughly quadratic in the
+  expiries. **The surface is not claimed free of arbitrage**: findings
+  and points the check could not resolve are reported and do not stop the surface,
+  `passed` means only those checks on that grid, and a check that cannot finish is an
+  error. Failures are a new `#[non_exhaustive]` `ImpliedVolatilitySurfaceError`.
+  `optionstratlib-pricing` now depends on `chrono` directly, without
+  its `clock` feature, for `DateTime<Utc>` in this API. Runnable example:
+  `calibrated_surface` in `examples_pricing`.
 
 - **`settlement_obligation`: what expiry, exercise or assignment obliges an
   option position to pay, receive or deliver** (#949). A pure function in
@@ -112,13 +153,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   intermediate product can create or break a tie. European and American are the supported option
   types. Failures are a new `#[non_exhaustive]` `SettlementError`: unsupported
   option type, missing price, price observed after the cutoff, event
-  incompatible with the side, and arithmetic overflow. The aggregate
-  `optionstratlib::error::Error` has no variant for it yet, since adding one to
-  that exhaustive enum is breaking. Runnable example: `settlement_obligations`
+  incompatible with the side, and arithmetic overflow. Runnable example: `settlement_obligations`
   in `examples_pricing`.
 
 ### Changed — breaking
 
+- **All ten crates move to 0.24.0**, a new minor line, because of the breaking changes
+  below. `docs/migration-0.24.md` lists what to change.
+- **`optionstratlib::error::Error` gains `Clock`, `Settlement`, `Svi`, `StaticArbitrage`
+  and `ImpliedVolatilitySurface`** (#947), each transparent and with `From`. Breaking,
+  since the enum is exhaustive: a `match` over it needs the new arms or a wildcard.
+- **`OptionChain::delta_exposure` and `gamma_exposure` fail on a strike with no Greek, in
+  every build** (#947). With the `clock` feature they added it as zero, against their
+  docs, so a chain whose Greeks were never computed reported an exposure of zero, and a
+  chain with one failed strike reported a total over the others. The error is a
+  `ChainError::ChainBuildError` with `InvalidParameters`, naming the strike. Migration: call
+  `try_update_greeks` first, and handle the error where a strike may have no Greek.
 - **`expiration_date` 0.6 and `option_type` 0.6** (#944). Breaking, and released
   with the 0.24.0 bump (#947):
   - `ExpirationDate`'s `Ord` no longer reads the clock: every `Days` sorts before
@@ -153,8 +203,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`None`, "no such chain"; use the new `odte_at`), `OptionChain::update_greeks` and
   `update_greek_snapshots` (empty Greeks; use the `try_` forms), and `is_delta_neutral`
   and `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). Without the
-  feature, `delta_exposure` and `gamma_exposure` fail on a strike with no Greek where a
-  build with it adds zero, a single-leg simulation whose steps cannot read their
+  feature, a single-leg simulation whose steps cannot read their
   days returns the error instead of reporting the path as expired,
   `OptionData::calculate_prices` returns it instead of wiping the quotes, and
   `AdjustmentOptimizer::optimize` returns it instead of an empty plan. With the feature,
@@ -162,8 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per call, where each position used to read the clock itself.
 - **`TradeError`, `PositionError`, `ChainError`, `StrategyError` and
   `TransactionError` gain a `Clock(ClockError)` variant** (#944). Breaking, since
-  they are exhaustive, and released with the 0.24.0 bump (#947). The aggregate
-  `optionstratlib::error::Error` gains its variant there too.
+  they are exhaustive, and released with the 0.24.0 bump (#947).
 - `Strategy::new` opens all the legs of one call at one instant rather than reading
   the clock once per leg, and `SimulationStatsResult::from_outcomes` stamps all its
   results with one instant (#944).

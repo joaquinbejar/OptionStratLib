@@ -43,6 +43,7 @@ pub use optionstratlib::error::DecimalResult
 pub use optionstratlib::error::GraphError
 pub use optionstratlib::error::GreeksError
 pub use optionstratlib::error::GreeksResult
+pub use optionstratlib::error::ImpliedVolatilitySurfaceError
 pub use optionstratlib::error::InterpolationError
 pub use optionstratlib::error::MetricsError
 pub use optionstratlib::error::OhlcvError
@@ -76,12 +77,14 @@ pub enum optionstratlib::error::Error
 pub optionstratlib::error::Error::Adjustment(optionstratlib_strategies::error::adjustment::AdjustmentError)
 pub optionstratlib::error::Error::Backtest(optionstratlib_backtest::error::backtesting::BacktestError)
 pub optionstratlib::error::Error::Chain(optionstratlib_market::error::chains::ChainError)
+pub optionstratlib::error::Error::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib::error::Error::Curve(optionstratlib_math::error::curves::CurveError)
 pub optionstratlib::error::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib::error::Error::EmptyCollection
 pub optionstratlib::error::Error::EmptyCollection::context: &'static str
 pub optionstratlib::error::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
 pub optionstratlib::error::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
+pub optionstratlib::error::Error::ImpliedVolatilitySurface(optionstratlib_pricing::error::surface::ImpliedVolatilitySurfaceError)
 pub optionstratlib::error::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
 pub optionstratlib::error::Error::Io(core::io::error::Error)
 pub optionstratlib::error::Error::Metrics(optionstratlib_math::error::metrics::MetricsError)
@@ -93,9 +96,12 @@ pub optionstratlib::error::Error::Pricing(optionstratlib_pricing::error::pricing
 pub optionstratlib::error::Error::Probability(optionstratlib_analytics::error::probability::ProbabilityError)
 pub optionstratlib::error::Error::Projection(optionstratlib_analytics::error::projections::ProjectionError)
 pub optionstratlib::error::Error::Rnd(optionstratlib_analytics::error::rnd::RNDError)
+pub optionstratlib::error::Error::Settlement(optionstratlib_core::error::settlement::SettlementError)
 pub optionstratlib::error::Error::Simulation(optionstratlib_simulation::error::simulation::SimulationError)
+pub optionstratlib::error::Error::StaticArbitrage(optionstratlib_pricing::error::arbitrage::StaticArbitrageError)
 pub optionstratlib::error::Error::Strategy(optionstratlib_strategies::error::strategies::StrategyError)
 pub optionstratlib::error::Error::Surface(optionstratlib_math::error::surfaces::SurfaceError)
+pub optionstratlib::error::Error::Svi(optionstratlib_pricing::error::svi::SviError)
 pub optionstratlib::error::Error::Trade(optionstratlib_core::error::trade::TradeError)
 pub optionstratlib::error::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
 pub optionstratlib::error::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)

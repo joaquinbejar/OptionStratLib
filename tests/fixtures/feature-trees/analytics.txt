@@ -108,6 +108,7 @@ optionstratlib-math -> serde
 optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
+optionstratlib-pricing -> chrono
 optionstratlib-pricing -> num-traits
 optionstratlib-pricing -> optionstratlib-core
 optionstratlib-pricing -> optionstratlib-math

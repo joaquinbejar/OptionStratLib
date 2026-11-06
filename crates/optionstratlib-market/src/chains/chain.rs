@@ -309,9 +309,9 @@ pub(crate) const PARALLEL_STRIKE_THRESHOLD: usize = 8;
 
 /// One strike's Greek in an aggregate exposure.
 ///
-/// Without a clock an empty Greek is an error: it may be a strike whose time to
-/// expiry could not be measured, and adding it as zero would report a total for a
-/// chain with no Greeks at all. A build with a clock keeps adding it as zero.
+/// An empty Greek is an error in every build: the strike was never measured, or its
+/// time to expiry could not be, and adding it as zero would report a total over fewer
+/// strikes than the chain has, or over none.
 fn exposure_term(
     greek: Option<Decimal>,
     strike: Positive,
@@ -319,7 +319,6 @@ fn exposure_term(
 ) -> Result<Decimal, ChainError> {
     match greek {
         Some(value) => Ok(value),
-        None if now().is_ok() => Ok(Decimal::ZERO),
         None => Err(ChainError::invalid_parameters(
             name,
             &format!("strike {strike} has none: call try_update_greeks first"),
@@ -2582,8 +2581,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's gamma calculation fails
-    /// - Options greeks are not initialized; a build with the `clock` feature adds a
-    ///   strike with no gamma as zero
+    /// - A strike has no gamma, because the Greeks were not initialized or could not be
+    ///   calculated for it
     ///
     /// # Note
     ///
@@ -2614,8 +2613,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's delta calculation fails
-    /// - Options greeks are not initialized; a build with the `clock` feature adds a
-    ///   strike with no delta as zero
+    /// - A strike has no call or put delta, because the Greeks were not initialized or
+    ///   could not be calculated for it
     ///
     /// # Note
     ///
@@ -6704,8 +6703,6 @@ mod tests_option_chain_serde {
 mod tests_gamma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    #[cfg(feature = "io")]
-    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
 
     #[cfg(feature = "io")]
@@ -6785,6 +6782,51 @@ mod tests_gamma_calculations {
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
         assert_decimal_eq!(result, dec!(0.0), dec!(0.001));
+    }
+
+    /// A chain with one strike whose gamma and put delta are given by the arguments.
+    fn chain_with_one_strike(delta_put: Option<Decimal>, gamma: Option<Decimal>) -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        chain.add_option(
+            Positive::HUNDRED,
+            spos!(0.5),
+            spos!(0.7),
+            spos!(2.5),
+            spos!(2.7),
+            pos_or_panic!(0.35),
+            Some(dec!(0.3)),
+            delta_put,
+            gamma,
+            spos!(60.0),
+            Some(30),
+            None,
+        );
+        chain
+    }
+
+    #[test]
+    fn test_gamma_exposure_of_a_strike_with_no_gamma_is_an_error_not_zero() {
+        let chain = chain_with_one_strike(Some(dec!(-0.7)), None);
+        assert!(chain.gamma_exposure().is_err());
+    }
+
+    #[test]
+    fn test_delta_exposure_of_a_strike_with_no_delta_is_an_error_not_a_partial_sum() {
+        let chain = chain_with_one_strike(None, Some(dec!(0.1)));
+        assert!(chain.delta_exposure().is_err());
+    }
+
+    #[test]
+    fn test_exposures_of_a_strike_with_its_greeks_are_their_sum() {
+        let chain = chain_with_one_strike(Some(dec!(-0.7)), Some(dec!(0.1)));
+        assert_eq!(chain.gamma_exposure().unwrap(), dec!(0.1));
+        assert_eq!(chain.delta_exposure().unwrap(), dec!(-0.4));
     }
 }
 
