@@ -123,22 +123,22 @@
 //! - Butterfly: `g` is a sum of terms that each carry the rounding of `w`, in
 //!   proportion to their size, so its band is
 //!   `((1 + |q| + |k|)^2 + w'^2 / (4 * w) + w'^2 / 16 + |w''| / 2) * (2 * r + 1e-26)
-//!   + |w'| * rounding / 4`
+//!   + |w'| * rounding / 4 + rounding^2 / 16 + rounding * r / 4`
 //!   with `q = k * w' / (2 * w)`, `rounding` that of `w`, and `r` the rounding of `w`
 //!   over `w`. `1e-26` is 100 units in the last place of a `Decimal`, for the
 //!   arithmetic of `g` itself.
 //!   At a raw SVI point of ordinary size this is about `1e-23`. Where `w` is barely
 //!   resolved, `r` is `1e-12` and the band is `2e-12` times the size of the terms.
 //!
-//! These bounds were compared with a 150-digit reference on about 250000 random raw
-//! SVI points: `b` from `1e-6` to `1e21`, `sigma` from `1e-28` to `100`, `|rho|` up to
-//! `0.999999`, `|m|` up to `2`, `a` from the floor to about `9 * b`, and `k` up to
-//! about `9e9` from the vertex; and on about 98000 random slices declaring no rounding,
-//! with `w`, `|w'|` and `|w''|` from `1e-28` to `1e28` and `|k|` up to `1e21`. No
-//! evaluated `g` was outside its band, and no `w` or `w'` of a raw SVI point outside
-//! its rounding. Much of that range, at a large `b` or `w'`, comes back as a typed
-//! overflow rather than a value, since `w'^2` alone leaves the range of a `Decimal`.
-//! Outside that range only the argument above stands.
+//! These bounds were compared with a 150-digit reference on random raw SVI points: `b`
+//! from `1e-6` to `1e21`, `sigma` from `1e-28` to `100`, `|rho|` up to `0.999999`, `|m|`
+//! up to `2`, `a` from the floor to about `9 * b`, and `k` up to about `9e9` from the
+//! vertex; and on random slices declaring no rounding, with `w`, `|w'|` and `|w''|` from
+//! `1e-28` to `1e28` and `|k|` up to `1e21`. No evaluated `g` was outside its band, and
+//! no `w` or `w'` of a raw SVI point outside its rounding. Much of that range, at a
+//! large `b` or `w'`, comes back as a typed overflow rather than a value, since `w'^2`
+//! alone leaves the range of a `Decimal`. Outside that range only the argument above
+//! stands.
 //!
 //! # Failure
 //!
@@ -693,21 +693,25 @@ struct DensityFactor {
 ///
 /// `w'` is never halved before it is used: a value near the last place would round
 /// away, and `w' / w` can be large however small `w'` is. So `p = w' / w` comes
-/// first, `q = k * p / 2`, and `w'^2 / (4 * w)` is `w' * p / 4`.
+/// first, `q = k * p / 2`, and `w'^2 / (4 * w)` is `w' * p / 4`, or `(w' / 4) * p`
+/// where only the product before the division leaves the range.
 ///
 /// Each step then rounds by at most about one unit in the last place, or one part
 /// in `1e28` of a larger value. `p` being that far off moves `q` by `|k|` units and
 /// `w' * p / 4` by `|w'|` units plus a part in `1e28` of itself, and a term that
-/// rounds to zero was below one unit. So all of it is within `1e-26`, 100 units, of
-/// the first term of `magnitude`, which is never below one, using that `|w'| / 2` is
-/// at most `1 + w'^2 / 16` by the arithmetic-geometric mean.
+/// rounds to zero here was below one unit. So this arithmetic is within `1e-26`, 100
+/// units, of the first term of `magnitude`, which is never below one, using that
+/// `|w'| / 2` is at most `1 + w'^2 / 16` by the arithmetic-geometric mean.
 ///
 /// The rounding the slice declares comes on top. Relative to `w`, called `r` here,
 /// it moves `q` by up to `(|q| + |k| / 2) * r`, since it also bounds that of `w'`,
 /// which gives the first term of `magnitude` again, and it is within `magnitude` for
 /// `w' * p / 4` by the same mean. `w'^2 / 16` has no `1 / w` to put its `w'` rounding
-/// in terms of `r`, so that one is added on its own. Any product here that rounds to
-/// zero is below one unit, which is within the `1e-26` too.
+/// in terms of `r`, so that one is added on its own. These are first order in the
+/// rounding, and the second order is no part of them: `w'` reported as zero can have
+/// `w'^2 / 16` and `w'^2 / (4 * w)` of `rounding^2 / 16` and `rounding * r / 4`, which
+/// are added too. In the first term of `magnitude`, `q` has its second order within
+/// the first, since `r` is at most `1e-12`.
 fn density_factor(
     k: Decimal,
     w: Decimal,
@@ -720,8 +724,11 @@ fn density_factor(
     let q = d_div(d_mul(k, ratio, OP)?, Decimal::TWO, OP)?;
     let one_minus_q = d_sub(Decimal::ONE, q, OP)?;
     let first = d_mul(one_minus_q, one_minus_q, OP)?;
-    let over_w = d_div(d_mul(slope, ratio, OP)?, FOUR, OP)?;
     let quarter_slope = d_div(slope, FOUR, OP)?;
+    let over_w = match slope.checked_mul(ratio) {
+        Some(product) => d_div(product, FOUR, OP)?,
+        None => d_mul(quarter_slope, ratio, OP)?,
+    };
     let over_four = d_mul(quarter_slope, quarter_slope, OP)?;
     let half_curvature = d_div(curvature, Decimal::TWO, OP)?;
     let g = d_add(
@@ -742,9 +749,19 @@ fn density_factor(
         OP,
     )?;
     let over_four_rounding = d_mul(quarter_slope.abs(), rounding, OP)?;
+    let quarter_rounding = d_div(rounding, FOUR, OP)?;
+    let second_order = d_add(
+        d_mul(quarter_rounding, quarter_rounding, OP)?,
+        d_mul(quarter_rounding, d_div(rounding, w, OP)?, OP)?,
+        OP,
+    )?;
     Ok(DensityFactor {
         g,
-        band: d_add(d_mul(magnitude, relative, OP)?, over_four_rounding, OP)?,
+        band: d_add(
+            d_add(d_mul(magnitude, relative, OP)?, over_four_rounding, OP)?,
+            second_order,
+            OP,
+        )?,
     })
 }
 
@@ -1113,6 +1130,49 @@ mod tests {
         )
         .unwrap();
         assert_eq!(factor.g, dec!(0.25) - dec!(0.0000000000000000000000000002));
+    }
+
+    #[test]
+    fn test_density_factor_band_covers_the_second_order_of_a_rounded_slope() {
+        // w = 1e15 with a declared rounding of 1000 is exactly at the resolution limit.
+        // A slope reported as zero can really be 1000, which gives g = 1 - 62500 + a
+        // term of 2.5e-10, so the band has to reach 62500 and not stop at 2e-12.
+        let (w, rounding) = (dec!(1000000000000000), dec!(1000));
+        let factor = density_factor(dec!(0), w, dec!(0), dec!(0), rounding).unwrap();
+        assert_eq!(factor.g, dec!(1));
+        let second_order = dec!(62500.00000000025);
+        assert!(factor.band >= second_order, "{}", factor.band);
+        assert!(
+            factor.band <= second_order + dec!(0.00000000001),
+            "{}",
+            factor.band
+        );
+
+        // The verdicts this moves, at that rounding: a negative g reported only past
+        // the band. A g above it stays a pass, and the band says how far that goes.
+        for (g, reported) in [(dec!(-62000), false), (dec!(-63000), true)] {
+            let slice = Fixed {
+                curvature: (g - dec!(1)) * dec!(2),
+                ..Fixed::new(w, dec!(0), dec!(0), rounding)
+            };
+            let report = check_butterfly(&slice, &[dec!(0)]).unwrap();
+            assert_eq!(report.violations().len(), usize::from(reported), "g = {g}");
+            assert!(report.unevaluated().is_empty(), "{report:?}");
+        }
+    }
+
+    #[test]
+    fn test_density_factor_large_slope_keeps_its_value_past_the_product() {
+        // w' * p = 1e14 * 1e15 is out of range and w'^2 / (4 * w) = 2.5e28 is not. With
+        // w'^2 / 16 = 6.25e26, g = 1 - 2.5625e28 at k = 0.
+        let slice = Fixed::new(dec!(0.1), dec!(100000000000000), dec!(0), dec!(0));
+        let report = check_butterfly(&slice, &[dec!(0)]).unwrap();
+        match report.violations() {
+            [StaticArbitrageViolation::Butterfly { g, .. }] => {
+                assert_eq!(*g, dec!(-25625000000000000000000000000) + dec!(1));
+            }
+            other => panic!("expected one violation, got {other:?}"),
+        }
     }
 
     #[test]
