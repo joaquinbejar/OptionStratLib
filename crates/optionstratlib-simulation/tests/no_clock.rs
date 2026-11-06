@@ -19,6 +19,45 @@ fn test_days_step_needs_no_clock() {
     );
 }
 
+/// The quadratic rough Heston kernel reads no time: it takes its horizon as a number, so a
+/// run gives the same decimals with and without the clock.
+#[test]
+fn test_quadratic_rough_heston_needs_no_clock() {
+    use optionstratlib_core::model::types::OptionStyle;
+    use optionstratlib_simulation::simulation::{
+        QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonParams,
+        price_vanilla_quadratic_rough_heston, simulate_quadratic_rough_heston_path,
+    };
+    use rust_decimal_macros::dec;
+    use std::num::NonZeroUsize;
+
+    let kernel = QuadraticRoughHestonKernel::try_new(dec!(0.6), 3, dec!(4)).unwrap();
+    let params = QuadraticRoughHestonParams::try_new(
+        dec!(0.5),
+        dec!(0.1),
+        dec!(0.01),
+        dec!(1.5),
+        dec!(1),
+        kernel,
+        vec![dec!(-0.05); 3],
+        Positive::HUNDRED,
+    )
+    .unwrap();
+    let grid = QuadraticRoughHestonGrid::try_new(dec!(0.25), 10).unwrap();
+    let path = simulate_quadratic_rough_heston_path(&params, &grid, 958).unwrap();
+    assert_eq!(path.spot().len(), 11);
+    let estimate = price_vanilla_quadratic_rough_heston(
+        &params,
+        &grid,
+        OptionStyle::Call,
+        Positive::HUNDRED,
+        NonZeroUsize::new(100).unwrap(),
+        958,
+    )
+    .unwrap();
+    assert!(estimate.price() > dec!(0));
+}
+
 #[cfg(not(feature = "clock"))]
 mod without_clock {
     use super::*;

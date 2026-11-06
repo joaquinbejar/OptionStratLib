@@ -33,4 +33,11 @@
 /// * Step calculation issues
 mod simulation;
 
+/// ### Quadratic rough Heston errors (`QuadraticRoughHestonError`)
+/// Handles:
+/// * Kernel and model parameter validation
+/// * A simulated state that stops being finite
+mod quadratic_rough_heston;
+
+pub use quadratic_rough_heston::QuadraticRoughHestonError;
 pub use simulation::{SimulationError, SimulationResult};

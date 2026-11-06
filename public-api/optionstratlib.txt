@@ -56,6 +56,7 @@ pub use optionstratlib::error::PricingResult
 pub use optionstratlib::error::ProbabilityError
 pub use optionstratlib::error::ProbabilityResult
 pub use optionstratlib::error::ProjectionError
+pub use optionstratlib::error::QuadraticRoughHestonError
 pub use optionstratlib::error::RNDError
 pub use optionstratlib::error::SettlementError
 pub use optionstratlib::error::SimulationError
@@ -95,6 +96,7 @@ pub optionstratlib::error::Error::Positive(positive::error::PositiveError)
 pub optionstratlib::error::Error::Pricing(optionstratlib_pricing::error::pricing::PricingError)
 pub optionstratlib::error::Error::Probability(optionstratlib_analytics::error::probability::ProbabilityError)
 pub optionstratlib::error::Error::Projection(optionstratlib_analytics::error::projections::ProjectionError)
+pub optionstratlib::error::Error::QuadraticRoughHeston(optionstratlib_simulation::error::quadratic_rough_heston::QuadraticRoughHestonError)
 pub optionstratlib::error::Error::Rnd(optionstratlib_analytics::error::rnd::RNDError)
 pub optionstratlib::error::Error::Settlement(optionstratlib_core::error::settlement::SettlementError)
 pub optionstratlib::error::Error::Simulation(optionstratlib_simulation::error::simulation::SimulationError)

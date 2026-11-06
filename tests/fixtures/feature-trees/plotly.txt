@@ -193,6 +193,7 @@ optionstratlib-simulation -> num-traits
 optionstratlib-simulation -> optionstratlib-core
 optionstratlib-simulation -> optionstratlib-pricing
 optionstratlib-simulation -> rand
+optionstratlib-simulation -> rand_distr
 optionstratlib-simulation -> rayon
 optionstratlib-simulation -> rust_decimal
 optionstratlib-simulation -> rust_decimal_macros

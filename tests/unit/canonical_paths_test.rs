@@ -244,6 +244,10 @@ fn test_canonical_error_paths_are_component_errors() {
         optionstratlib_simulation::error::SimulationError
     );
     same!(
+        facade::QuadraticRoughHestonError,
+        optionstratlib_simulation::error::QuadraticRoughHestonError
+    );
+    same!(
         facade::SimulationResult<()>,
         optionstratlib_simulation::error::SimulationResult<()>
     );

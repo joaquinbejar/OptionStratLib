@@ -155,6 +155,15 @@ pub use traits::{
 };
 pub mod ou;
 pub use ou::generate_ou_process;
+
+/// The multi-factor quadratic rough Heston model. See [`QuadraticRoughHestonParams`].
+mod quadratic_rough_heston;
+pub use quadratic_rough_heston::{
+    QuadraticRoughHestonEstimate, QuadraticRoughHestonGrid, QuadraticRoughHestonKernel,
+    QuadraticRoughHestonParams, QuadraticRoughHestonPath, price_vanilla_quadratic_rough_heston,
+    simulate_quadratic_rough_heston_path,
+};
+
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};
 
 use crate::error::SimulationError;
