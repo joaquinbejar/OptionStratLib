@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The derivatives of total variance at a point of a calibrated surface** (#964).
+  `ImpliedVolatilitySurface::point_with_derivatives` and
+  `point_at_strike_with_derivatives` return a `SurfacePointDerivatives`, in
+  `optionstratlib_pricing::volatility` (also `optionstratlib::volatility`): the
+  `SurfacePoint` exactly as `point` reads it, `dw/dk`, `d2w/dk2` and `dw/dT`, by the same
+  rule as the value between expiries, at them and before or after them, and with the same
+  error beyond `ExtrapolationPolicy`. `dw/dT` at a fitted expiry is the left side, the
+  segment towards shorter expiries, since time reduces `T`, and at the first or only expiry
+  that is the flat volatility rule, `w / T`. It is at fixed log moneyness: at a fixed strike
+  it is `dw/dT - (r - q) * dw/dk`. It is signed, and a calendar violation gives a negative
+  value with no error. `point` and `point_at_strike` do not change.
+
 ### Fixed
 
 - The facade README and crate docs named v0.23.0 in their title and footer, and did not
