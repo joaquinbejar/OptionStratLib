@@ -59,6 +59,11 @@ const MAX_ARBITRAGE_GRID_POINTS: usize = 100_000;
 /// points.
 const MIN_ARBITRAGE_GRID_POINTS: usize = 5;
 
+/// The resolution of a time to expiry, relative to it: `Decimal::from_f64` keeps 15 to 16
+/// significant digits, so the `T` of a slice is within about `6e-16` of itself as computed in
+/// `Decimal`. A `T` this close to a fitted expiry reads that expiry.
+const TIME_TO_EXPIRY_RESOLUTION: Decimal = Decimal::from_parts(1, 0, 0, false, 15);
+
 /// The `theta` of the slice in the middle of a gap between two expiries: one half.
 const MIDDLE_OF_GAP: Decimal = Decimal::from_parts(5, 0, 0, false, 1);
 
@@ -484,7 +489,7 @@ pub enum SurfaceExpiryRegion {
 pub struct SurfacePoint {
     /// The log moneyness, `ln(K / F(T))`.
     pub log_moneyness: Decimal,
-    /// The time to expiry, in years.
+    /// The time to expiry, in years. At a fitted expiry, the `T` of its slice.
     pub time_to_expiry: Positive,
     /// The forward at that expiry: `S e^((r - q) T)`.
     pub forward: Positive,
@@ -1066,6 +1071,12 @@ impl ImpliedVolatilitySurface {
     /// the data. A read beyond [`ExtrapolationPolicy`] is an error, and one within it says so in
     /// [`SurfacePoint::is_extrapolated`].
     ///
+    /// A `time_to_expiry` within `1e-15` of a fitted expiry, relative to it, reads that slice,
+    /// and [`SurfacePoint::time_to_expiry`] is then the `T` of the slice. That is the resolution
+    /// of `T`, so `91 / 365` computed in `Decimal` reads the expiry 91 days out, whose own `T`
+    /// went through `f64`, rather than falling just outside it. Anything further is a different
+    /// time to expiry.
+    ///
     /// # Errors
     ///
     /// - [`ImpliedVolatilitySurfaceError::ZeroTimeToExpiry`]: a zero time to expiry.
@@ -1084,6 +1095,11 @@ impl ImpliedVolatilitySurface {
             return Err(ImpliedVolatilitySurfaceError::ZeroTimeToExpiry);
         }
         let located = self.locate(time_to_expiry)?;
+        // Within the resolution of `T` a read is of that slice, at its own `T`.
+        let time_to_expiry = match located {
+            Located::Fitted(expiry) => expiry.time_to_expiry(),
+            _ => time_to_expiry,
+        };
         let wing_extension = self.wing_extension(k, time_to_expiry, &located)?;
         let total_variance = match located {
             Located::Fitted(expiry) => expiry.slice.total_variance(k)?,
@@ -1152,10 +1168,14 @@ impl ImpliedVolatilitySurface {
             .checked_sub(1)
             .and_then(|index| self.expiries.get(index));
         let later = self.expiries.get(after);
-        match (earlier, later) {
-            (Some(earlier), _) if earlier.time_to_expiry() == time_to_expiry => {
-                Ok(Located::Fitted(earlier))
+        for expiry in [earlier, later].into_iter().flatten() {
+            let fitted = expiry.time_to_expiry().to_dec();
+            let distance = d_sub(time_to_expiry.to_dec(), fitted, OP)?.abs();
+            if distance <= d_mul(fitted, TIME_TO_EXPIRY_RESOLUTION, OP)? {
+                return Ok(Located::Fitted(expiry));
             }
+        }
+        match (earlier, later) {
             (Some(earlier), Some(later)) => {
                 let first = earlier.time_to_expiry().to_dec();
                 let theta = d_div(
@@ -3230,6 +3250,61 @@ mod tests_implied_volatility_surface {
             forward.to_dec(),
             dec!(100) * d_exp(dec!(0.04), "test").unwrap(),
             dec!(0.0000000000000000001),
+        );
+    }
+
+    #[test]
+    fn test_time_within_the_resolution_of_a_fitted_expiry_reads_that_slice() {
+        let surface = calibrate(&quotes_of(&[91, 182, 365])).unwrap();
+        let k = dec!(0.01);
+        let [first, middle, last] = surface.expiries() else {
+            panic!("three expiries");
+        };
+
+        // Computed in `Decimal`, just below the `T` of the slice, which went through `f64`.
+        let computed = dec!(91) / dec!(365);
+        assert!(computed < first.time_to_expiry().to_dec());
+        // Just above the last, at both ends of what a default policy would refuse.
+        let above = last.time_to_expiry().to_dec() + dec!(0.00000000000000000001);
+        // Close to the middle one, which is otherwise a read between two slices.
+        let near_middle = middle.time_to_expiry().to_dec() * dec!(1.0000000000000005);
+        for (time, expiry) in [(computed, first), (above, last), (near_middle, middle)] {
+            let point = surface.point(k, pos(time)).unwrap();
+            assert_eq!(point.time_to_expiry, expiry.time_to_expiry());
+            assert_eq!(point.forward, expiry.forward());
+            assert_eq!(
+                point.total_variance,
+                expiry.slice().total_variance(k).unwrap()
+            );
+            assert_eq!(
+                point.implied_volatility,
+                expiry.slice().implied_volatility(k).unwrap()
+            );
+            assert!(!point.is_extrapolated());
+        }
+    }
+
+    #[test]
+    fn test_time_really_outside_the_fitted_expiries_still_errors() {
+        let surface = calibrate(&quotes_of(&[91, 365])).unwrap();
+        let [first, last] = surface.expiries() else {
+            panic!("two expiries");
+        };
+        let before = first.time_to_expiry().to_dec() * dec!(0.99999999999999);
+        assert!(matches!(
+            surface.point(dec!(0), pos(before)),
+            Err(ImpliedVolatilitySurfaceError::ShortExpiryOutOfPolicy { .. })
+        ));
+        let after = last.time_to_expiry().to_dec() * dec!(1.00000000000001);
+        assert!(matches!(
+            surface.point(dec!(0), pos(after)),
+            Err(ImpliedVolatilitySurfaceError::LongExpiryOutOfPolicy { .. })
+        ));
+        // The same distance inside a gap is a read between two slices at its own time.
+        let inside = pos(first.time_to_expiry().to_dec() * dec!(1.00000000000001));
+        assert_eq!(
+            surface.point(dec!(0), inside).unwrap().time_to_expiry,
+            inside
         );
     }
 
