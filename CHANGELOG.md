@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The facade README and crate docs named v0.23.0 in their title and footer, and did not
+  point to the 0.24 migration guide. The README and docs of the published 0.24.0 still do.
+
 ## [0.24.0] - 2026-11-06
 
 ### Added

@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.23.0: Financial Options Library
+## OptionStratLib v0.24.0: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -404,7 +404,9 @@ and the [ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main
 gives the defining crate, direct import, facade path and feature of every
 public concept.
 
-Moving from 0.22? The [0.23
+Moving from 0.23? The [0.24
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.24.md)
+lists what to change, starting with the new `clock` feature. Moving from 0.22? The [0.23
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
 covers the one area that changed: PNG and SVG export, now drawn natively,
 and the typed `GraphError` it returns. Moving from 0.21? The [0.22
@@ -1570,7 +1572,7 @@ cargo test --all-features
 
 ---
 
-**OptionStratLib v0.23.0** - Built with ❤️ in Rust for the financial community
+**OptionStratLib v0.24.0** - Built with ❤️ in Rust for the financial community
 
 
 
