@@ -44,7 +44,7 @@ CRATES = (
     "optionstratlib-market", "optionstratlib-analytics", "optionstratlib-strategies",
     "optionstratlib-backtest", "optionstratlib-visualization", "optionstratlib",
 )
-DEFAULT_RELEASE = "0.23.0"
+DEFAULT_RELEASE = "0.24.0"
 RELEASE_RE = re.compile(r"^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
 
@@ -74,7 +74,7 @@ def crate_versions() -> dict[str, str]:
         return {}
     return {p["name"]: p["version"] for p in packages if p["name"] in CRATES}
 # The last published release: the semver reports compare against its tag.
-BASELINE = "v0.22.2"
+BASELINE = "v0.23.0"
 # The report parser needs Python 3.11 or newer, as the Makefile's PYTHON311.
 REPORT_PYTHON = "$(command -v python3.13 || command -v python3.12 || command -v python3.11 || echo python3)"
 SURFACES = ("none", "default", "plotly", "static_export", "async", "all")

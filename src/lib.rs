@@ -1918,3 +1918,12 @@ pub struct ReleaseNotesDoctests;
 #[cfg(all(doctest, feature = "static_export", feature = "clock"))]
 #[doc = include_str!("../docs/release/0.23/RELEASE-NOTES.md")]
 pub struct ReleaseNotes023Doctests;
+
+/// Compiles and runs the Rust examples of the 0.24 release notes,
+/// `docs/release/0.24/RELEASE-NOTES.md`, as doctests. Exists only under
+/// `cfg(doctest)`, with `visualization` on, which brings the simulation and pricing
+/// crates they use; `make check-release-notes` builds each one against exactly the
+/// manifest shown above it.
+#[cfg(all(doctest, feature = "visualization", feature = "clock"))]
+#[doc = include_str!("../docs/release/0.24/RELEASE-NOTES.md")]
+pub struct ReleaseNotes024Doctests;
