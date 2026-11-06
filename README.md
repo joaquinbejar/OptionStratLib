@@ -434,7 +434,7 @@ layer, enable only its facade feature:
 ```toml
 [dependencies]
 # pricing, greeks and volatility, without market data, I/O or charts
-optionstratlib = { version = "0.23.0", default-features = false, features = ["pricing"] }
+optionstratlib = { version = "0.24.0", default-features = false, features = ["pricing"] }
 rust_decimal = "1.43" # for `dec!`
 ```
 
@@ -442,8 +442,8 @@ or depend on the component itself:
 
 ```toml
 [dependencies]
-optionstratlib-core = "0.23.0"
-optionstratlib-pricing = "0.23.0"
+optionstratlib-core = "0.24.0"
+optionstratlib-pricing = "0.24.0"
 ```
 
 ### Canonical paths
@@ -971,7 +971,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.23.0"
+optionstratlib = "0.24.0"
 rust_decimal = "1.43"
 ```
 
@@ -991,7 +991,7 @@ The library includes optional features for enhanced functionality:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.23.0", features = ["plotly"] }
+optionstratlib = { version = "0.24.0", features = ["plotly"] }
 rust_decimal = "1.43"
 ```
 
@@ -1081,7 +1081,7 @@ capability, of each capability alone and of the default.
 feature flag: `pricing`, `market`, `analytics`, `strategies`,
 `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`,
 plus `clock`, which those capabilities always had before it was a feature, so a
-plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
+plain `optionstratlib = "0.24.0"` keeps the whole library and resolves no
 Plotly, image-export, async-runtime or HTTP package. The default is a
 compatibility contract since the 0.22 line, not a statement that a consumer
 needs all of it: opt out with `default-features = false` and name only the
@@ -1572,6 +1572,16 @@ cargo test --all-features
 **OptionStratLib v0.23.0** - Built with ❤️ in Rust for the financial community
 
 
+
+## Upgrading from 0.23
+
+0.24 makes the wall clock optional, renames `iv_surface` to say what it computes,
+and adds a calibrated implied volatility surface, SVI slices, static arbitrage
+checks and settlement obligations. A build that sets
+`default-features = false` must add the `clock` feature to keep reading the time.
+The [0.24 migration
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.24.md)
+lists what to change.
 
 ## Upgrading from 0.22
 

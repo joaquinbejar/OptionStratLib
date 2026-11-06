@@ -453,7 +453,7 @@
 //! ```toml
 //! [dependencies]
 //! # pricing, greeks and volatility, without market data, I/O or charts
-//! optionstratlib = { version = "0.23.0", default-features = false, features = ["pricing"] }
+//! optionstratlib = { version = "0.24.0", default-features = false, features = ["pricing"] }
 //! rust_decimal = "1.43" # for `dec!`
 //! ```
 //!
@@ -461,8 +461,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib-core = "0.23.0"
-//! optionstratlib-pricing = "0.23.0"
+//! optionstratlib-core = "0.24.0"
+//! optionstratlib-pricing = "0.24.0"
 //! ```
 //!
 //! ## Canonical paths
@@ -990,7 +990,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.23.0"
+//! optionstratlib = "0.24.0"
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1010,7 +1010,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.23.0", features = ["plotly"] }
+//! optionstratlib = { version = "0.24.0", features = ["plotly"] }
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1100,7 +1100,7 @@
 //! feature flag: `pricing`, `market`, `analytics`, `strategies`,
 //! `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`,
 //! plus `clock`, which those capabilities always had before it was a feature, so a
-//! plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
+//! plain `optionstratlib = "0.24.0"` keeps the whole library and resolves no
 //! Plotly, image-export, async-runtime or HTTP package. The default is a
 //! compatibility contract since the 0.22 line, not a statement that a consumer
 //! needs all of it: opt out with `default-features = false` and name only the

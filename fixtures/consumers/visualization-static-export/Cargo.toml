@@ -14,6 +14,6 @@ license = "MIT"
 [dependencies]
 # Path plus version, as every OptionStratLib dependency is declared until the
 # crates are published (ADR-0001 D1).
-optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.23.0", default-features = false, features = ["static_export"] }
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.24.0", default-features = false, features = ["static_export"] }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"
