@@ -1082,8 +1082,8 @@ impl ImpliedVolatilitySurface {
     /// A `time_to_expiry` within `1e-15` of a fitted expiry, relative to it, reads that slice,
     /// and [`SurfacePoint::time_to_expiry`] is then the `T` of the slice. That is the resolution
     /// of `T`, so `91 / 365` computed in `Decimal` reads the expiry 91 days out, whose own `T`
-    /// went through `f64`, rather than falling just outside it. Anything further is a different
-    /// time to expiry.
+    /// went through `f64`, rather than falling just outside it. Within that of two fitted
+    /// expiries, it reads the nearer. Anything further is a different time to expiry.
     ///
     /// # Errors
     ///
@@ -1176,12 +1176,20 @@ impl ImpliedVolatilitySurface {
             .checked_sub(1)
             .and_then(|index| self.expiries.get(index));
         let later = self.expiries.get(after);
+        // The two neighbours are the nearest of all the expiries, since they are sorted, and
+        // can both be within the resolution: the nearer one is the read, and on a tie the earlier.
+        let mut nearest: Option<(Decimal, &SurfaceExpiry)> = None;
         for expiry in [earlier, later].into_iter().flatten() {
             let fitted = expiry.time_to_expiry().to_dec();
             let distance = d_sub(time_to_expiry.to_dec(), fitted, OP)?.abs();
-            if distance <= d_mul(fitted, TIME_TO_EXPIRY_RESOLUTION, OP)? {
-                return Ok(Located::Fitted(expiry));
+            if distance <= d_mul(fitted, TIME_TO_EXPIRY_RESOLUTION, OP)?
+                && nearest.is_none_or(|(best, _)| distance < best)
+            {
+                nearest = Some((distance, expiry));
             }
+        }
+        if let Some((_, expiry)) = nearest {
+            return Ok(Located::Fitted(expiry));
         }
         match (earlier, later) {
             (Some(earlier), Some(later)) => {
@@ -1802,18 +1810,28 @@ fn quotes_with_weights(
     Ok(quotes)
 }
 
-/// The sorted union of `points` evenly spaced points across the quotes of each expiry, both
-/// ends of each included.
+/// The strictly sorted union, over the expiries, of `points` evenly spaced points across the
+/// quotes of each, both ends included, and the log moneyness of each of its clean quotes.
 ///
-/// One grid spaced by the widest quotes would leave a short expiry with a point or two
-/// inside its own, and a violation there would pass.
+/// One grid spaced by the widest quotes would leave a short expiry with a point or two inside
+/// its own. A step for each expiry still leaves few among dense quotes when a far quote
+/// stretches it, so every quote is a point in itself: where there is data, there is a check.
 fn union_across_quotes(
     expiries: &[SurfaceExpiry],
     points: NonZeroUsize,
 ) -> Result<Vec<Decimal>, DecimalError> {
     const OP: &str = "surface::grid";
     let intervals = d_sub(Decimal::from(points.get()), Decimal::ONE, OP)?;
-    let mut grid = Vec::with_capacity(points.get());
+    // Only a hint: a size that does not fit in a `usize` allocates as it goes.
+    let capacity = expiries
+        .iter()
+        .try_fold(0_usize, |total, expiry| {
+            total
+                .checked_add(points.get())?
+                .checked_add(expiry.residuals.len())
+        })
+        .unwrap_or(0);
+    let mut grid = Vec::with_capacity(capacity);
     for expiry in expiries {
         let (lowest, highest) = (expiry.lowest_log_moneyness, expiry.highest_log_moneyness);
         let step = d_div(d_sub(highest, lowest, OP)?, intervals, OP)?;
@@ -3390,6 +3408,73 @@ mod tests_implied_volatility_surface {
             );
             assert!(!point.is_extrapolated());
         }
+    }
+
+    /// Flat quotes of one expiry at a given volatility.
+    fn flat_chain(expiry: DateTime<Utc>, days: i64, volatility: Decimal) -> Vec<OptionQuote> {
+        [90, 95, 100, 105, 110, 115]
+            .into_iter()
+            .map(|strike| {
+                let strike = Decimal::from(strike);
+                OptionQuote {
+                    expiry,
+                    ..quote_at_volatility(days, strike, OptionStyle::Call, pos(volatility))
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_time_within_the_resolution_of_two_expiries_reads_the_nearer() {
+        // Five nanoseconds apart, within `1e-15` of each other, at 20% and 40%.
+        let earlier = in_days(91);
+        let later = earlier + TimeDelta::nanoseconds(5);
+        let quotes = [
+            flat_chain(earlier, 91, dec!(0.2)),
+            flat_chain(later, 91, dec!(0.4)),
+        ]
+        .concat();
+        let surface = calibrate(&quotes).unwrap();
+        let [first, last] = surface.expiries() else {
+            panic!("two expiries: {:?}", surface.unfitted());
+        };
+        let (t1, t2) = (
+            first.time_to_expiry().to_dec(),
+            last.time_to_expiry().to_dec(),
+        );
+        let gap = t2 - t1;
+        assert!(gap > dec!(0));
+        assert!(gap <= t1 * TIME_TO_EXPIRY_RESOLUTION);
+
+        let read = |time: Decimal| surface.point(dec!(0), pos(time)).unwrap();
+        for (time, expiry) in [
+            (t1, first),
+            (t2, last),
+            (t1 + gap * dec!(0.01), first),
+            (t1 + gap * dec!(0.49), first),
+            (t2 - gap * dec!(0.49), last),
+            (t2 - gap * dec!(0.01), last),
+            // Exactly in the middle the earlier is as near.
+            (t1 + gap / dec!(2), first),
+        ] {
+            let point = read(time);
+            assert_eq!(point.time_to_expiry, expiry.time_to_expiry(), "{time}");
+            assert_eq!(
+                point.implied_volatility,
+                expiry.slice().implied_volatility(dec!(0)).unwrap(),
+                "{time}"
+            );
+        }
+        assert_close(
+            read(t2 - gap * dec!(0.01)).implied_volatility.to_dec(),
+            dec!(0.4),
+            dec!(0.000001),
+        );
+        assert_close(
+            read(t1 + gap * dec!(0.01)).implied_volatility.to_dec(),
+            dec!(0.2),
+            dec!(0.000001),
+        );
     }
 
     #[test]
