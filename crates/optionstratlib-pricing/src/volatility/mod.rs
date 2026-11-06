@@ -191,7 +191,7 @@ pub use arbitrage::{
 pub use surface::{
     BaselineComparison, ExtrapolationPolicy, ImpliedVolatilitySurface,
     ImpliedVolatilitySurfaceConfig, SurfaceExpiry, SurfaceExpiryRegion, SurfaceExport,
-    SurfacePoint, SurfaceResidual, SurfaceShock,
+    SurfacePoint, SurfacePointDerivatives, SurfaceResidual, SurfaceShock,
 };
 
 pub use crate::error::surface::{

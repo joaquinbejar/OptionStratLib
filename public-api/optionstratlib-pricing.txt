@@ -807,6 +807,8 @@ pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::expiries(&s
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::export_surface(&self, &[rust_decimal::decimal::Decimal], &[positive::positive::Positive]) -> core::result::Result<optionstratlib_pricing::volatility::SurfaceExport, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point(&self, rust_decimal::decimal::Decimal, positive::positive::Positive) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePoint, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point_at_strike(&self, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePoint, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point_at_strike_with_derivatives(&self, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePointDerivatives, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
+pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::point_with_derivatives(&self, rust_decimal::decimal::Decimal, positive::positive::Positive) -> core::result::Result<optionstratlib_pricing::volatility::SurfacePointDerivatives, optionstratlib_pricing::error::ImpliedVolatilitySurfaceError>
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::rate(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::rejections(&self) -> &[optionstratlib_pricing::volatility::QuoteRejection]
 pub fn optionstratlib_pricing::volatility::ImpliedVolatilitySurface::residuals(&self) -> impl core::iter::traits::iterator::Iterator<Item = &optionstratlib_pricing::volatility::SurfaceResidual>
@@ -865,6 +867,11 @@ pub optionstratlib_pricing::volatility::SurfacePoint::total_variance: positive::
 pub optionstratlib_pricing::volatility::SurfacePoint::wing_extension: positive::positive::Positive
 impl optionstratlib_pricing::volatility::SurfacePoint
 pub fn optionstratlib_pricing::volatility::SurfacePoint::is_extrapolated(&self) -> bool
+#[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfacePointDerivatives
+pub optionstratlib_pricing::volatility::SurfacePointDerivatives::point: optionstratlib_pricing::volatility::SurfacePoint
+pub optionstratlib_pricing::volatility::SurfacePointDerivatives::total_variance_curvature: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfacePointDerivatives::total_variance_slope: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::volatility::SurfacePointDerivatives::total_variance_time_slope: rust_decimal::decimal::Decimal
 #[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceResidual
 pub optionstratlib_pricing::volatility::SurfaceResidual::ask: positive::positive::Positive
 pub optionstratlib_pricing::volatility::SurfaceResidual::bid: positive::positive::Positive

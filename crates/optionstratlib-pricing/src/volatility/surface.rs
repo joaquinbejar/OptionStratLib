@@ -528,6 +528,52 @@ impl SurfacePoint {
     }
 }
 
+/// One value read from a surface, with the derivatives of its total variance there.
+///
+/// Total variance `w(k, T)` is read as [`ImpliedVolatilitySurface::point`] reads it, and these
+/// are its derivatives under the same rule for the same place:
+///
+/// | Where | `dw/dk`, `d2w/dk2` | `dw/dT` |
+/// |---|---|---|
+/// | At a fitted expiry | The slice's | The left side, below |
+/// | Between `T1` and `T2` | `(1 - theta)` of the first plus `theta` of the second | `(w2 - w1) / (T2 - T1)` |
+/// | Before the first or after the last | The slice's times `T / T_ref` | `w_ref / T_ref` |
+///
+/// # `dw/dT` at a fitted expiry
+///
+/// Total variance is linear in `T` between expiries, so it has a kink at each, and `dw/dT` has
+/// two values there. This is the **left side**, the segment towards shorter expiries: time
+/// reduces `T`, so that is the side an option ages along and what its theta needs. At the first
+/// fitted expiry, and on a surface with one, that segment is the flat volatility rule read
+/// before the first expiry, `w / T`. A read within the resolution of `T` of a fitted expiry is at
+/// that expiry, as in [`ImpliedVolatilitySurface::point`], so this applies to it.
+///
+/// # `dw/dT` is at fixed log moneyness
+///
+/// With `k = ln(K / F(T))` and `F(T) = S e^((r - q) T)`, a fixed strike has `dk/dT = -(r - q)`, so
+/// at fixed strike
+///
+/// ```text
+/// dw/dT at fixed K = dw/dT - (r - q) * dw/dk
+/// ```
+///
+/// # Sign
+///
+/// `dw/dT` is signed. Where total variance decreases between two expiries, a calendar violation,
+/// it is negative, and that is not an error: the arbitrage report is what names the violation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SurfacePointDerivatives {
+    /// The value, exactly as [`ImpliedVolatilitySurface::point`] reads it.
+    pub point: SurfacePoint,
+    /// `dw/dk` at fixed `T`, in total variance per unit of log moneyness.
+    pub total_variance_slope: Decimal,
+    /// `d2w/dk2` at fixed `T`, in total variance per squared unit of log moneyness.
+    pub total_variance_curvature: Decimal,
+    /// `dw/dT` at fixed `k`, signed, in total variance per year.
+    pub total_variance_time_slope: Decimal,
+}
+
 /// A scenario applied to every expiry of a surface, by
 /// [`ImpliedVolatilitySurface::shock`].
 ///
@@ -1070,14 +1116,41 @@ impl ImpliedVolatilitySurface {
         strike: Positive,
         expiry: DateTime<Utc>,
     ) -> Result<SurfacePoint, ImpliedVolatilitySurfaceError> {
+        let (k, years) = self.coordinates_of(strike, expiry)?;
+        self.point(k, years)
+    }
+
+    /// Reads the surface and the derivatives of its total variance at a strike and an expiry:
+    /// `k = ln(K / F(T))`, with the forward of that expiry. See
+    /// [`ImpliedVolatilitySurface::point_with_derivatives`]. The derivative in time is still at
+    /// fixed `k`: [`SurfacePointDerivatives`] gives the conversion to a fixed strike.
+    ///
+    /// # Errors
+    ///
+    /// The errors of [`ImpliedVolatilitySurface::point_at_strike`] and of
+    /// [`ImpliedVolatilitySurface::point_with_derivatives`].
+    pub fn point_at_strike_with_derivatives(
+        &self,
+        strike: Positive,
+        expiry: DateTime<Utc>,
+    ) -> Result<SurfacePointDerivatives, ImpliedVolatilitySurfaceError> {
+        let (k, years) = self.coordinates_of(strike, expiry)?;
+        self.point_with_derivatives(k, years)
+    }
+
+    /// The log moneyness and the time to expiry of a strike and an expiry.
+    fn coordinates_of(
+        &self,
+        strike: Positive,
+        expiry: DateTime<Utc>,
+    ) -> Result<(Decimal, Positive), ImpliedVolatilitySurfaceError> {
         let Some(TimeToExpiry { years, .. }) = time_to_expiry(self.market.as_of, expiry)? else {
             return Err(ImpliedVolatilitySurfaceError::ExpiryNotAfterAsOf {
                 expiry,
                 as_of: self.market.as_of,
             });
         };
-        let k = log_moneyness(strike, self.market.forward(years)?)?;
-        self.point(k, years)
+        Ok((log_moneyness(strike, self.market.forward(years)?)?, years))
     }
 
     /// Reads the surface at a log moneyness and a time to expiry in years.
@@ -1105,6 +1178,98 @@ impl ImpliedVolatilitySurface {
         k: Decimal,
         time_to_expiry: Positive,
     ) -> Result<SurfacePoint, ImpliedVolatilitySurfaceError> {
+        Ok(self.read(k, time_to_expiry)?.0)
+    }
+
+    /// Reads the surface at a log moneyness and a time to expiry in years, with the derivatives
+    /// of total variance there.
+    ///
+    /// [`SurfacePointDerivatives::point`] is exactly what [`ImpliedVolatilitySurface::point`]
+    /// gives, and a read beyond [`ExtrapolationPolicy`] is its same error. See
+    /// [`SurfacePointDerivatives`] for each derivative, for the side `dw/dT` takes at a fitted
+    /// expiry, and for its conversion to a fixed strike.
+    ///
+    /// # Errors
+    ///
+    /// The errors of [`ImpliedVolatilitySurface::point`], and
+    /// [`ImpliedVolatilitySurfaceError::Svi`] or [`ImpliedVolatilitySurfaceError::Decimal`] if a
+    /// derivative leaves the range of a `Decimal`. A negative `dw/dT` is not an error.
+    pub fn point_with_derivatives(
+        &self,
+        k: Decimal,
+        time_to_expiry: Positive,
+    ) -> Result<SurfacePointDerivatives, ImpliedVolatilitySurfaceError> {
+        const OP: &str = "surface::derivatives";
+        let (point, located) = self.read(k, time_to_expiry)?;
+        let (total_variance_slope, total_variance_curvature, total_variance_time_slope) =
+            match located {
+                Located::Fitted(expiry) => (
+                    expiry.slice.total_variance_slope(k)?,
+                    expiry.slice.total_variance_curvature(k)?,
+                    self.left_time_slope(expiry, k)?,
+                ),
+                Located::Between {
+                    earlier,
+                    later,
+                    theta,
+                } => (
+                    blend(
+                        earlier.slice.total_variance_slope(k)?,
+                        later.slice.total_variance_slope(k)?,
+                        theta,
+                    )?,
+                    blend(
+                        earlier.slice.total_variance_curvature(k)?,
+                        later.slice.total_variance_curvature(k)?,
+                        theta,
+                    )?,
+                    time_slope_between(earlier, later, k)?,
+                ),
+                Located::Before(expiry) | Located::After(expiry) => {
+                    let scale = d_div(
+                        point.time_to_expiry.to_dec(),
+                        expiry.time_to_expiry().to_dec(),
+                        OP,
+                    )?;
+                    (
+                        d_mul(expiry.slice.total_variance_slope(k)?, scale, OP)?,
+                        d_mul(expiry.slice.total_variance_curvature(k)?, scale, OP)?,
+                        flat_volatility_time_slope(expiry, k)?,
+                    )
+                }
+            };
+        Ok(SurfacePointDerivatives {
+            point,
+            total_variance_slope,
+            total_variance_curvature,
+            total_variance_time_slope,
+        })
+    }
+
+    /// `dw/dT` at a fitted expiry, on the segment towards shorter expiries.
+    fn left_time_slope(
+        &self,
+        expiry: &SurfaceExpiry,
+        k: Decimal,
+    ) -> Result<Decimal, ImpliedVolatilitySurfaceError> {
+        let position = self
+            .expiries
+            .partition_point(|other| other.time_to_expiry() < expiry.time_to_expiry());
+        match position
+            .checked_sub(1)
+            .and_then(|index| self.expiries.get(index))
+        {
+            Some(earlier) => time_slope_between(earlier, expiry, k),
+            None => flat_volatility_time_slope(expiry, k),
+        }
+    }
+
+    /// Reads the surface, and says where the read fell for what is computed from it.
+    fn read(
+        &self,
+        k: Decimal,
+        time_to_expiry: Positive,
+    ) -> Result<(SurfacePoint, Located<'_>), ImpliedVolatilitySurfaceError> {
         const OP: &str = "surface::point";
         if time_to_expiry.is_zero() {
             return Err(ImpliedVolatilitySurfaceError::ZeroTimeToExpiry);
@@ -1157,7 +1322,7 @@ impl ImpliedVolatilitySurface {
             Located::Before(_) => (SurfaceExpiryRegion::BeforeFirstExpiry, false),
             Located::After(_) => (SurfaceExpiryRegion::AfterLastExpiry, false),
         };
-        Ok(SurfacePoint {
+        let point = SurfacePoint {
             log_moneyness: k,
             time_to_expiry,
             forward: self.market.forward(time_to_expiry)?,
@@ -1166,7 +1331,8 @@ impl ImpliedVolatilitySurface {
             wing_extension,
             expiry_region,
             bridges_unfitted_expiry,
-        })
+        };
+        Ok((point, located))
     }
 
     /// Where a time to expiry lies against the fitted expiries, or the error the policy
@@ -1421,6 +1587,40 @@ enum Located<'a> {
     },
     Before(&'a SurfaceExpiry),
     After(&'a SurfaceExpiry),
+}
+
+/// `dw/dT` at fixed `k` on the segment between two expiries: `(w2 - w1) / (T2 - T1)`.
+fn time_slope_between(
+    earlier: &SurfaceExpiry,
+    later: &SurfaceExpiry,
+    k: Decimal,
+) -> Result<Decimal, ImpliedVolatilitySurfaceError> {
+    const OP: &str = "surface::time_slope";
+    Ok(d_div(
+        d_sub(
+            later.slice.total_variance(k)?.to_dec(),
+            earlier.slice.total_variance(k)?.to_dec(),
+            OP,
+        )?,
+        d_sub(
+            later.time_to_expiry().to_dec(),
+            earlier.time_to_expiry().to_dec(),
+            OP,
+        )?,
+        OP,
+    )?)
+}
+
+/// `dw/dT` at fixed `k` under the flat volatility rule beyond the expiries: `w / T`.
+fn flat_volatility_time_slope(
+    expiry: &SurfaceExpiry,
+    k: Decimal,
+) -> Result<Decimal, ImpliedVolatilitySurfaceError> {
+    Ok(d_div(
+        expiry.slice.total_variance(k)?.to_dec(),
+        expiry.time_to_expiry().to_dec(),
+        "surface::flat_time_slope",
+    )?)
 }
 
 /// The inputs shared by every expiry.
@@ -4802,6 +5002,450 @@ mod tests_implied_volatility_surface {
             surface.export_surface(&[dec!(0)], &[]),
             Err(ImpliedVolatilitySurfaceError::EmptyExportGrid)
         ));
+    }
+
+    // Derivatives of total variance.
+
+    /// `w`, `w'` and `w''` of the slice `EARLY` at `k = 0.13`, worked out by hand from the raw SVI
+    /// formula to 28 places, independently of the crate.
+    const HAND_EARLY: (Decimal, Decimal, Decimal) = (
+        dec!(0.028340659228538016125002842),
+        dec!(-0.002860932364589627370684755),
+        dec!(0.400205470209163498160724620),
+    );
+    /// `w`, `w'` and `w''` of the slice `MIDDLE` at `k = 0.13`, worked out by hand from the raw SVI
+    /// formula to 28 places, independently of the crate.
+    const HAND_MIDDLE: (Decimal, Decimal, Decimal) = (
+        dec!(0.065099552236035204972789354),
+        dec!(-0.024059553717480130372016715),
+        dec!(0.394074134736629360659514358),
+    );
+    /// `w`, `w'` and `w''` of the slice `LATE` at `k = 0.13`, worked out by hand from the raw SVI
+    /// formula to 28 places, independently of the crate.
+    const HAND_LATE: (Decimal, Decimal, Decimal) = (
+        dec!(0.125317279136368421459697626),
+        dec!(-0.017529407246171207931690934),
+        dec!(0.347067503752352751383768512),
+    );
+
+    /// A surface of exactly these raw SVI slices, each quoted across `k` of about -0.5 to 0.5.
+    fn surface_of_slices(
+        slices: &[(i64, (Decimal, Decimal, Decimal, Decimal, Decimal))],
+        extrapolation: ExtrapolationPolicy,
+    ) -> ImpliedVolatilitySurface {
+        let market = market();
+        let expiries: Vec<SurfaceExpiry> = slices
+            .iter()
+            .map(|(days, (a, b, rho, m, sigma))| {
+                let t = years(*days);
+                let forward = market.forward(t).unwrap();
+                let slice = SviSlice::try_new(
+                    SviParameters::try_new(*a, *b, *rho, *m, *sigma).unwrap(),
+                    forward,
+                    t,
+                )
+                .unwrap();
+                let quotes = [dec!(-0.5), dec!(0.5)].map(|k| QuoteInFit {
+                    strike: pos(forward.to_dec() * d_exp(k, "test").unwrap()),
+                    style: OptionStyle::Call,
+                    volatility: pos(dec!(0.2)),
+                    weight: Positive::ONE,
+                    bid: Positive::ONE,
+                    ask: Positive::TWO,
+                });
+                SurfaceExpiry::from_slice(in_days(*days), slice, &quotes, &market).unwrap()
+            })
+            .collect();
+        let arbitrage_grid = vec![dec!(0)];
+        let (arbitrage_report, calendar_checked) =
+            check_expiries(&expiries, &market, &arbitrage_grid).unwrap();
+        ImpliedVolatilitySurface {
+            market,
+            extrapolation,
+            expiries,
+            unfitted: Vec::new(),
+            rejections: Vec::new(),
+            arbitrage_grid,
+            arbitrage_report,
+            calendar_checked,
+            shocks: Vec::new(),
+        }
+    }
+
+    fn early() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+        (dec!(0.01), dec!(0.1), dec!(-0.4), dec!(0.05), dec!(0.2))
+    }
+
+    fn middle() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+        (dec!(0.03), dec!(0.12), dec!(-0.3), dec!(0.1), dec!(0.3))
+    }
+
+    fn late() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+        (dec!(0.07), dec!(0.14), dec!(-0.2), dec!(0.1), dec!(0.4))
+    }
+
+    fn wide() -> ExtrapolationPolicy {
+        ExtrapolationPolicy {
+            max_wing_extension: Positive::ONE,
+            max_short_extension: Positive::ONE,
+            max_long_extension: Positive::TEN,
+        }
+    }
+
+    fn three_slices() -> ImpliedVolatilitySurface {
+        surface_of_slices(&[(91, early()), (365, middle()), (730, late())], wide())
+    }
+
+    const HAND_K: Decimal = Decimal::from_parts(13, 0, 0, false, 2);
+    const HAND_TOLERANCE: Decimal = Decimal::from_parts(1, 0, 0, false, 22);
+
+    fn assert_derivatives(
+        read: &SurfacePointDerivatives,
+        slope: Decimal,
+        curvature: Decimal,
+        time_slope: Decimal,
+    ) {
+        assert_close(read.total_variance_slope, slope, HAND_TOLERANCE);
+        assert_close(read.total_variance_curvature, curvature, HAND_TOLERANCE);
+        assert_close(read.total_variance_time_slope, time_slope, HAND_TOLERANCE);
+    }
+
+    #[test]
+    fn test_derivatives_at_a_fitted_expiry_match_the_hand_values_on_the_left_side() {
+        let surface = three_slices();
+        let (t1, t2, t3) = (years(91).to_dec(), years(365).to_dec(), years(730).to_dec());
+        // The first expiry: the flat volatility rule, `w / T`.
+        let read = surface.point_with_derivatives(HAND_K, years(91)).unwrap();
+        assert_close(
+            read.point.total_variance.to_dec(),
+            HAND_EARLY.0,
+            HAND_TOLERANCE,
+        );
+        assert_derivatives(&read, HAND_EARLY.1, HAND_EARLY.2, HAND_EARLY.0 / t1);
+        // A middle one: the segment towards shorter expiries, not the one after.
+        let read = surface.point_with_derivatives(HAND_K, years(365)).unwrap();
+        assert_derivatives(
+            &read,
+            HAND_MIDDLE.1,
+            HAND_MIDDLE.2,
+            (HAND_MIDDLE.0 - HAND_EARLY.0) / (t2 - t1),
+        );
+        assert!(
+            (read.total_variance_time_slope - (HAND_LATE.0 - HAND_MIDDLE.0) / (t3 - t2)).abs()
+                > dec!(0.01)
+        );
+        // The last one: the same side, not the flat rule read after it.
+        let read = surface.point_with_derivatives(HAND_K, years(730)).unwrap();
+        assert_derivatives(
+            &read,
+            HAND_LATE.1,
+            HAND_LATE.2,
+            (HAND_LATE.0 - HAND_MIDDLE.0) / (t3 - t2),
+        );
+        assert!((read.total_variance_time_slope - HAND_LATE.0 / t3).abs() > dec!(0.001));
+    }
+
+    #[test]
+    fn test_derivatives_between_two_expiries_match_the_hand_values() {
+        let surface = three_slices();
+        let (t1, t2) = (years(91).to_dec(), years(365).to_dec());
+        // A quarter of the way, so that swapping the two ends gets it wrong.
+        let t = t1 + (t2 - t1) / dec!(4);
+        let read = surface.point_with_derivatives(HAND_K, pos(t)).unwrap();
+        assert_close(
+            read.point.total_variance.to_dec(),
+            dec!(0.75) * HAND_EARLY.0 + dec!(0.25) * HAND_MIDDLE.0,
+            HAND_TOLERANCE,
+        );
+        assert_derivatives(
+            &read,
+            dec!(0.75) * HAND_EARLY.1 + dec!(0.25) * HAND_MIDDLE.1,
+            dec!(0.75) * HAND_EARLY.2 + dec!(0.25) * HAND_MIDDLE.2,
+            (HAND_MIDDLE.0 - HAND_EARLY.0) / (t2 - t1),
+        );
+    }
+
+    #[test]
+    fn test_derivatives_before_and_after_the_expiries_match_the_flat_rule() {
+        let surface = three_slices();
+        let (t1, t3) = (years(91).to_dec(), years(730).to_dec());
+        let t = t1 / dec!(4);
+        let read = surface.point_with_derivatives(HAND_K, pos(t)).unwrap();
+        assert_eq!(
+            read.point.expiry_region,
+            SurfaceExpiryRegion::BeforeFirstExpiry
+        );
+        assert_derivatives(
+            &read,
+            HAND_EARLY.1 / dec!(4),
+            HAND_EARLY.2 / dec!(4),
+            HAND_EARLY.0 / t1,
+        );
+        let t = t3 * dec!(3);
+        let read = surface.point_with_derivatives(HAND_K, pos(t)).unwrap();
+        assert_eq!(
+            read.point.expiry_region,
+            SurfaceExpiryRegion::AfterLastExpiry
+        );
+        assert_derivatives(
+            &read,
+            HAND_LATE.1 * dec!(3),
+            HAND_LATE.2 * dec!(3),
+            HAND_LATE.0 / t3,
+        );
+    }
+
+    #[test]
+    fn test_derivatives_of_one_expiry_take_the_flat_rule_on_every_side() {
+        let surface = surface_of_slices(&[(91, early())], wide());
+        let t1 = years(91).to_dec();
+        for t in [t1, t1 / dec!(2), t1 * dec!(2)] {
+            let read = surface.point_with_derivatives(HAND_K, pos(t)).unwrap();
+            assert_close(
+                read.total_variance_time_slope,
+                HAND_EARLY.0 / t1,
+                HAND_TOLERANCE,
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_within_the_resolution_of_an_expiry_takes_its_left_side() {
+        let surface = three_slices();
+        let t2 = years(365).to_dec();
+        let exact = surface.point_with_derivatives(HAND_K, years(365)).unwrap();
+        for near in [t2 * dec!(1.0000000000000005), t2 * dec!(0.9999999999999995)] {
+            let read = surface.point_with_derivatives(HAND_K, pos(near)).unwrap();
+            assert_eq!(read, exact);
+        }
+        // Computed in `Decimal`, this is the first expiry, whose left side is the flat rule.
+        let computed = pos(dec!(91) / dec!(365));
+        let read = surface.point_with_derivatives(HAND_K, computed).unwrap();
+        assert_close(
+            read.total_variance_time_slope,
+            HAND_EARLY.0 / years(91).to_dec(),
+            HAND_TOLERANCE,
+        );
+    }
+
+    #[test]
+    fn test_calendar_violation_gives_a_negative_time_slope_and_no_error() {
+        // The two slices crossed: more total variance at the shorter expiry.
+        let surface = surface_of_slices(&[(91, middle()), (365, early())], wide());
+        let (t1, t2) = (years(91).to_dec(), years(365).to_dec());
+        let expected = (HAND_EARLY.0 - HAND_MIDDLE.0) / (t2 - t1);
+        assert!(expected < dec!(0));
+        for t in [(t1 + t2) / dec!(2), t2] {
+            let read = surface.point_with_derivatives(HAND_K, pos(t)).unwrap();
+            assert_close(read.total_variance_time_slope, expected, HAND_TOLERANCE);
+        }
+    }
+
+    /// `dw/dk`, `d2w/dk2` and `dw/dT` by central differences of `point`.
+    fn central_differences(
+        surface: &ImpliedVolatilitySurface,
+        k: Decimal,
+        t: Decimal,
+    ) -> (Decimal, Decimal, Decimal) {
+        let w = |k: Decimal, t: Decimal| surface.point(k, pos(t)).unwrap().total_variance.to_dec();
+        let (h, h2, dt) = (dec!(0.00001), dec!(0.0001), dec!(0.0001));
+        (
+            (w(k + h, t) - w(k - h, t)) / (dec!(2) * h),
+            (w(k + h2, t) - dec!(2) * w(k, t) + w(k - h2, t)) / (h2 * h2),
+            (w(k, t + dt) - w(k, t - dt)) / (dec!(2) * dt),
+        )
+    }
+
+    fn assert_matches_central_differences(
+        surface: &ImpliedVolatilitySurface,
+        k: Decimal,
+        t: Decimal,
+    ) {
+        let read = surface.point_with_derivatives(k, pos(t)).unwrap();
+        assert_eq!(read.point, surface.point(k, pos(t)).unwrap());
+        let (slope, curvature, time_slope) = central_differences(surface, k, t);
+        let at = format!("k = {k}, T = {t}: {read:?}");
+        assert!(
+            (read.total_variance_slope - slope).abs() < dec!(0.00000001),
+            "{at}: {slope}"
+        );
+        assert!(
+            (read.total_variance_curvature - curvature).abs() < dec!(0.000001),
+            "{at}: {curvature}"
+        );
+        assert!(
+            (read.total_variance_time_slope - time_slope).abs() < dec!(0.0000000001),
+            "{at}: {time_slope}"
+        );
+    }
+
+    #[test]
+    fn test_derivatives_match_central_differences_away_from_the_expiries() {
+        let surface = three_slices();
+        let (t1, t2, t3) = (years(91).to_dec(), years(365).to_dec(), years(730).to_dec());
+        let times = [
+            // Between expiries.
+            (t1 + t2) / dec!(2),
+            (t2 + t3) / dec!(2),
+            // Before the first and after the last, within the policy.
+            t1 / dec!(2),
+            t3 + dec!(1),
+        ];
+        // At the money, inside the quotes, and in the wings beyond them within the policy.
+        for k in [dec!(0), dec!(0.13), dec!(-0.3), dec!(0.8), dec!(-1.2)] {
+            for t in times {
+                assert_matches_central_differences(&surface, k, t);
+            }
+        }
+    }
+
+    #[test]
+    fn test_derivatives_of_a_calibrated_surface_match_central_differences() {
+        let surface = two_expiries(&flexible());
+        for k in [dec!(0), dec!(0.03), dec!(-0.04), dec!(0.3)] {
+            assert_matches_central_differences(&surface, k, dec!(0.6));
+        }
+    }
+
+    #[test]
+    fn test_derivatives_of_a_shocked_surface_are_its_own() {
+        let surface = three_slices();
+        for shock in [
+            SurfaceShock::Level {
+                volatility: dec!(0.02),
+            },
+            SurfaceShock::Skew { rho: dec!(-0.1) },
+            SurfaceShock::Term {
+                slope: dec!(0.01),
+                pivot: Positive::ONE,
+            },
+        ] {
+            let shocked = surface.shock(shock).unwrap();
+            for k in [dec!(0), dec!(0.13), dec!(-0.3)] {
+                for t in [dec!(0.5), dec!(1.5), dec!(0.1), dec!(3)] {
+                    assert_matches_central_differences(&shocked, k, t);
+                }
+                // At each expiry, the slice the shock left and its own segment.
+                let [first, second, _] = shocked.expiries() else {
+                    panic!("three expiries");
+                };
+                let read = shocked
+                    .point_with_derivatives(k, second.time_to_expiry())
+                    .unwrap();
+                assert_eq!(
+                    read.total_variance_slope,
+                    second.slice().total_variance_slope(k).unwrap()
+                );
+                assert_eq!(
+                    read.total_variance_curvature,
+                    second.slice().total_variance_curvature(k).unwrap()
+                );
+                assert_eq!(
+                    read.total_variance_time_slope,
+                    time_slope_between(first, second, k).unwrap()
+                );
+            }
+        }
+        // A skew shock moves the slope by `b * x` and leaves the curvature.
+        let x = dec!(-0.1);
+        let shocked = surface.shock(SurfaceShock::Skew { rho: x }).unwrap();
+        let t = years(91);
+        let (before, after) = (
+            surface.point_with_derivatives(HAND_K, t).unwrap(),
+            shocked.point_with_derivatives(HAND_K, t).unwrap(),
+        );
+        assert_close(
+            after.total_variance_slope - before.total_variance_slope,
+            dec!(0.1) * x,
+            HAND_TOLERANCE,
+        );
+        assert_close(
+            after.total_variance_curvature,
+            before.total_variance_curvature,
+            HAND_TOLERANCE,
+        );
+    }
+
+    #[test]
+    fn test_time_slope_at_fixed_strike_is_the_stated_conversion() {
+        // `dw/dT` at fixed `K` by central differences of the read at a strike, against
+        // `dw/dT - (r - q) * dw/dk` at the same point. `r - q` is not zero here, so a wrong
+        // sign shows.
+        let surface = three_slices();
+        let strike = pos(dec!(108));
+        let carry = RATE - YIELD;
+        let fixed_strike_w = |t: Decimal| {
+            let forward = market().forward(pos(t)).unwrap();
+            let k = log_moneyness(strike, forward).unwrap();
+            surface.point(k, pos(t)).unwrap().total_variance.to_dec()
+        };
+        for t in [dec!(0.5), dec!(1.5), dec!(0.1), dec!(3)] {
+            let dt = dec!(0.00001);
+            let numerical = (fixed_strike_w(t + dt) - fixed_strike_w(t - dt)) / (dec!(2) * dt);
+            let k = log_moneyness(strike, market().forward(pos(t)).unwrap()).unwrap();
+            let read = surface.point_with_derivatives(k, pos(t)).unwrap();
+            let stated = read.total_variance_time_slope - carry * read.total_variance_slope;
+            assert_close(numerical, stated, dec!(0.00000001));
+            let wrong_sign = read.total_variance_time_slope + carry * read.total_variance_slope;
+            assert!((numerical - wrong_sign).abs() > dec!(0.00001), "{t}");
+        }
+    }
+
+    #[test]
+    fn test_read_at_a_strike_is_the_read_at_its_log_moneyness() {
+        let surface = three_slices();
+        let expiry = in_days(200);
+        let t = time_to_expiry(as_of(), expiry).unwrap().unwrap().years;
+        let strike = pos(dec!(103));
+        let k = log_moneyness(strike, market().forward(t).unwrap()).unwrap();
+        assert_eq!(
+            surface
+                .point_at_strike_with_derivatives(strike, expiry)
+                .unwrap(),
+            surface.point_with_derivatives(k, t).unwrap()
+        );
+        assert_eq!(
+            surface
+                .point_at_strike_with_derivatives(strike, expiry)
+                .unwrap()
+                .point,
+            surface.point_at_strike(strike, expiry).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_derivatives_beyond_the_policy_are_the_same_error_as_the_point() {
+        let surface = two_expiries(&ImpliedVolatilitySurfaceConfig::default());
+        let last = surface.expiries().last().unwrap();
+        let cases = [
+            (
+                last.highest_log_moneyness() + dec!(0.5),
+                last.time_to_expiry(),
+            ),
+            (dec!(0), pos(dec!(0.01))),
+            (dec!(0), pos(dec!(9))),
+            (dec!(0), Positive::ZERO),
+        ];
+        for (k, t) in cases {
+            let point = surface.point(k, t).unwrap_err();
+            let read = surface.point_with_derivatives(k, t).unwrap_err();
+            assert_eq!(point.to_string(), read.to_string());
+            assert_eq!(
+                std::mem::discriminant(&point),
+                std::mem::discriminant(&read)
+            );
+        }
+        for (strike, expiry) in [
+            (Positive::HUNDRED, as_of()),
+            (Positive::ZERO, in_days(365)),
+            (Positive::HUNDRED, in_days(3000)),
+        ] {
+            let point = surface.point_at_strike(strike, expiry).unwrap_err();
+            let read = surface
+                .point_at_strike_with_derivatives(strike, expiry)
+                .unwrap_err();
+            assert_eq!(point.to_string(), read.to_string());
+        }
     }
 
     #[test]
