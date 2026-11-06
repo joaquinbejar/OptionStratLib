@@ -15,7 +15,7 @@ the tables with the code; the check names the row that drifted.
 ## How to read it
 
 - **Defining module** is where the item lives and what a direct dependency on
-  that component imports: `optionstratlib-pricing = "0.22"` gives
+  that component imports: `optionstratlib-pricing = "0.24"` gives
   `optionstratlib_pricing::pricing::black_scholes`.
 - **Facade path** is the same item through `optionstratlib`. The two paths
   are the same type (`TypeId`), never a wrapper: `tests/unit/canonical_paths_test.rs`
@@ -120,10 +120,6 @@ and `optionstratlib::error::OperationErrorKind`.
 | `BacktestError` | `optionstratlib-backtest` | `optionstratlib_backtest::error::BacktestError` | `optionstratlib::error::BacktestError` | backtest | — |
 | `GraphError` | `optionstratlib-visualization` | `optionstratlib_visualization::error::GraphError` | `optionstratlib::error::GraphError` | visualization | — |
 | `Error` (aggregate over the errors above) | `optionstratlib` (facade) | `optionstratlib::error::Error` | `optionstratlib::error::Error` | visualization | — |
-
-The aggregate `Error` has no variant for `SviError`, `SettlementError`,
-`StaticArbitrageError` or `ImpliedVolatilitySurfaceError` yet: `Error` is an
-exhaustive enum, so adding one is breaking, and it comes with the 0.24.0 bump.
 
 The `...Result<T>` aliases sit next to their error, flat: `DecimalResult`,
 `OptionsResult`, `CurvesResult`, `PricingResult`, `GreeksResult`,

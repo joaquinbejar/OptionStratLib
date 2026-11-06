@@ -21,9 +21,7 @@ use thiserror::Error;
 /// [`StaticArbitrageReport`](crate::volatility::StaticArbitrageReport). This is
 /// for a check that cannot be evaluated, which must not read as one that passed.
 ///
-/// The aggregate `optionstratlib::error::Error` has no variant for it yet:
-/// adding one to that exhaustive enum is breaking, and #944 adds it with the
-/// 0.24.0 bump.
+/// The aggregate `optionstratlib::error::Error` wraps it as `StaticArbitrage`.
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum StaticArbitrageError {

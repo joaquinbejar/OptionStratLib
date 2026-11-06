@@ -197,8 +197,7 @@ pub struct UnfittedExpiry {
 /// [`ImpliedVolatilitySurface::unfitted`](crate::volatility::ImpliedVolatilitySurface::unfitted).
 /// Only a surface with no fitted expiry at all is an error, and it carries both.
 ///
-/// The aggregate `optionstratlib::error::Error` has no variant for it yet: adding
-/// one to that exhaustive enum is breaking, and it comes with the 0.24.0 bump.
+/// The aggregate `optionstratlib::error::Error` wraps it as `ImpliedVolatilitySurface`.
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum ImpliedVolatilitySurfaceError {

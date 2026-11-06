@@ -124,6 +124,26 @@ pub enum Error {
     #[error(transparent)]
     Trade(#[from] crate::error::TradeError),
 
+    /// The current time was asked for and this build cannot provide it.
+    #[error(transparent)]
+    Clock(#[from] crate::error::ClockError),
+
+    /// Expiry, exercise and settlement obligations.
+    #[error(transparent)]
+    Settlement(#[from] crate::error::SettlementError),
+
+    /// Raw SVI parameter validation and slice calibration.
+    #[error(transparent)]
+    Svi(#[from] crate::error::SviError),
+
+    /// A butterfly or calendar check that cannot be evaluated.
+    #[error(transparent)]
+    StaticArbitrage(#[from] crate::error::StaticArbitrageError),
+
+    /// A calibrated implied volatility surface that cannot be built, read or shocked.
+    #[error(transparent)]
+    ImpliedVolatilitySurface(#[from] crate::error::ImpliedVolatilitySurfaceError),
+
     /// Empty input collection supplied to a utility that requires at least one element.
     #[error("empty collection: {context}")]
     EmptyCollection {
@@ -135,4 +155,28 @@ pub enum Error {
     /// and documentation snippets (plot saving, chain loading, etc.).
     #[error(transparent)]
     Io(#[from] std::io::Error),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::{
+        ClockError, ImpliedVolatilitySurfaceError, SettlementError, StaticArbitrageError, SviError,
+    };
+
+    #[test]
+    fn test_error_clock_variant_keeps_the_message_of_its_source() {
+        let error = Error::from(ClockError::Unavailable);
+        assert!(matches!(error, Error::Clock(ClockError::Unavailable)));
+        assert_eq!(error.to_string(), ClockError::Unavailable.to_string());
+    }
+
+    #[test]
+    fn test_error_converts_from_every_error_added_in_0_24() {
+        fn converts<E: Into<Error>>() {}
+        converts::<SettlementError>();
+        converts::<SviError>();
+        converts::<StaticArbitrageError>();
+        converts::<ImpliedVolatilitySurfaceError>();
+    }
 }
