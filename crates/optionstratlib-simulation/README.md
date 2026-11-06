@@ -8,8 +8,8 @@ strategy, backtesting, plotting, I/O or terminal-presentation code.
 
 | Module       | Contents                                                                                                   |
 |--------------|------------------------------------------------------------------------------------------------------------|
-| `simulation` | `WalkType` (Brownian, geometric Brownian, log-returns, mean-reverting, jump diffusion, GARCH, Heston, telegraph, custom, historical) and `WalkTypeAble`; `WalkParams`, `Step`, `Xstep`, `Ystep`; `walk_steps`, `walk_steps_par`, `generator_positive`; `RandomWalk`, `Simulator`; `generate_ou_process`; `ExitPolicy`; `PathEvaluator`, `PathOutcome`, `PathStatistics`, `evaluate_paths` |
-| `error`      | `SimulationError`, `SimulationResult`                                                                      |
+| `simulation` | `WalkType` (Brownian, geometric Brownian, log-returns, mean-reverting, jump diffusion, GARCH, Heston, telegraph, custom, historical) and `WalkTypeAble`; `WalkParams`, `Step`, `Xstep`, `Ystep`; `walk_steps`, `walk_steps_par`, `generator_positive`; `RandomWalk`, `Simulator`; `generate_ou_process`; `QuadraticRoughHestonKernel`, `QuadraticRoughHestonParams`, `QuadraticRoughHestonGrid`, `QuadraticRoughHestonPath`, `QuadraticRoughHestonEstimate`, `simulate_quadratic_rough_heston_path`, `price_vanilla_quadratic_rough_heston`; `ExitPolicy`; `PathEvaluator`, `PathOutcome`, `PathStatistics`, `evaluate_paths` |
+| `error`      | `SimulationError`, `SimulationResult`, `QuadraticRoughHestonError`                                         |
 
 Prices along a path are `Positive`, drifts and statistics
 `rust_decimal::Decimal`; `f64` stays inside the kernels. The evaluation of a
@@ -24,7 +24,8 @@ generators built on these walks stay with the backtesting, visualization and
   `-backtest` and `-visualization`; `make check-graph` enforces the layering
   (ADR-0001 D9).
 - **In the facade:** `optionstratlib::simulation` and `SimulationError` /
-  `SimulationResult` in `optionstratlib::error`, under the facade feature
+  `SimulationResult` / `QuadraticRoughHestonError` in `optionstratlib::error`,
+  under the facade feature
   `simulation`. The facade paths are the same types as the paths here; the
   [ownership
   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)

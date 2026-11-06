@@ -155,6 +155,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   option type, missing price, price observed after the cutoff, event
   incompatible with the side, and arithmetic overflow. Runnable example: `settlement_obligations`
   in `examples_pricing`.
+- **A simulation of the quadratic rough Heston model, and Monte Carlo prices of
+  vanillas on it** (#958), following Rosenbaum and Zhang, "Deep calibration of the
+  quadratic rough Heston model" (arXiv:2107.01611v2), Section 2 and Appendix A. In
+  `optionstratlib_simulation::simulation` (also `optionstratlib::simulation`), and not
+  in the prelude. `QuadraticRoughHestonKernel::try_new(alpha, factors, ratio)` gives the
+  weights and discounts of the geometric partition of the fractional kernel, and
+  `K^n(t)` through `value_at`. `QuadraticRoughHestonParams` and
+  `QuadraticRoughHestonGrid` hold the model, its initial factors and the steps.
+  `simulate_quadratic_rough_heston_path` runs the paper's scheme (A.1) from a seed, and
+  `price_vanilla_quadratic_rough_heston` returns a `QuadraticRoughHestonEstimate`: the
+  price, its standard error, the mean of `S_T` with its own, the paths, and the paths
+  whose spot was not above zero at some step. The spot is not clamped, since (A.1) can
+  take it below zero and a clamp breaks the martingale, so a put on such a path can pay
+  more than its strike. The variance is the plain square, not the truncated one of the
+  paper's footnote, and a state that stops being finite is an error with its step. A
+  price has no rates, as with `r = q = 0`. It does not depend on the number of threads.
+  No parameter set is a default, because the papers' values are for SPX and VIX. Tests
+  compare `a = 0` with Black-Scholes at `sigma^2 = c`, the mean of `S_T` with `S_0`, and
+  halve the step on stated parameters. New `#[non_exhaustive]`
+  `QuadraticRoughHestonError`, also a variant of the aggregate
+  `optionstratlib::error::Error`. `rand_distr` becomes a direct dependency of
+  `optionstratlib-simulation`, and `statrs` a dev-dependency. Runnable example:
+  `quadratic_rough_heston` in `examples_simulation`, with illustrative parameters.
 
 ### Changed — breaking
 

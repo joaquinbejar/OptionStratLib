@@ -1,8 +1,8 @@
 # Moving to 0.24: an optional clock, and new volatility and settlement APIs
 
 0.24 makes the wall clock optional, renames a surface whose name overstated what it
-computes, and adds calibrated volatility surfaces, SVI slices, static arbitrage checks
-and settlement obligations. The full list is in `CHANGELOG.md`. All ten crates move to
+computes, and adds calibrated volatility surfaces, SVI slices, static arbitrage checks,
+settlement obligations and a quadratic rough Heston simulation. The full list is in `CHANGELOG.md`. All ten crates move to
 `0.24.0`.
 
 ## If you set `default-features = false`
@@ -57,7 +57,8 @@ production item gated on it, so nothing is lost.
 
 `TradeError`, `PositionError`, `ChainError`, `StrategyError` and `TransactionError` have a
 new `Clock(ClockError)` variant. The aggregate `optionstratlib::error::Error` gains `Clock`,
-`Settlement`, `Svi`, `StaticArbitrage` and `ImpliedVolatilitySurface`. These enums are
+`Settlement`, `Svi`, `StaticArbitrage`, `ImpliedVolatilitySurface` and
+`QuadraticRoughHeston`. These enums are
 exhaustive, so a `match` over one needs the new arms or a wildcard.
 
 A time to expiry that cannot be measured does not arrive as `ClockError`.
@@ -122,6 +123,7 @@ different types.
 | A raw SVI slice fitted to observations | `calibrate_svi` | `svi_calibration` |
 | Butterfly and calendar checks on a grid | `check_butterfly`, `check_calendar`, `check_static_arbitrage` | `static_arbitrage` |
 | A surface calibrated from bid and ask quotes | `ImpliedVolatilitySurface::calibrate` | `calibrated_surface` |
+| A quadratic rough Heston path and Monte Carlo vanilla prices | `simulate_quadratic_rough_heston_path`, `price_vanilla_quadratic_rough_heston` | `quadratic_rough_heston`, in `examples_simulation` |
 
 None of them reads a clock. Passing the static arbitrage checks means only those checks, on
 that grid. A surface with findings is still built, so read its report.
