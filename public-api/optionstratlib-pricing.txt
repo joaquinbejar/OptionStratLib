@@ -851,6 +851,7 @@ pub fn optionstratlib_pricing::volatility::SurfaceExpiry::slice(&self) -> &optio
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::time_to_expiry(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::unweighted_rmse(&self) -> positive::positive::Positive
 #[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceExport
+pub optionstratlib_pricing::volatility::SurfaceExport::bridging_unfitted: alloc::vec::Vec<optionstratlib_pricing::volatility::SurfacePoint>
 pub optionstratlib_pricing::volatility::SurfaceExport::extrapolated: alloc::vec::Vec<optionstratlib_pricing::volatility::SurfacePoint>
 pub optionstratlib_pricing::volatility::SurfaceExport::surface: optionstratlib_math::surfaces::surface::Surface
 #[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfacePoint

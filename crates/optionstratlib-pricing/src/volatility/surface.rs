@@ -569,6 +569,9 @@ pub struct SurfaceExport {
     /// The points of the grid read outside the data, as the policy allows. A `Surface`
     /// cannot carry this flag itself.
     pub extrapolated: Vec<SurfacePoint>,
+    /// The points of the grid read across an expiry without a slice, so the data there was
+    /// not used. A `Surface` cannot carry this flag either. A point can be in both lists.
+    pub bridging_unfitted: Vec<SurfacePoint>,
 }
 
 /// A calibrated implied volatility surface: one raw SVI slice per fitted expiry, the
@@ -1296,8 +1299,9 @@ impl ImpliedVolatilitySurface {
     /// exports it as a generic [`Surface`].
     ///
     /// Every point goes through [`ImpliedVolatilitySurface::point`], so the policy applies:
-    /// one point beyond it fails the export, and those within it are listed in
-    /// [`SurfaceExport::extrapolated`].
+    /// one point beyond it fails the export, those within it are listed in
+    /// [`SurfaceExport::extrapolated`], and those read across an expiry without a slice in
+    /// [`SurfaceExport::bridging_unfitted`].
     ///
     /// # Errors
     ///
@@ -1313,6 +1317,7 @@ impl ImpliedVolatilitySurface {
         }
         let mut points = BTreeSet::new();
         let mut extrapolated = Vec::new();
+        let mut bridging_unfitted = Vec::new();
         for time_to_expiry in times_to_expiry {
             for k in log_moneyness {
                 let point = self.point(*k, *time_to_expiry)?;
@@ -1324,11 +1329,15 @@ impl ImpliedVolatilitySurface {
                 if point.is_extrapolated() {
                     extrapolated.push(point);
                 }
+                if point.bridges_unfitted_expiry {
+                    bridging_unfitted.push(point);
+                }
             }
         }
         Ok(SurfaceExport {
             surface: Surface::new(points),
             extrapolated,
+            bridging_unfitted,
         })
     }
 }
@@ -4343,6 +4352,34 @@ mod tests_implied_volatility_surface {
         assert_eq!(export.surface.points.len(), 2);
         assert_eq!(export.extrapolated.len(), 1);
         assert!(export.extrapolated.first().unwrap().is_extrapolated());
+    }
+
+    #[test]
+    fn test_export_lists_what_it_read_across_an_unfitted_expiry() {
+        // The middle expiry has quotes and all of them are stale, so it has no slice.
+        let stale = quotes_of(&[182]).into_iter().map(|quote| OptionQuote {
+            quoted_at: as_of() - TimeDelta::try_hours(2).unwrap(),
+            ..quote
+        });
+        let quotes: Vec<OptionQuote> = quotes_of(&[91, 365]).into_iter().chain(stale).collect();
+        let surface = calibrate(&quotes).unwrap();
+        assert_eq!(surface.unfitted().len(), 1);
+        let across = years(182);
+        let at_a_slice = years(91);
+        let export = surface
+            .export_surface(&[dec!(0), dec!(0.01)], &[at_a_slice, across])
+            .unwrap();
+        assert_eq!(export.surface.points.len(), 4);
+        assert!(export.extrapolated.is_empty());
+        assert_eq!(export.bridging_unfitted.len(), 2);
+        for point in &export.bridging_unfitted {
+            assert_eq!(point.time_to_expiry, across);
+            assert!(point.bridges_unfitted_expiry);
+        }
+        // With no gap to cross, nothing is listed.
+        let clean = calibrate(&quotes_of(&[91, 365])).unwrap();
+        let export = clean.export_surface(&[dec!(0)], &[across]).unwrap();
+        assert!(export.bridging_unfitted.is_empty());
     }
 
     #[test]
