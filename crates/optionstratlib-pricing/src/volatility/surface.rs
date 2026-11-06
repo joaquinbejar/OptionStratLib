@@ -5028,9 +5028,12 @@ mod tests_implied_volatility_surface {
         dec!(0.347067503752352751383768512),
     );
 
+    /// Raw SVI parameters: `a`, `b`, `rho`, `m` and `sigma`.
+    type RawSvi = (Decimal, Decimal, Decimal, Decimal, Decimal);
+
     /// A surface of exactly these raw SVI slices, each quoted across `k` of about -0.5 to 0.5.
     fn surface_of_slices(
-        slices: &[(i64, (Decimal, Decimal, Decimal, Decimal, Decimal))],
+        slices: &[(i64, RawSvi)],
         extrapolation: ExtrapolationPolicy,
     ) -> ImpliedVolatilitySurface {
         let market = market();
@@ -5072,15 +5075,15 @@ mod tests_implied_volatility_surface {
         }
     }
 
-    fn early() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+    fn early() -> RawSvi {
         (dec!(0.01), dec!(0.1), dec!(-0.4), dec!(0.05), dec!(0.2))
     }
 
-    fn middle() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+    fn middle() -> RawSvi {
         (dec!(0.03), dec!(0.12), dec!(-0.3), dec!(0.1), dec!(0.3))
     }
 
-    fn late() -> (Decimal, Decimal, Decimal, Decimal, Decimal) {
+    fn late() -> RawSvi {
         (dec!(0.07), dec!(0.14), dec!(-0.2), dec!(0.1), dec!(0.4))
     }
 
