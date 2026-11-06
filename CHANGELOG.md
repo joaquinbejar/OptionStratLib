@@ -20,14 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same decimal in every build, and needs a time only where it must become a calendar
   date: `build_chain`, `build_series` and the P&L of a bare `Options`. A `DateTime`
   measures from the thread's reference datetime, which parallel sections carry to their
-  workers; with none, every path with an error channel fails, never with a made-up
-  instant. New in `optionstratlib_core::utils::time`, in every build: `now`, `now_or`,
+  workers; with none, a result that depends on that time to expiry and can report an
+  error does, and is never computed from a made-up instant, while a path that does not
+  measure the expiry succeeds and a record keeps the date it carries. New in `optionstratlib_core::utils::time`, in every build: `now`, `now_or`,
   `evaluation_time`, `resolution_base`, `ReferenceCarrier`, `years_to_expiration`,
   `days_to_expiration` and `expiration_date_string`; with `clock`, `wall_clock`. New
   `OptionChain::try_update_greeks`, `try_update_greek_snapshots` and
   `require_time_to_expiry`. New pure forms that take
   the time: `Trade::new_at`, `Position::blank_at`, `days_held_at`,
-  `days_to_expiration_at` and `trade_at`, `OptionSeries::odte_at`, `new_at` on every
+  `days_to_expiration_at` and `trade_at`, `OptionSeries::odte_at`, `OptionChain::get_random_positions_at`, `new_at` on every
   strategy with a public `new`, and `SimulationResult::from_outcome_at`. New `#[non_exhaustive]`
   `ClockError` in `optionstratlib_core::error`, also at `optionstratlib::error`. A
   time to expiry carries it through `ExpirationDateError::InvalidDateTime`, since
@@ -153,8 +154,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `update_greek_snapshots` (empty Greeks; use the `try_` forms), and `is_delta_neutral`
   and `meets_greek_targets` (`false`; use `delta` and `portfolio_greeks`). Without the
   feature, `delta_exposure` and `gamma_exposure` fail on a strike with no Greek where a
-  build with it adds zero, and a single-leg simulation whose steps cannot read their
-  days returns the error instead of reporting the path as expired.
+  build with it adds zero, a single-leg simulation whose steps cannot read their
+  days returns the error instead of reporting the path as expired,
+  `OptionData::calculate_prices` returns it instead of wiping the quotes, and
+  `AdjustmentOptimizer::optimize` returns it instead of an empty plan.
 - **`TradeError`, `PositionError`, `ChainError`, `StrategyError` and
   `TransactionError` gain a `Clock(ClockError)` variant** (#944). Breaking, since
   they are exhaustive, and released with the 0.24.0 bump (#947). The aggregate

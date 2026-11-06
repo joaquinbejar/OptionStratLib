@@ -1122,13 +1122,17 @@
 //!   expiration and a single-leg `simulate` need no reference at all.
 //! - **A `DateTime` expiration needs a time for any time to expiry**: the thread's
 //!   reference datetime, from `ExpirationDate::set_reference_datetime`. Parallel sections
-//!   carry the caller's reference to their workers. With none, every path with an error
-//!   channel fails, with `ExpirationDateError::InvalidDateTime` inside the crate's error
-//!   (for example `PricingError::Options`) or a `Clock` variant, and never with a made-up
-//!   instant. What has no error channel is listed below.
+//!   carry the caller's reference to their workers. With none, a result that depends on
+//!   that time to expiry and can report an error does, with
+//!   `ExpirationDateError::InvalidDateTime` inside the crate's error (for example
+//!   `PricingError::Options`) or a `Clock` variant, and is never computed from a made-up
+//!   instant. What cannot report an error is listed below. A path that does not measure
+//!   the expiry succeeds with no time: a search over quotes, a rebuild from positions, or a
+//!   refresh from a chain row, whose record keeps the date it already carries.
 //! - **The `*_at` forms take the time as an argument** and exist in every build:
 //!   `Trade::new_at`, `Position::days_held_at`, `days_to_expiration_at` and
-//!   `trade_at`, `OptionSeries::odte_at`, `new_at` on the strategies with a public `new`,
+//!   `trade_at`, `OptionSeries::odte_at`, `OptionChain::get_random_positions_at`, `new_at`
+//!   on the strategies with a public `new`,
 //!   `SimulationResult::from_outcome_at`, and on `ExpirationDate` itself
 //!   `get_years_at`, `get_days_at`, `get_date_at` and `cmp_at`.
 //! - **`optionstratlib::utils::time`** has `now()`, which is `ClockError` without
