@@ -2731,12 +2731,87 @@ mod tests_implied_volatility_surface {
         assert_eq!(surface.rejections().len(), 1);
     }
 
+    /// Quotes with a rival for many of their instruments: an identical one, an older one, and
+    /// one as late and as tight with a higher bid, so that `Screened::order` runs on every
+    /// tie it has.
+    fn quotes_with_rivals() -> Vec<OptionQuote> {
+        let quotes = quotes_of(&[91, 365]);
+        let mut all = quotes.clone();
+        for (index, quote) in quotes.iter().enumerate() {
+            all.push(match index % 4 {
+                0 => *quote,
+                1 => OptionQuote {
+                    quoted_at: as_of() - seconds(10),
+                    bid: pos(quote.bid.to_dec() * dec!(1.01)),
+                    ask: pos(quote.ask.to_dec() * dec!(1.01)),
+                    ..*quote
+                },
+                2 => OptionQuote {
+                    bid: pos(quote.bid.to_dec() + dec!(0.001)),
+                    ask: pos(quote.ask.to_dec() + dec!(0.001)),
+                    ..*quote
+                },
+                _ => OptionQuote {
+                    ask: pos(quote.ask.to_dec() * dec!(1.05)),
+                    ..*quote
+                },
+            });
+        }
+        all
+    }
+
+    /// A Fisher-Yates shuffle on a fixed generator.
+    fn shuffled(quotes: &[OptionQuote], seed: &mut u64) -> Vec<OptionQuote> {
+        let mut shuffled = quotes.to_vec();
+        for index in (1..shuffled.len()).rev() {
+            *seed ^= *seed << 13;
+            *seed ^= *seed >> 7;
+            *seed ^= *seed << 17;
+            let other = usize::try_from(*seed % (index as u64 + 1)).unwrap();
+            shuffled.swap(index, other);
+        }
+        shuffled
+    }
+
+    #[test]
+    fn test_rivals_of_one_instrument_leave_the_quote_each_tie_says() {
+        let clean = quotes_of(&[91, 365]);
+        let all = quotes_with_rivals();
+        let surface = calibrate(&all).unwrap();
+        assert_eq!(surface.rejections().len(), clean.len());
+        assert!(
+            surface
+                .rejections()
+                .iter()
+                .all(|rejection| rejection.reason == QuoteRejectionReason::Superseded)
+        );
+        // In every tie the original stands, so the fit is that of the originals alone.
+        assert_eq!(surface.expiries(), calibrate(&clean).unwrap().expiries());
+    }
+
     #[test]
     fn test_calibrate_does_not_depend_on_the_order_of_the_quotes() {
-        let quotes = quotes_of(&[91, 365]);
-        let mut reversed = quotes.clone();
-        reversed.reverse();
-        assert_eq!(calibrate(&quotes).unwrap(), calibrate(&reversed).unwrap());
+        let all = quotes_with_rivals();
+        let base = calibrate(&all).unwrap();
+        let sorted_rejections = |surface: &ImpliedVolatilitySurface| {
+            let mut rejections: Vec<String> = surface
+                .rejections()
+                .iter()
+                .map(|rejection| format!("{rejection:?}"))
+                .collect();
+            rejections.sort();
+            rejections
+        };
+        let mut seed = 0x9E37_79B9_7F4A_7C15_u64;
+        for _ in 0..8 {
+            let surface = calibrate(&shuffled(&all, &mut seed)).unwrap();
+            // Exactly the same but for the order of the rejections, which is that of the input.
+            assert_eq!(surface.expiries(), base.expiries());
+            assert_eq!(surface.unfitted(), base.unfitted());
+            assert_eq!(surface.arbitrage_report(), base.arbitrage_report());
+            assert_eq!(surface.arbitrage_grid(), base.arbitrage_grid());
+            assert_eq!(sorted_rejections(&surface), sorted_rejections(&base));
+        }
     }
 
     #[test]

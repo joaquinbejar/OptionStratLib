@@ -15,7 +15,7 @@ use optionstratlib_core::model::types::OptionStyle;
 use optionstratlib_pricing::error::ImpliedVolatilitySurfaceError;
 use optionstratlib_pricing::volatility::{
     ExtrapolationPolicy, ImpliedVolatilitySurface, ImpliedVolatilitySurfaceConfig, OptionQuote,
-    QuoteRejectionReason, SurfaceShock,
+    QuoteRejection, QuoteRejectionReason, SurfaceExpiryRegion, SurfaceShock,
 };
 use proptest::prelude::*;
 use rust_decimal::Decimal;
@@ -190,6 +190,15 @@ fn config() -> ImpliedVolatilitySurfaceConfig {
     }
 }
 
+/// The rejections that are not for being later than the as-of time.
+fn without_later(rejections: &[QuoteRejection]) -> Vec<QuoteRejection> {
+    rejections
+        .iter()
+        .filter(|rejection| rejection.reason != QuoteRejectionReason::LaterThanAsOf)
+        .cloned()
+        .collect()
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(128))]
 
@@ -216,16 +225,27 @@ proptest! {
                 prop_assert!(!surface.expiries().is_empty());
 
                 let time = positive(time);
+                let first = surface.expiries().first().map(|expiry| expiry.time_to_expiry());
+                let last = surface.expiries().last().map(|expiry| expiry.time_to_expiry());
                 for k in [k, -k, dec!(0)] {
                     if let Ok(point) = surface.point(k, time) {
                         prop_assert_eq!(point.log_moneyness, k);
-                        prop_assert_eq!(point.time_to_expiry, time);
-                        prop_assert_eq!(
-                            point.is_extrapolated(),
-                            !point.wing_extension.is_zero()
-                                || point.expiry_region
-                                    != optionstratlib_pricing::volatility::SurfaceExpiryRegion::WithinExpiries
-                        );
+                        // Within the policy, and where the expiries say it is. The times read
+                        // here are never within the resolution of a fitted one.
+                        prop_assert!(point.wing_extension <= config().extrapolation.max_wing_extension);
+                        let region = match (first, last) {
+                            (Some(first), _) if time < first => SurfaceExpiryRegion::BeforeFirstExpiry,
+                            (_, Some(last)) if time > last => SurfaceExpiryRegion::AfterLastExpiry,
+                            _ => SurfaceExpiryRegion::WithinExpiries,
+                        };
+                        prop_assert_eq!(point.expiry_region, region);
+                    }
+                }
+                // At a fitted expiry the read is that slice, and inside the expiries.
+                for expiry in surface.expiries() {
+                    if let Ok(point) = surface.point(k, expiry.time_to_expiry()) {
+                        prop_assert_eq!(point.expiry_region, SurfaceExpiryRegion::WithinExpiries);
+                        prop_assert!(!point.bridges_unfitted_expiry);
                     }
                 }
                 let _ = surface.point_at_strike(Positive::HUNDRED, as_of() + TimeDelta::nanoseconds(1));
@@ -279,8 +299,23 @@ proptest! {
                     .filter(|rejection| rejection.reason == QuoteRejectionReason::LaterThanAsOf)
                     .count();
                 prop_assert_eq!(later_rejections, later.len());
+                prop_assert_eq!(without_later(with.rejections()), base.rejections());
             }
-            (Err(_), Err(_)) => {}
+            // The same failure, for the same reasons, once the later quotes are set aside.
+            (
+                Err(ImpliedVolatilitySurfaceError::NoFittedExpiry {
+                    unfitted: base_unfitted,
+                    rejections: base_rejections,
+                }),
+                Err(ImpliedVolatilitySurfaceError::NoFittedExpiry {
+                    unfitted: with_unfitted,
+                    rejections: with_rejections,
+                }),
+            ) => {
+                prop_assert_eq!(base_unfitted, with_unfitted);
+                prop_assert_eq!(without_later(&with_rejections), base_rejections);
+            }
+            (Err(base), Err(with)) => prop_assert_eq!(base.to_string(), with.to_string()),
             (base, with) => prop_assert!(false, "{:?} against {:?}", base.err(), with.err()),
         }
     }
