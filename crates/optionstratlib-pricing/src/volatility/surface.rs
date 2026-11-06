@@ -548,6 +548,15 @@ impl SurfacePoint {
 /// before the first expiry, `w / T`. A read within the resolution of `T` of a fitted expiry is at
 /// that expiry, as in [`ImpliedVolatilitySurface::point`], so this applies to it.
 ///
+/// That slope comes from the two expiries of the segment, and two limits follow:
+///
+/// - An expiry without a slice may lie inside the segment. [`SurfacePoint::bridges_unfitted_expiry`]
+///   describes the value, which at a fitted expiry comes from its own slice, so it stays `false`
+///   even when the slope spans a gap. Compare with [`ImpliedVolatilitySurface::unfitted`].
+/// - Two expiries closer than the resolution of `T` divide by a gap that resolution cannot
+///   measure, so `dw/dT` there is huge and not meaningful. Expiries 5 ns apart at 20% and 40%
+///   volatility, 91 days out, give about `1.5e14`, with no error.
+///
 /// # `dw/dT` is at fixed log moneyness
 ///
 /// With `k = ln(K / F(T))` and `F(T) = S e^((r - q) T)`, a fixed strike has `dk/dT = -(r - q)`, so
