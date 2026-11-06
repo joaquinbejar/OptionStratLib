@@ -34,7 +34,7 @@
 // the success path too (#857), so it is built in a closure.
 #![deny(clippy::or_fun_call)]
 
-//! # OptionStratLib v0.23.0: Financial Options Library
+//! # OptionStratLib v0.24.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -423,7 +423,9 @@
 //! gives the defining crate, direct import, facade path and feature of every
 //! public concept.
 //!
-//! Moving from 0.22? The [0.23
+//! Moving from 0.23? The [0.24
+//! guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.24.md)
+//! lists what to change, starting with the new `clock` feature. Moving from 0.22? The [0.23
 //! guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
 //! covers the one area that changed: PNG and SVG export, now drawn natively,
 //! and the typed `GraphError` it returns. Moving from 0.21? The [0.22
@@ -1629,7 +1631,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.23.0** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.24.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
