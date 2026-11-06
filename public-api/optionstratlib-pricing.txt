@@ -112,9 +112,10 @@ pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_p
 impl core::convert::From<optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind> for optionstratlib_pricing::error::greeks::GreeksError
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind) -> Self
 #[non_exhaustive] pub enum optionstratlib_pricing::error::ImpliedVolatilitySurfaceError
-pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge
-pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge::limit: usize
-pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge::points: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::maximum: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::minimum: usize
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange::points: usize
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::EmptyExportGrid
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ExpirationDate(expiration_date::error::ExpirationDateError)

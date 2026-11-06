@@ -50,9 +50,18 @@ const DEFAULT_ARBITRAGE_GRID_POINTS: NonZeroUsize = match NonZeroUsize::new(41) 
     None => NonZeroUsize::MIN,
 };
 
-/// The largest [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`]: the grid is
-/// allocated and every point costs a check on every slice.
+/// The largest [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`], per expiry: the
+/// grid is allocated and every point costs a check on every slice.
 const MAX_ARBITRAGE_GRID_POINTS: usize = 100_000;
+
+/// The smallest [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`], per expiry: as
+/// many points as a raw SVI slice has parameters. One or two points cannot see a slice at
+/// all. Five is a floor against that and no assurance: the check still covers only its
+/// points.
+const MIN_ARBITRAGE_GRID_POINTS: usize = 5;
+
+/// The `theta` of the slice in the middle of a gap between two expiries: one half.
+const MIDDLE_OF_GAP: Decimal = Decimal::from_parts(5, 0, 0, false, 1);
 
 /// The spread a locked quote weighs as, relative to its mid: 0.1%. A tighter spread
 /// than that weighs as this, so one quote cannot take the whole fit.
@@ -92,14 +101,15 @@ pub struct ImpliedVolatilitySurfaceConfig {
     pub svi: SviCalibrationConfig,
     /// How far a read may leave the data.
     pub extrapolation: ExtrapolationPolicy,
-    /// The points of the log moneyness grid of the arbitrage report, evenly across the
-    /// quotes of every expiry. At most 100000.
+    /// The points of the log moneyness grid of the arbitrage report **per expiry**, evenly
+    /// across the quotes of that expiry. The grid is the sorted union of them, so it has up
+    /// to this many points times the fitted expiries. At least 5 and at most 100000.
     pub arbitrage_grid_points: NonZeroUsize,
 }
 
 impl Default for ImpliedVolatilitySurfaceConfig {
     /// Quotes up to five minutes old, the defaults of [`SviCalibrationConfig`], no
-    /// extrapolation, and a grid of 41 points.
+    /// extrapolation, and a grid of 41 points per expiry.
     fn default() -> Self {
         // The constant fits, so the fallback is not taken. Were it taken, zero would
         // mark every quote older than the as-of time stale: the failure stays loud.
@@ -614,9 +624,10 @@ pub struct SurfaceExport {
 /// # What the arbitrage report means
 ///
 /// [`check_static_arbitrage`] runs on the slices of the fitted expiries and on a slice
-/// at the middle of each gap between them, all on one log moneyness grid of
-/// [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points across the quotes
-/// of every expiry. A surface with one expiry has no calendar check, and
+/// at the middle of each gap between them, all on one log moneyness grid: the sorted
+/// union of [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points across the
+/// quotes of each expiry, so a short expiry with narrow quotes has that many points inside
+/// them. A surface with one expiry has no calendar check, and
 /// [`ImpliedVolatilitySurface::calendar_checked`] says so.
 ///
 /// [`ImpliedVolatilitySurface::arbitrage_report`] is a finding, not a verdict:
@@ -628,8 +639,9 @@ pub struct SurfaceExport {
 ///   arbitrage.** Between grid points, at other expiries and in the far wings nothing is
 ///   known. [`ImpliedVolatilitySurface::check_on_grid`] repeats the check on a grid of
 ///   the caller's.
-/// - The grid is shared, so it reads a short expiry far beyond its quotes when a long
-///   expiry has quotes there. A finding names its `k` and expiry, which is how to tell.
+/// - The grid is one for all the slices, so it also reads a short expiry far beyond its
+///   quotes where a long expiry has quotes. A finding names its `k` and expiry, which is
+///   how to tell.
 /// - The check also aborts on a `Decimal` overflow. A surface whose check cannot finish
 ///   is an error, [`ImpliedVolatilitySurfaceError::StaticArbitrage`], since it has no
 ///   report to carry.
@@ -745,7 +757,7 @@ impl ImpliedVolatilitySurface {
     ///
     /// - [`ImpliedVolatilitySurfaceError::ZeroSpot`]: a zero spot.
     /// - [`ImpliedVolatilitySurfaceError::NegativeQuoteAgeLimit`],
-    ///   [`ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge`], and
+    ///   [`ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange`], and
     ///   [`ImpliedVolatilitySurfaceError::Svi`] holding [`SviError::InvalidConfig`]: an
     ///   invalid configuration.
     /// - [`ImpliedVolatilitySurfaceError::NoFittedExpiry`]: no expiry has a slice.
@@ -804,7 +816,7 @@ impl ImpliedVolatilitySurface {
             });
         }
 
-        let arbitrage_grid = evenly_across_quotes(&expiries, config.arbitrage_grid_points)?;
+        let arbitrage_grid = union_across_quotes(&expiries, config.arbitrage_grid_points)?;
         let (arbitrage_report, calendar_checked) =
             check_expiries(&expiries, &market, &arbitrage_grid)?;
         log_report(&arbitrage_report);
@@ -899,7 +911,9 @@ impl ImpliedVolatilitySurface {
         &self.arbitrage_report
     }
 
-    /// The log moneyness grid of [`ImpliedVolatilitySurface::arbitrage_report`].
+    /// The log moneyness grid of [`ImpliedVolatilitySurface::arbitrage_report`], sorted: the
+    /// union of [`ImpliedVolatilitySurfaceConfig::arbitrage_grid_points`] points across the
+    /// quotes of each expiry.
     #[must_use]
     #[inline]
     pub fn arbitrage_grid(&self) -> &[Decimal] {
@@ -1249,11 +1263,15 @@ fn check_config(
             limit: config.max_quote_age,
         });
     }
-    if config.arbitrage_grid_points.get() > MAX_ARBITRAGE_GRID_POINTS {
-        return Err(ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge {
-            points: config.arbitrage_grid_points.get(),
-            limit: MAX_ARBITRAGE_GRID_POINTS,
-        });
+    let points = config.arbitrage_grid_points.get();
+    if !(MIN_ARBITRAGE_GRID_POINTS..=MAX_ARBITRAGE_GRID_POINTS).contains(&points) {
+        return Err(
+            ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange {
+                points,
+                minimum: MIN_ARBITRAGE_GRID_POINTS,
+                maximum: MAX_ARBITRAGE_GRID_POINTS,
+            },
+        );
     }
     Ok(())
 }
@@ -1644,34 +1662,32 @@ fn quotes_with_weights(
     Ok(quotes)
 }
 
-/// A grid of evenly spaced points across the quotes of every expiry, both ends included.
-fn evenly_across_quotes(
+/// The sorted union of `points` evenly spaced points across the quotes of each expiry, both
+/// ends of each included.
+///
+/// One grid spaced by the widest quotes would leave a short expiry with a point or two
+/// inside its own, and a violation there would pass.
+fn union_across_quotes(
     expiries: &[SurfaceExpiry],
     points: NonZeroUsize,
 ) -> Result<Vec<Decimal>, DecimalError> {
     const OP: &str = "surface::grid";
-    let mut lowest: Option<Decimal> = None;
-    let mut highest: Option<Decimal> = None;
-    for expiry in expiries {
-        let (low, high) = (expiry.lowest_log_moneyness, expiry.highest_log_moneyness);
-        lowest = Some(lowest.map_or(low, |value| value.min(low)));
-        highest = Some(highest.map_or(high, |value| value.max(high)));
-    }
-    let (lowest, highest) = (
-        lowest.unwrap_or(Decimal::ZERO),
-        highest.unwrap_or(Decimal::ZERO),
-    );
+    let intervals = d_sub(Decimal::from(points.get()), Decimal::ONE, OP)?;
     let mut grid = Vec::with_capacity(points.get());
-    grid.push(lowest);
-    let last = points.get() - 1;
-    if last == 0 {
-        return Ok(grid);
+    for expiry in expiries {
+        let (lowest, highest) = (expiry.lowest_log_moneyness, expiry.highest_log_moneyness);
+        let step = d_div(d_sub(highest, lowest, OP)?, intervals, OP)?;
+        grid.push(lowest);
+        for index in 1..points.get() {
+            grid.push(d_add(lowest, d_mul(step, Decimal::from(index), OP)?, OP)?);
+        }
+        // The step is rounded, and the last quote is in the grid exactly.
+        if let Some(end) = grid.last_mut() {
+            *end = highest;
+        }
     }
-    let step = d_div(d_sub(highest, lowest, OP)?, Decimal::from(last), OP)?;
-    for index in 1..last {
-        grid.push(d_add(lowest, d_mul(step, Decimal::from(index), OP)?, OP)?);
-    }
-    grid.push(highest);
+    grid.sort_unstable();
+    grid.dedup();
     Ok(grid)
 }
 
@@ -1785,8 +1801,7 @@ fn slices_to_check(
             slices.push(GridSlice {
                 earlier: earlier.slice,
                 later: later.slice,
-                // Half, exactly: the middle of the gap by construction.
-                theta: Decimal::from_parts(5, 0, 0, false, 1),
+                theta: MIDDLE_OF_GAP,
                 time_to_expiry: middle,
                 forward: market.forward(middle)?,
             });
@@ -3338,6 +3353,34 @@ mod tests_implied_volatility_surface {
     }
 
     #[test]
+    fn test_calibrate_refuses_a_grid_below_the_minimum() {
+        for points in [1, MIN_ARBITRAGE_GRID_POINTS - 1] {
+            let config = ImpliedVolatilitySurfaceConfig {
+                arbitrage_grid_points: NonZeroUsize::new(points).unwrap(),
+                ..ImpliedVolatilitySurfaceConfig::default()
+            };
+            match calibrate_with(&quotes_of(&[365]), &config).unwrap_err() {
+                ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange {
+                    points: found,
+                    minimum,
+                    maximum,
+                } => {
+                    assert_eq!(found, points);
+                    assert_eq!(minimum, MIN_ARBITRAGE_GRID_POINTS);
+                    assert_eq!(maximum, MAX_ARBITRAGE_GRID_POINTS);
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+        let config = ImpliedVolatilitySurfaceConfig {
+            arbitrage_grid_points: NonZeroUsize::new(MIN_ARBITRAGE_GRID_POINTS).unwrap(),
+            ..ImpliedVolatilitySurfaceConfig::default()
+        };
+        let surface = calibrate_with(&quotes_of(&[365]), &config).unwrap();
+        assert_eq!(surface.arbitrage_grid().len(), MIN_ARBITRAGE_GRID_POINTS);
+    }
+
+    #[test]
     fn test_calibrate_refuses_a_grid_above_the_limit() {
         let config = ImpliedVolatilitySurfaceConfig {
             arbitrage_grid_points: NonZeroUsize::new(MAX_ARBITRAGE_GRID_POINTS + 1).unwrap(),
@@ -3345,7 +3388,7 @@ mod tests_implied_volatility_surface {
         };
         assert!(matches!(
             calibrate_with(&quotes_of(&[365]), &config),
-            Err(ImpliedVolatilitySurfaceError::ArbitrageGridTooLarge { .. })
+            Err(ImpliedVolatilitySurfaceError::ArbitrageGridPointsOutOfRange { .. })
         ));
     }
 
@@ -3406,42 +3449,125 @@ mod tests_implied_volatility_surface {
     // Arbitrage report.
 
     #[test]
-    fn test_grid_spans_the_quotes_of_every_expiry_both_ends_included() {
+    fn test_grid_is_the_sorted_union_of_points_across_the_quotes_of_each_expiry() {
         let surface = two_expiries(&ImpliedVolatilitySurfaceConfig::default());
-        let [first, last] = surface.expiries() else {
-            panic!("two expiries");
-        };
-        let lowest = first
-            .lowest_log_moneyness()
-            .min(last.lowest_log_moneyness());
-        let highest = first
-            .highest_log_moneyness()
-            .max(last.highest_log_moneyness());
         let grid = surface.arbitrage_grid();
-        assert_eq!(grid.len(), 41);
-        assert_eq!(grid.first(), Some(&lowest));
-        assert_eq!(grid.last(), Some(&highest));
-        for pair in grid.windows(2) {
-            let [one, other] = pair else {
-                panic!("a window of two");
-            };
-            assert_close(
-                *other - *one,
-                (highest - lowest) / dec!(40),
-                dec!(0.0000000000000000000001),
+        let mut sorted = grid.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(grid, sorted);
+        for expiry in surface.expiries() {
+            let (lowest, highest) = (
+                expiry.lowest_log_moneyness(),
+                expiry.highest_log_moneyness(),
             );
+            assert!(grid.contains(&lowest));
+            assert!(grid.contains(&highest));
+            let inside = grid
+                .iter()
+                .filter(|k| **k >= lowest && **k <= highest)
+                .count();
+            assert!(
+                inside >= 41,
+                "{inside} points inside the quotes of {expiry:?}"
+            );
+            for index in 0..=40 {
+                let point = lowest + (highest - lowest) * Decimal::from(index) / dec!(40);
+                let nearest = grid.iter().map(|k| (*k - point).abs()).min().unwrap();
+                assert!(
+                    nearest < dec!(0.000000000000000000001),
+                    "{point}: {nearest}"
+                );
+            }
         }
     }
 
     #[test]
-    fn test_grid_of_one_point_is_the_lowest_quote() {
-        let config = ImpliedVolatilitySurfaceConfig {
-            arbitrage_grid_points: NonZeroUsize::MIN,
-            ..ImpliedVolatilitySurfaceConfig::default()
-        };
-        let surface = calibrate_with(&quotes_of(&[365]), &config).unwrap();
+    fn test_grid_of_one_expiry_has_exactly_its_points_and_no_repeat_across_equal_ranges() {
+        let surface = calibrate(&quotes_of(&[365])).unwrap();
+        assert_eq!(surface.arbitrage_grid().len(), 41);
+        // Two expiries sharing one range and the same points leave one copy of each.
+        let expiry = surface.expiries().first().unwrap().clone();
+        let grid =
+            union_across_quotes(&[expiry.clone(), expiry], NonZeroUsize::new(41).unwrap()).unwrap();
+        assert_eq!(grid, surface.arbitrage_grid());
+    }
+
+    /// A slice a day from expiry with a butterfly violation inside quotes 0.03 wide, and a
+    /// clean year-long slice with quotes 0.75 wide. One grid spaced by the long expiry puts
+    /// one point inside the short quotes, at the money, and passes.
+    #[test]
+    fn test_butterfly_inside_the_narrow_quotes_of_a_short_expiry_is_found() {
+        let bad = (
+            dec!(0.00004075917963554839),
+            dec!(0.023277104032127877),
+            dec!(0.5928072869710899),
+            dec!(0.0007647429485032747),
+            dec!(0.001079933017846628),
+        );
+        let t = years(1);
+        let short = SviSlice::try_new(
+            SviParameters::try_new(bad.0, bad.1, bad.2, bad.3, bad.4).unwrap(),
+            market().forward(t).unwrap(),
+            t,
+        )
+        .unwrap();
+        let forward = short.forward().to_dec();
+        let mut quotes: Vec<OptionQuote> = (-15_i32..=15)
+            .map(|step| {
+                let k = dec!(0.002) * Decimal::from(step);
+                let strike = (forward * d_exp(k, "test").unwrap()).round_dp(2);
+                let style = if strike >= forward {
+                    OptionStyle::Call
+                } else {
+                    OptionStyle::Put
+                };
+                quote_of(&short, 1, strike, style)
+            })
+            .collect();
+        let long = known(365);
+        let long_forward = long.forward().to_dec();
+        quotes.extend((-20_i32..=20).map(|step| {
+            let k = dec!(0.0375) * Decimal::from(step);
+            let strike = (long_forward * d_exp(k, "test").unwrap()).round_dp(2);
+            let style = if strike >= long_forward {
+                OptionStyle::Call
+            } else {
+                OptionStyle::Put
+            };
+            quote_of(&long, 365, strike, style)
+        }));
+
+        let surface = calibrate(&quotes).unwrap();
+        assert!(surface.unfitted().is_empty(), "{:?}", surface.unfitted());
+        assert!(
+            surface.rejections().is_empty(),
+            "{:?}",
+            surface.rejections()
+        );
+        let report = surface.arbitrage_report();
+        assert!(!report.passed());
         let expiry = surface.expiries().first().unwrap();
-        assert_eq!(surface.arbitrage_grid(), [expiry.lowest_log_moneyness()]);
+        let (lowest, highest) = (
+            expiry.lowest_log_moneyness(),
+            expiry.highest_log_moneyness(),
+        );
+        let found = report
+            .violations()
+            .iter()
+            .filter(|violation| {
+                matches!(
+                    violation,
+                    crate::volatility::StaticArbitrageViolation::Butterfly { time_to_expiry, .. }
+                        if *time_to_expiry == t
+                ) && violation.log_moneyness() >= lowest
+                    && violation.log_moneyness() <= highest
+            })
+            .count();
+        assert!(
+            found >= 10,
+            "{found} violations inside the short quotes: {report:?}"
+        );
     }
 
     #[test]

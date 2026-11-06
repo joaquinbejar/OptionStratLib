@@ -199,13 +199,16 @@ pub enum ImpliedVolatilitySurfaceError {
         limit: TimeDelta,
     },
 
-    /// The grid of the arbitrage report would have too many points to allocate and check.
-    #[error("the arbitrage grid has {points} points, above the limit of {limit}")]
-    ArbitrageGridTooLarge {
-        /// The points asked for.
+    /// The points per expiry of the grid of the arbitrage report are outside the range
+    /// allowed: too few to see a slice at all, or too many to allocate and check.
+    #[error("the arbitrage grid has {points} points per expiry, outside [{minimum}, {maximum}]")]
+    ArbitrageGridPointsOutOfRange {
+        /// The points per expiry asked for.
         points: usize,
-        /// The largest grid allowed.
-        limit: usize,
+        /// The fewest allowed: as many as a raw SVI slice has parameters.
+        minimum: usize,
+        /// The most allowed.
+        maximum: usize,
     },
 
     /// No expiry could be fitted, so there is no surface. Both lists say why.
