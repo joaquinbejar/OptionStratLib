@@ -94,6 +94,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adds it with the 0.24.0 bump. Runnable example: `static_arbitrage` in
   `examples_pricing`.
 
+- **A calibrated implied volatility surface, built from bid and ask quotes** (#947),
+  for consumers that only feed quotes in. In `optionstratlib_pricing::volatility`
+  (also `optionstratlib::volatility`). `ImpliedVolatilitySurface::calibrate` takes
+  `OptionQuote`s (expiry, strike, style, bid, ask, `quoted_at`), the spot, a rate, a
+  dividend yield and an as-of `DateTime<Utc>`, and reads no clock: `T` is `expiry -
+  as_of` on Actual/365 Fixed through `ExpirationDate::Days`, so sub-day expiries keep
+  their hours, to about `1e-15` of `T`, and the whole feature gives the same answer
+  without the `clock` feature. Every quote is clean or rejected with a
+  `QuoteRejectionReason`, never smoothed: later than the as-of time, expired, zero
+  strike, crossed, zero bid, stale, superseded, outside its no-arbitrage band, no
+  implied volatility, or no weight. **A quote later than the as-of time cannot change
+  the surface**, which the tests assert by exact equality. Each expiry gets one raw SVI
+  slice, weighted by `(vega / (iv * spread))^2`, and the caller sets
+  `max_relative_rmse`. An expiry that cannot be fitted never disappears: it is an
+  `UnfittedExpiry` with its `UnfittedReason`, the rest is still built, and a value read
+  across it says so; only a surface with no slice at all is an error, carrying both
+  lists. On the defaults, noise above about half a volatility point starts to lose
+  expiries, and a frown cannot be fitted. Between expiries total variance is linear in
+  `T` at fixed log moneyness. `ExtrapolationPolicy` declares how far a read may leave
+  the data, in wings and in short and long expiries: within it the `SurfacePoint` is
+  flagged, beyond it the read is a typed error, and the default allows nothing. The
+  surface also gives residuals by strike and expiry, `age_at`, shocks of level, skew and
+  term with their formulas stated (`SurfaceShock`, where invalid parameters are a typed
+  error and the shocked surface has its own report), a `BaselineComparison` against a
+  flat volatility per expiry, and `export_surface` to a generic `Surface`.
+  `check_static_arbitrage` runs on the fitted slices and on a slice in the middle of
+  each gap, on one grid. **The surface is not claimed free of arbitrage**: findings
+  and points the check could not resolve are reported and do not stop the surface,
+  `passed` means only those checks on that grid, and a check that cannot finish is an
+  error. Failures are a new `#[non_exhaustive]` `ImpliedVolatilitySurfaceError`; the
+  aggregate `optionstratlib::error::Error` has no variant for it yet, which comes with
+  the 0.24.0 bump. `optionstratlib-pricing` now depends on `chrono` directly, without
+  its `clock` feature, for `DateTime<Utc>` in this API. Runnable example:
+  `calibrated_surface` in `examples_pricing`.
+
 - **`settlement_obligation`: what expiry, exercise or assignment obliges an
   option position to pay, receive or deliver** (#949). A pure function in
   `optionstratlib_core::model` (also `optionstratlib::model`), with no clock

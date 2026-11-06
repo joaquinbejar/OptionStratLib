@@ -41,3 +41,7 @@ path = "src/bin/settlement_obligations.rs"
 [[bin]]
 name = "static_arbitrage"
 path = "src/bin/static_arbitrage.rs"
+
+[[bin]]
+name = "calibrated_surface"
+path = "src/bin/calibrated_surface.rs"
