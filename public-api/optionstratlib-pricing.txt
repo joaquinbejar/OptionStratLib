@@ -138,6 +138,7 @@ pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry::rejections: alloc::vec::Vec<optionstratlib_pricing::volatility::QuoteRejection>
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::NoFittedExpiry::unfitted: alloc::vec::Vec<optionstratlib_pricing::volatility::UnfittedExpiry>
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Positive(positive::error::PositiveError)
+pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::Pricing(optionstratlib_pricing::error::PricingError)
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive::at_the_money: positive::positive::Positive
 pub optionstratlib_pricing::error::ImpliedVolatilitySurfaceError::ShockedVolatilityNotPositive::shift: rust_decimal::decimal::Decimal
@@ -841,11 +842,13 @@ pub fn optionstratlib_pricing::volatility::SurfaceExpiry::expiry(&self) -> chron
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::forward(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::highest_log_moneyness(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::lowest_log_moneyness(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::quotes_outside_bid_ask(&self) -> usize
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::relative_rmse(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::residuals(&self) -> &[optionstratlib_pricing::volatility::SurfaceResidual]
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::rmse(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::slice(&self) -> &optionstratlib_pricing::volatility::SviSlice
 pub fn optionstratlib_pricing::volatility::SurfaceExpiry::time_to_expiry(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::volatility::SurfaceExpiry::unweighted_rmse(&self) -> positive::positive::Positive
 #[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceExport
 pub optionstratlib_pricing::volatility::SurfaceExport::extrapolated: alloc::vec::Vec<optionstratlib_pricing::volatility::SurfacePoint>
 pub optionstratlib_pricing::volatility::SurfaceExport::surface: optionstratlib_math::surfaces::surface::Surface
@@ -861,10 +864,14 @@ pub optionstratlib_pricing::volatility::SurfacePoint::wing_extension: positive::
 impl optionstratlib_pricing::volatility::SurfacePoint
 pub fn optionstratlib_pricing::volatility::SurfacePoint::is_extrapolated(&self) -> bool
 #[non_exhaustive] pub struct optionstratlib_pricing::volatility::SurfaceResidual
+pub optionstratlib_pricing::volatility::SurfaceResidual::ask: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::bid: positive::positive::Positive
 pub optionstratlib_pricing::volatility::SurfaceResidual::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib_pricing::volatility::SurfaceResidual::fitted_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::fitted_price: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::volatility::SurfaceResidual::log_moneyness: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::volatility::SurfaceResidual::observed_implied_volatility: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SurfaceResidual::outside_bid_ask: bool
 pub optionstratlib_pricing::volatility::SurfaceResidual::residual: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::volatility::SurfaceResidual::strike: positive::positive::Positive
 pub optionstratlib_pricing::volatility::SurfaceResidual::style: financial_types::OptionStyle

@@ -10,7 +10,7 @@
 //! the expiries it could not fit, and `error` is a leaf of this crate's internal graph, so
 //! those types live here. Their public path is `optionstratlib_pricing::volatility`.
 
-use crate::error::{StaticArbitrageError, SviError};
+use crate::error::{PricingError, StaticArbitrageError, SviError};
 use chrono::{DateTime, TimeDelta, Utc};
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::types::OptionStyle;
@@ -326,6 +326,10 @@ pub enum ImpliedVolatilitySurfaceError {
     /// A slice could not be built or evaluated.
     #[error(transparent)]
     Svi(#[from] SviError),
+
+    /// An option could not be priced at its fitted implied volatility.
+    #[error(transparent)]
+    Pricing(#[from] PricingError),
 
     /// A static arbitrage check could not run to its end, so there is no report: a
     /// check that was not completed must not read as one that passed.

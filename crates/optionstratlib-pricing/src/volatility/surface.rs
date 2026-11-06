@@ -18,7 +18,7 @@ use crate::error::surface::{
     OptionQuote, QuoteRejection, QuoteRejectionReason, UnfittedExpiry, UnfittedReason,
 };
 use crate::error::{ImpliedVolatilitySurfaceError, StaticArbitrageError, SviError};
-use crate::pricing::black_scholes_model::european_price_band;
+use crate::pricing::black_scholes_model::{black_scholes, european_price_band};
 use crate::pricing::constants::MAX_ITERATIONS_IV;
 use crate::pricing::iv_solver::{
     IV_BRACKET_MAX, IvOutcome, iv_initial_guess, long_residual, solve_implied_volatility,
@@ -145,6 +145,16 @@ pub struct SurfaceResidual {
     pub residual: Decimal,
     /// Its weight in the fit, at most one. See [`ImpliedVolatilitySurface`].
     pub weight: Positive,
+    /// Its bid.
+    pub bid: Positive,
+    /// Its ask.
+    pub ask: Positive,
+    /// The price of this option at the fitted implied volatility, per unit of underlying.
+    pub fitted_price: Decimal,
+    /// Whether [`SurfaceResidual::fitted_price`] is below the bid or above the ask, with no
+    /// tolerance, so a locked quote is outside unless the fit prices it exactly. This
+    /// ignores the weight and gates nothing.
+    pub outside_bid_ask: bool,
 }
 
 /// One expiry against a flat volatility.
@@ -189,6 +199,8 @@ pub struct SurfaceExpiry {
     residuals: Vec<SurfaceResidual>,
     rmse: Positive,
     relative_rmse: Positive,
+    unweighted_rmse: Positive,
+    quotes_outside_bid_ask: usize,
     lowest_log_moneyness: Decimal,
     highest_log_moneyness: Decimal,
     baseline: BaselineComparison,
@@ -200,12 +212,23 @@ impl SurfaceExpiry {
         expiry: DateTime<Utc>,
         slice: SviSlice,
         quotes: &[QuoteInFit],
+        market: &Market,
     ) -> Result<Self, ImpliedVolatilitySurfaceError> {
+        let days = time_to_expiry(market.as_of, expiry)?
+            .ok_or(ImpliedVolatilitySurfaceError::ZeroTimeToExpiry)?
+            .days;
         let time_to_expiry = slice.time_to_expiry();
         let mut residuals = Vec::with_capacity(quotes.len());
         for quote in quotes {
             let k = slice.log_moneyness(quote.strike)?;
             let fitted = slice.implied_volatility(k)?;
+            let fitted_price = black_scholes(&european_option(
+                quote.strike,
+                quote.style,
+                days,
+                fitted,
+                market,
+            ))?;
             residuals.push(SurfaceResidual {
                 expiry,
                 time_to_expiry,
@@ -220,6 +243,11 @@ impl SurfaceExpiry {
                     "surface::residual",
                 )?,
                 weight: quote.weight,
+                bid: quote.bid,
+                ask: quote.ask,
+                fitted_price,
+                outside_bid_ask: fitted_price < quote.bid.to_dec()
+                    || fitted_price > quote.ask.to_dec(),
             });
         }
         let summary = FitSummary::of(&residuals)?;
@@ -230,6 +258,11 @@ impl SurfaceExpiry {
             highest_log_moneyness: summary.highest,
             rmse: summary.rmse,
             relative_rmse: summary.relative_rmse,
+            unweighted_rmse: summary.unweighted_rmse,
+            quotes_outside_bid_ask: residuals
+                .iter()
+                .filter(|residual| residual.outside_bid_ask)
+                .count(),
             baseline: BaselineComparison {
                 expiry,
                 time_to_expiry,
@@ -290,6 +323,27 @@ impl SurfaceExpiry {
         self.relative_rmse
     }
 
+    /// The RMSE of the slice against all its quotes with equal weights, in implied volatility:
+    /// `sqrt(sum(residual^2) / n)`.
+    ///
+    /// [`SurfaceExpiry::rmse`] and the limit on it use the weights of the fit, so quotes with
+    /// wide spreads hardly count in them. This does not, and it gates nothing: neither the fit
+    /// nor the arbitrage report reads it. See [`ImpliedVolatilitySurface`].
+    #[must_use]
+    #[inline]
+    pub fn unweighted_rmse(&self) -> Positive {
+        self.unweighted_rmse
+    }
+
+    /// How many of its quotes the slice prices outside their bid and ask, whatever their
+    /// weight. See [`SurfaceResidual::outside_bid_ask`]. It gates nothing: neither the fit nor
+    /// the arbitrage report reads it.
+    #[must_use]
+    #[inline]
+    pub fn quotes_outside_bid_ask(&self) -> usize {
+        self.quotes_outside_bid_ask
+    }
+
     /// The lowest log moneyness of a quote with a positive weight.
     #[must_use]
     #[inline]
@@ -327,6 +381,8 @@ impl SurfaceExpiry {
                 style: residual.style,
                 volatility: residual.observed_implied_volatility,
                 weight: residual.weight,
+                bid: residual.bid,
+                ask: residual.ask,
             })
             .collect()
     }
@@ -336,6 +392,7 @@ impl SurfaceExpiry {
 struct FitSummary {
     rmse: Positive,
     relative_rmse: Positive,
+    unweighted_rmse: Positive,
     lowest: Decimal,
     highest: Decimal,
     baseline: Positive,
@@ -376,7 +433,13 @@ impl FitSummary {
         let rmse = d_sqrt(d_div(squares, weight_sum, OP)?, OP)?;
         let baseline = d_sqrt(d_div(variances, weight_sum, OP)?, OP)?;
         let mut baseline_squares = Decimal::ZERO;
+        let mut unweighted_squares = Decimal::ZERO;
         for residual in residuals {
+            unweighted_squares = d_add(
+                unweighted_squares,
+                d_mul(residual.residual, residual.residual, OP)?,
+                OP,
+            )?;
             let miss = d_sub(baseline, residual.observed_implied_volatility.to_dec(), OP)?;
             baseline_squares = d_add(
                 baseline_squares,
@@ -388,6 +451,10 @@ impl FitSummary {
         Ok(Self {
             rmse: Positive::new_decimal(rmse)?,
             relative_rmse: Positive::new_decimal(d_div(rmse, mean, OP)?)?,
+            unweighted_rmse: Positive::new_decimal(d_sqrt(
+                d_div(unweighted_squares, Decimal::from(residuals.len()), OP)?,
+                OP,
+            )?)?,
             lowest: lowest.unwrap_or(Decimal::ZERO),
             highest: highest.unwrap_or(Decimal::ZERO),
             baseline: Positive::new_decimal(baseline)?,
@@ -571,8 +638,12 @@ pub struct SurfaceExport {
 /// The floor keeps a locked quote finite, as if it were 0.1% of its mid wide. A
 /// weight that rounds to zero, below about `1e-28` of the largest, keeps its residual
 /// but does not enter the fit. These weights also weigh the RMSE that
-/// [`SviCalibrationConfig::max_relative_rmse`] limits, so a far wing with little vega
-/// can sit far from its quote within the limit. The residuals show it.
+/// [`SviCalibrationConfig::max_relative_rmse`] limits, so a quote with little vega or a wide
+/// spread can sit far from the slice within the limit.
+///
+/// [`SurfaceExpiry::quotes_outside_bid_ask`] and [`SurfaceExpiry::unweighted_rmse`] ignore the
+/// weights, and show that. They are figures to read: neither gates the fit, and neither
+/// enters the arbitrage report.
 ///
 /// # An expiry that cannot be fitted
 ///
@@ -585,11 +656,20 @@ pub struct SurfaceExport {
 /// all is an error, [`ImpliedVolatilitySurfaceError::NoFittedExpiry`], and it carries
 /// both lists.
 ///
-/// [`calibrate_svi`] has no flat fallback. On the defaults, quotes with more than
-/// about half a volatility point of noise start to be rejected, and a raw SVI slice is
-/// convex in `k`, so it cannot fit a frown: such an expiry comes back unfitted.
+/// [`calibrate_svi`] has no flat fallback. A raw SVI slice is convex in `k`, so it cannot
+/// follow a frown, and with even spreads such an expiry comes back unfitted. **That is not a
+/// guarantee**: the limit is on a weighted RMSE. Measured: nine quotes of a frown from 50% down
+/// to 30%, at the money 0.1% wide and the rest 60% wide, fit at a relative RMSE of 0.0046 with
+/// residuals up to 21 volatility points and 5 of the 9 fitted prices outside their bid and ask.
+/// That expiry has a slice and the report can pass. [`SurfaceExpiry::quotes_outside_bid_ask`]
+/// and [`SurfaceExpiry::unweighted_rmse`] are what show it.
+///
 /// [`SviCalibrationConfig::max_relative_rmse`], through
-/// [`ImpliedVolatilitySurfaceConfig::svi`], is what the caller loosens.
+/// [`ImpliedVolatilitySurfaceConfig::svi`], is what the caller tightens or loosens. It is
+/// relative to the level of volatility, so the noise it admits scales with that level. On the
+/// default of 3%, measured on five expiries of 15 quotes each: at a volatility of 20%, noise of
+/// 0.5 volatility points (2.5% of the level) fits all of them, and at 0.8 points (4%) three are
+/// lost; at 60%, 0.8 points (1.3%) fits all of them.
 ///
 /// # Interpolation
 ///
@@ -1192,6 +1272,7 @@ impl ImpliedVolatilitySurface {
                 expiry.expiry,
                 slice,
                 &expiry.quotes_in_fit(),
+                &self.market,
             )?);
         }
         let (arbitrage_report, calendar_checked) =
@@ -1362,6 +1443,8 @@ struct QuoteInFit {
     style: OptionStyle,
     volatility: Positive,
     weight: Positive,
+    bid: Positive,
+    ask: Positive,
 }
 
 /// The quotes of one expiry that are at or before the as-of time.
@@ -1511,6 +1594,30 @@ fn screen_quote(
     None
 }
 
+/// One long European option, as a quote is priced.
+fn european_option(
+    strike: Positive,
+    style: OptionStyle,
+    days: Positive,
+    volatility: Positive,
+    market: &Market,
+) -> Options {
+    Options::new(
+        OptionType::European,
+        Side::Long,
+        String::new(),
+        strike,
+        ExpirationDate::Days(days),
+        volatility,
+        Positive::ONE,
+        market.spot,
+        market.rate,
+        style,
+        market.dividend_yield,
+        None,
+    )
+}
+
 /// The rules that price the quote: its band, its implied volatility, its weight.
 fn extract_quote(screened: &Screened, market: &Market) -> Result<CleanQuote, QuoteRejectionReason> {
     const OP: &str = "surface::quote";
@@ -1518,19 +1625,12 @@ fn extract_quote(screened: &Screened, market: &Market) -> Result<CleanQuote, Quo
     let mid = d_add(quote.bid.to_dec(), quote.ask.to_dec(), OP)
         .and_then(|sum| d_div(sum, Decimal::TWO, OP))
         .map_err(numerical_failure)?;
-    let mut option = Options::new(
-        OptionType::European,
-        Side::Long,
-        String::new(),
+    let mut option = european_option(
         quote.strike,
-        ExpirationDate::Days(screened.time.days),
-        *MIN_VOLATILITY,
-        Positive::ONE,
-        market.spot,
-        market.rate,
         quote.style,
-        market.dividend_yield,
-        None,
+        screened.time.days,
+        *MIN_VOLATILITY,
+        market,
     );
     let (lower, upper) = european_price_band(&option).map_err(numerical_failure)?;
     if mid < lower || mid > upper {
@@ -1632,7 +1732,12 @@ fn fit_expiry(
         })
         .collect();
     let fit = calibrate_svi(&observations, forward, years, config)?;
-    Ok(SurfaceExpiry::from_slice(expiry, *fit.slice(), &quotes)?)
+    Ok(SurfaceExpiry::from_slice(
+        expiry,
+        *fit.slice(),
+        &quotes,
+        market,
+    )?)
 }
 
 /// The weight of each quote: see [`ImpliedVolatilitySurface`]. Normalized by the largest before it is
@@ -1657,6 +1762,8 @@ fn quotes_with_weights(
             style: quote.quote.style,
             volatility: quote.volatility,
             weight: Positive::new_decimal(d_mul(ratio, ratio, OP)?)?,
+            bid: quote.quote.bid,
+            ask: quote.quote.ask,
         });
     }
     Ok(quotes)
@@ -2715,9 +2822,11 @@ mod tests_implied_volatility_surface {
                 style: OptionStyle::Call,
                 volatility: slice.implied_volatility_at_strike(pos(*strike)).unwrap(),
                 weight: pos(*weight),
+                bid: Positive::ONE,
+                ask: Positive::TWO,
             })
             .collect();
-        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes).unwrap();
+        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap();
         assert_eq!(expiry.residuals().len(), 6);
         let widest = slice.log_moneyness(pos(dec!(110))).unwrap();
         assert_eq!(expiry.highest_log_moneyness(), widest);
@@ -2739,12 +2848,14 @@ mod tests_implied_volatility_surface {
             style: OptionStyle::Call,
             volatility: pos(volatility),
             weight: pos(weight),
+            bid: Positive::ONE,
+            ask: Positive::TWO,
         };
         let quotes = [
             quote(dec!(90), dec!(0.1), dec!(1)),
             quote(dec!(110), dec!(0.3), dec!(0.25)),
         ];
-        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes).unwrap();
+        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap();
         // Residuals of +0.1 and -0.1 under any weights have an rmse of 0.1.
         assert_close(expiry.rmse().to_dec(), dec!(0.1), dec!(0.0000000000001));
         // The weighted mean volatility is (0.1 + 0.075) / 1.25 = 0.14.
@@ -2777,6 +2888,213 @@ mod tests_implied_volatility_surface {
             expiry.lowest_log_moneyness(),
             slice.log_moneyness(pos(dec!(90))).unwrap()
         );
+    }
+
+    #[test]
+    fn test_unweighted_rmse_ignores_the_weights() {
+        let slice = SviSlice::try_new(
+            SviParameters::try_new(dec!(0.04), dec!(0), dec!(0), dec!(0), dec!(1)).unwrap(),
+            Positive::HUNDRED,
+            Positive::ONE,
+        )
+        .unwrap();
+        let quote = |strike, volatility, weight| QuoteInFit {
+            strike: pos(strike),
+            style: OptionStyle::Call,
+            volatility: pos(volatility),
+            weight: pos(weight),
+            bid: Positive::ONE,
+            ask: Positive::TWO,
+        };
+        // Residuals of 0, 0.1 and 0.2, the largest with no weight at all.
+        let quotes = [
+            quote(dec!(90), dec!(0.2), dec!(1)),
+            quote(dec!(100), dec!(0.1), dec!(0.5)),
+            quote(dec!(110), dec!(0.4), dec!(0)),
+        ];
+        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap();
+        // sqrt((0 + 0.01 + 0.04) / 3).
+        assert_close(
+            expiry.unweighted_rmse().to_dec(),
+            d_sqrt(dec!(0.05) / dec!(3), "test").unwrap(),
+            dec!(0.0000000000001),
+        );
+        // sqrt(0.5 * 0.01 / 1.5).
+        assert_close(
+            expiry.rmse().to_dec(),
+            d_sqrt(dec!(0.005) / dec!(1.5), "test").unwrap(),
+            dec!(0.0000000000001),
+        );
+    }
+
+    /// The price of the residual's own option at its fitted volatility, in closed form.
+    fn closed_form_price(residual: &SurfaceResidual) -> Decimal {
+        price(
+            residual.strike,
+            residual.style,
+            pos(residual.time_to_expiry.to_dec() * dec!(365)),
+            residual.fitted_implied_volatility,
+        )
+    }
+
+    #[test]
+    fn test_fitted_price_is_black_scholes_at_the_fitted_volatility() {
+        let surface = calibrate(&quotes_of(&[365])).unwrap();
+        for residual in surface.residuals() {
+            assert_close(
+                residual.fitted_price,
+                closed_form_price(residual),
+                dec!(0.00000000001),
+            );
+            assert!(!residual.outside_bid_ask, "{residual:?}");
+        }
+        let expiry = surface.expiries().first().unwrap();
+        assert_eq!(expiry.quotes_outside_bid_ask(), 0);
+        assert!(expiry.unweighted_rmse().to_dec() < dec!(0.00000001));
+    }
+
+    #[test]
+    fn test_price_below_the_bid_or_above_the_ask_is_outside_and_at_either_is_not() {
+        let slice = known(365);
+        let strike = pos(dec!(100));
+        let volatility = slice.implied_volatility_at_strike(strike).unwrap();
+        let fitted = price(strike, OptionStyle::Call, pos(dec!(365)), volatility);
+        let cent = dec!(0.01);
+        let cases = [
+            (fitted + cent, fitted + dec!(2) * cent, true),
+            (fitted - dec!(2) * cent, fitted - cent, true),
+            (fitted, fitted + cent, false),
+            (fitted - cent, fitted, false),
+        ];
+        for (bid, ask, outside) in cases {
+            let quotes = [QuoteInFit {
+                strike,
+                style: OptionStyle::Call,
+                volatility,
+                weight: Positive::ONE,
+                bid: pos(bid),
+                ask: pos(ask),
+            }];
+            let expiry =
+                SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap();
+            let residual = expiry.residuals().first().unwrap();
+            assert_eq!(
+                residual.outside_bid_ask, outside,
+                "{bid} {ask}: {residual:?}"
+            );
+            assert_eq!(expiry.quotes_outside_bid_ask(), usize::from(outside));
+        }
+    }
+
+    /// A frown with the same volatilities as `frown`, the centre `centre` either side and the
+    /// rest `wing` either side, around their closed form price.
+    fn frown_with_spreads(days: i64, centre: Decimal, wing: Decimal) -> Vec<OptionQuote> {
+        (-4_i32..=4)
+            .map(|step| {
+                let strike = pos(dec!(100) + Decimal::from(step) * dec!(2));
+                let style = if step >= 0 {
+                    OptionStyle::Call
+                } else {
+                    OptionStyle::Put
+                };
+                let volatility = pos(dec!(0.5) - dec!(0.05) * Decimal::from(step.abs()));
+                let mid = price(strike, style, pos(Decimal::from(days)), volatility);
+                let half = if step == 0 { centre } else { wing };
+                OptionQuote {
+                    expiry: in_days(days),
+                    strike,
+                    style,
+                    bid: pos(mid * (Decimal::ONE - half)),
+                    ask: pos(mid * (Decimal::ONE + half)),
+                    quoted_at: as_of(),
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_frown_with_a_tight_centre_fits_within_the_limit_and_the_figures_show_it() {
+        // Even spreads: the limit sees it.
+        let even = frown_with_spreads(182, dec!(0.01), dec!(0.01));
+        assert!(matches!(
+            calibrate(&even),
+            Err(ImpliedVolatilitySurfaceError::NoFittedExpiry { .. })
+        ));
+
+        // A tight centre and wide wings: the weights hide it from the limit.
+        let quotes = frown_with_spreads(182, dec!(0.0005), dec!(0.3));
+        let surface = calibrate(&quotes).unwrap();
+        let expiry = surface.expiries().first().unwrap();
+        assert!(expiry.relative_rmse().to_dec() < dec!(0.03), "{expiry:?}");
+        let worst = expiry
+            .residuals()
+            .iter()
+            .map(|residual| residual.residual.abs())
+            .max()
+            .unwrap();
+        assert!(worst > dec!(0.2), "{worst}");
+
+        // Against the same residuals, the figures that ignore the weights.
+        assert!(expiry.unweighted_rmse().to_dec() > dec!(0.1), "{expiry:?}");
+        assert!(expiry.unweighted_rmse().to_dec() > dec!(10) * expiry.rmse().to_dec());
+        assert!(expiry.quotes_outside_bid_ask() >= 5, "{expiry:?}");
+        for residual in expiry.residuals() {
+            assert_eq!(
+                residual.outside_bid_ask,
+                residual.fitted_price < residual.bid.to_dec()
+                    || residual.fitted_price > residual.ask.to_dec()
+            );
+        }
+
+        // They gate nothing: the expiry is fitted, and the report does not read them.
+        assert_eq!(surface.expiries().len(), 1);
+        assert!(surface.unfitted().is_empty());
+        assert!(surface.arbitrage_report().passed());
+    }
+
+    #[test]
+    fn test_noise_limit_is_relative_to_the_level_of_volatility() {
+        // One noise of 0.8 volatility points on the same smile shape at 20% and at 60%: the
+        // limit is on a ratio to the level, so it is lost at one and not at the other.
+        let noisy = |variance: Decimal| -> Vec<OptionQuote> {
+            let mut seed = 42_u64;
+            [30_i64, 91, 182, 365, 730]
+                .iter()
+                .flat_map(|days| {
+                    let slice = known_scaled(*days, variance);
+                    let forward = slice.forward().to_dec();
+                    let width = d_sqrt(years(*days).to_dec() * variance / dec!(0.04), "test")
+                        .unwrap()
+                        * dec!(0.1);
+                    (-7_i32..=7)
+                        .map(|step| {
+                            let k = width * Decimal::from(step) / dec!(3.5);
+                            let strike = (forward * d_exp(k, "test").unwrap()).round_dp(2);
+                            let level = slice.implied_volatility_at_strike(pos(strike)).unwrap();
+                            let noise: f64 = (0..12)
+                                .map(|_| {
+                                    seed = seed
+                                        .wrapping_mul(6_364_136_223_846_793_005)
+                                        .wrapping_add(1_442_695_040_888_963_407);
+                                    f64::from((seed >> 33) as u32) / 2_147_483_648.0 - 0.5
+                                })
+                                .sum();
+                            let bumped = level.to_dec() + Decimal::try_from(0.008 * noise).unwrap();
+                            let style = if strike >= forward {
+                                OptionStyle::Call
+                            } else {
+                                OptionStyle::Put
+                            };
+                            quote_at_volatility(*days, strike, style, pos(bumped))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect()
+        };
+        let low = calibrate(&noisy(dec!(0.04))).unwrap();
+        assert!(!low.unfitted().is_empty());
+        let high = calibrate(&noisy(dec!(0.36))).unwrap();
+        assert!(high.unfitted().is_empty(), "{:?}", high.unfitted());
     }
 
     #[test]
@@ -3709,8 +4027,10 @@ mod tests_implied_volatility_surface {
             style: OptionStyle::Call,
             volatility: pos(dec!(0.2)),
             weight: Positive::ONE,
+            bid: Positive::ONE,
+            ask: Positive::TWO,
         }];
-        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes).unwrap();
+        let expiry = SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap();
         let (report, calendar) = check_expiries(&[expiry], &market(), &[dec!(0)]).unwrap();
         assert!(!calendar);
         assert!(!report.unevaluated().is_empty());
