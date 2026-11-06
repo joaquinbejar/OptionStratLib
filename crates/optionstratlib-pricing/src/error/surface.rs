@@ -137,7 +137,9 @@ pub enum UnfittedReason {
         /// The weighted RMSE of the best fit, in implied volatility.
         rmse: Positive,
     },
-    /// The calibration failed some other way, as [`calibrate_svi`](crate::volatility::calibrate_svi) reported it.
+    /// The calibration failed some other way, as
+    /// [`calibrate_svi`](crate::volatility::calibrate_svi) reported it, or a figure of the fitted
+    /// expiry could not be computed, such as the price of a quote at its fitted volatility.
     #[non_exhaustive]
     CalibrationFailed {
         /// The message of the error.

@@ -1298,6 +1298,8 @@ impl ImpliedVolatilitySurface {
     ///   a valid raw SVI slice.
     /// - [`ImpliedVolatilitySurfaceError::StaticArbitrage`]: the check of the shocked surface
     ///   could not finish. Findings of a check that finished are not an error.
+    /// - [`ImpliedVolatilitySurfaceError::Pricing`]: an option cannot be priced at its shocked
+    ///   implied volatility, which a volatility of exactly zero at a quote is enough for.
     /// - [`ImpliedVolatilitySurfaceError::Svi`], [`ImpliedVolatilitySurfaceError::Decimal`],
     ///   [`ImpliedVolatilitySurfaceError::Positive`]: a figure leaves the range of its type.
     #[instrument(skip(self), level = "debug")]
@@ -3891,6 +3893,42 @@ mod tests_implied_volatility_surface {
             calibrate(&[]),
             Err(ImpliedVolatilitySurfaceError::NoFittedExpiry { .. })
         ));
+    }
+
+    #[test]
+    fn test_option_with_no_volatility_at_a_quote_is_a_pricing_error_of_that_expiry() {
+        // A zero minimum at `k = 0`, read at the strike there: a slice can be valid and have
+        // a volatility of exactly zero at a quote, and an option has no price at that. A public
+        // input does not reach it, since no fit or shock lands on a quote at the minimum with
+        // no rounding, so this builds the expiry directly.
+        let forward = market().forward(years(365)).unwrap();
+        let slice = SviSlice::try_new(
+            SviParameters::try_new(dec!(-0.01), dec!(0.1), dec!(0), dec!(0), dec!(0.1)).unwrap(),
+            forward,
+            years(365),
+        )
+        .unwrap();
+        let quotes = [QuoteInFit {
+            strike: forward,
+            style: OptionStyle::Call,
+            volatility: pos(dec!(0.2)),
+            weight: Positive::ONE,
+            bid: Positive::ONE,
+            ask: Positive::TWO,
+        }];
+        let error = SurfaceExpiry::from_slice(in_days(365), slice, &quotes, &market()).unwrap_err();
+        assert!(
+            matches!(error, ImpliedVolatilitySurfaceError::Pricing(_)),
+            "{error:?}"
+        );
+        // In a calibration that costs the expiry, not the surface.
+        match FitFailure::from(error) {
+            FitFailure::Expiry(UnfittedReason::CalibrationFailed { reason }) => {
+                assert!(!reason.is_empty());
+            }
+            FitFailure::Expiry(other) => panic!("{other:?}"),
+            FitFailure::Surface(other) => panic!("{other:?}"),
+        }
     }
 
     #[test]
