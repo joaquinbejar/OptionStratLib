@@ -14,7 +14,9 @@ The default build must keep the clock, so that is asserted too.
 Features are not the whole story: `std::time` needs none, so this also scans the
 production sources. `utils/time.rs` is the one file that may read the clock, with
 `Utc::now` or `Local::now`. `SystemTime::now` is nowhere, and `Instant::now` only
-where the same function measures a duration with `.elapsed()`.
+where the same function measures a duration with `.elapsed()`. The scan reads text:
+`disallowed-methods` in `clippy.toml` is what resolves an alias or a call split across
+lines. An `Instant` used as a seed passes both: that one is not caught.
 
 Usage:
     check_no_clock.py               assert the trees, then lint, build, test and document
@@ -80,6 +82,9 @@ FACADE_TREES = [
     EVERYTHING,
 ]
 FACADE_TESTS = ["", "pricing", "strategies", "backtest", EVERYTHING]
+# With the defaults off and `clock` named, as the migration note tells a consumer to do:
+# nothing else lints or tests these, and each default build has every capability on.
+CLOCK_NAMED = ["clock", "clock,backtest"]
 
 # What `cargo tree -e features -i chrono` prints when something turned it on.
 LEAK_RE = re.compile(
@@ -89,8 +94,8 @@ LEAK_RE = re.compile(
 
 # A read of the clock in production code. `Instant` is monotonic and never tells the
 # time, so it is held to the narrower rule in `clock_reads`.
-CLOCK_READ_RE = re.compile(r"\b(?:Utc|Local)::now\s*\(")
-SYSTEM_TIME_RE = re.compile(r"\bSystemTime::now\s*\(")
+CLOCK_READ_RE = re.compile(r"\b(?:Utc|Local)\s*>?\s*::\s*now\b")
+SYSTEM_TIME_RE = re.compile(r"\bSystemTime\s*>?\s*::\s*now\b|\bUNIX_EPOCH\s*\.\s*elapsed\b")
 INSTANT_RE = re.compile(r"(?:let\s+(?:mut\s+)?(\w+)\s*=\s*)?(?:std::time::)?\bInstant::now\s*\(")
 # The only file that may read the clock (`wall_clock` and the local date helper).
 CLOCK_FILE = "crates/optionstratlib-core/src/utils/time.rs"
@@ -122,12 +127,31 @@ def production_lines(text: str) -> list[tuple[int, str]]:
     return out
 
 
+def code_of(line: str) -> str:
+    """A line without its trailing comment. A `//` inside a string, a URL say, is code."""
+    in_string = False
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if in_string:
+            if char == "\\":
+                index += 1
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif line.startswith("//", index):
+            return line[:index]
+        index += 1
+    return line
+
+
 def clock_reads(path: str, text: str) -> list[str]:
     """Where one production source reads the clock against the rule."""
     found = []
     lines = production_lines(text)
     for index, (number, line) in enumerate(lines):
-        code = line.split("//", 1)[0]
+        code = code_of(line)
         if SYSTEM_TIME_RE.search(code) or (CLOCK_READ_RE.search(code) and path != CLOCK_FILE):
             found.append(f"{path}:{number}: {line.strip()}")
         instant = INSTANT_RE.search(code)
@@ -221,6 +245,13 @@ def build_and_test() -> None:
             raise SystemExit(f"cargo doc {' '.join(flags)} failed")
 
 
+def lint_and_test_clock_named() -> None:
+    for features in CLOCK_NAMED:
+        flags = ["-p", FACADE, "--no-default-features", "--features", features]
+        cargo("clippy", *flags, "--all-targets", "--", "-D", "warnings")
+        cargo("test", *flags)
+
+
 def self_test() -> int:
     clean = """chrono v0.4.45
 \u251c\u2500\u2500 chrono feature "serde"
@@ -250,6 +281,13 @@ def self_test() -> int:
         "`std::time::SystemTime::now`": (clock_reads(other, "let t = std::time::SystemTime::now();"), 1),
         "`Utc::now` in the clock file": (clock_reads(CLOCK_FILE, "fn f() { Utc::now() }"), 0),
         "`SystemTime::now` in the clock file": (clock_reads(CLOCK_FILE, "let t = SystemTime::now();"), 1),
+        "passed as a function": (clock_reads(other, "let t = x.unwrap_or_else(SystemTime::now);"), 1),
+        "`Utc::now` passed as a function": (clock_reads(other, "let t = x.unwrap_or_else(Utc::now);"), 1),
+        "`UNIX_EPOCH.elapsed`": (clock_reads(other, "let t = UNIX_EPOCH.elapsed();"), 1),
+        "a qualified path": (clock_reads(other, "let t = <SystemTime>::now();"), 1),
+        "spaced": (clock_reads(other, "let t = SystemTime :: now();"), 1),
+        "after a URL on the line": (clock_reads(other, 'let u = "http://x"; let t = Utc::now();'), 1),
+        "a URL alone is not a read": (clock_reads(other, 'let u = "http://x";'), 0),
         "a comment is not a read": (clock_reads(other, "// Utc::now()"), 0),
         "a trailing comment is not a read": (clock_reads(other, "let x = 1; // Utc::now()"), 0),
         "a test module is not production": (
@@ -289,6 +327,7 @@ def main() -> int:
     print("OK: no configuration without `clock` enables `chrono/clock`, and the default builds keep it")
     if "--trees" not in sys.argv:
         build_and_test()
+        lint_and_test_clock_named()
         print("OK: every configuration without `clock` lints, builds, tests and documents")
     return 0
 
