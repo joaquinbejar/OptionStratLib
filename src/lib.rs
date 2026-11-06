@@ -45,9 +45,8 @@
 //! 6. [Trading Strategies](#trading-strategies)
 //! 7. [Setup Instructions](#setup-instructions)
 //! 8. [Library Usage](#library-usage)
-//! 9. [Usage Examples](#usage-examples)
-//! 10. [Testing](#testing)
-//! 11. [Contribution and Contact](#contribution-and-contact)
+//! 9. [Testing](#testing)
+//! 10. [Examples](#examples)
 //!
 //! ## Introduction
 //!
@@ -60,11 +59,13 @@
 //!
 //! ### 1. **Pricing Models**
 //! - **Black-Scholes Model**: European options pricing with full Greeks support
+//! - **Black-76**: European options on futures and forwards
+//! - **Garman-Kohlhagen**: European FX options
 //! - **Binomial Tree Model**: American and European options with early exercise capability
 //! - **Monte Carlo Simulations**: Complex pricing scenarios and path-dependent options
 //! - **Telegraph Process Model**: Monte-Carlo pricing under two-state regime-switching volatility
 //! - **American Options**: Barone-Adesi-Whaley approximation for early exercise
-//! - **Exotic Options**: Complete support for 14 exotic option types (see below)
+//! - **Exotic Options**: Pricing for 12 exotic option types (see below)
 //!
 //! ### 2. **Greeks Calculation**
 //! - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta,
@@ -74,10 +75,16 @@
 //! - Custom Greeks implementations with adjustable parameters
 //!
 //! ### 3. **Volatility Models**
-//! - Implied volatility calculation using Newton-Raphson method
-//! - Volatility surface construction and interpolation
-//! - Historical volatility estimation
-//! - Advanced volatility modeling tools
+//! - Implied volatility by Newton's method with a bisection fallback, up to 500% per year
+//! - Historical estimators: constant, EWMA and GARCH volatility, with uncertain volatility bounds
+//! - Raw SVI slices with weighted calibration (`calibrate_svi`)
+//! - Butterfly and calendar static arbitrage checks on a grid (`check_static_arbitrage`)
+//! - An implied volatility surface calibrated from bid and ask quotes
+//!   (`ImpliedVolatilitySurface::calibrate`): rejected quotes and unfitted expiries stay on
+//!   record, reads outside the data follow a declared extrapolation policy, and it offers
+//!   residuals, level, skew and term shocks, and a comparison against a flat baseline
+//! - Horizon volatility surfaces projected from one option chain
+//!   (`HorizonVolatilitySurface`), which are not annualized or calibrated
 //!
 //! ### 4. **Option Chain Management**
 //! - Complete option chain construction and analysis
@@ -105,6 +112,9 @@
 //! - Risk profiles and comprehensive visualizations
 //! - Delta neutrality analysis and adjustment
 //! - Probability analysis for strategy outcomes
+//! - Risk-neutral densities extracted from option chains
+//! - SPAN-style margin calculation
+//! - Expiry, exercise and assignment obligations, cash or physical (`settlement_obligation`)
 //!
 //! ### 7. **Backtesting Framework**
 //! - Comprehensive backtesting engine
@@ -114,9 +124,12 @@
 //!
 //! ### 8. **Simulation Tools**
 //! - Monte Carlo simulations for strategy testing
-//! - Telegraph process implementation
-//! - Random walk simulations
-//! - Custom simulation frameworks
+//! - Random walks: Brownian, geometric Brownian, log-returns, mean-reverting, jump-diffusion,
+//!   GARCH, Heston, telegraph, historical and custom
+//! - An Ornstein-Uhlenbeck path generator
+//! - The quadratic rough Heston model: seeded paths and Monte Carlo vanilla prices with
+//!   their standard error
+//! - Exit policies and path statistics for simulated positions
 //! - Parametrized simulations with adjustable inputs
 //!
 //! ### 9. **Visualization & Plotting**
@@ -156,10 +169,15 @@
 //! - **Exchange**: Margrabe's formula for asset exchange
 //! - **Power**: Non-linear payoff options
 //!
-//! ## Quality & Discipline (0.16.x)
+//! ### 13. **Builds Without a Wall Clock**
+//! The `clock` feature, on by default, can be dropped for simulators and replay engines that
+//! must be deterministic. A time the library needs then comes from an argument or the
+//! thread's reference datetime, or the call returns an error. See
+//! [Optional Features](#optional-features).
 //!
-//! The 0.16 line is a quality-hardening release. Every change below is
-//! enforced crate-wide and documented in `CHANGELOG.md`:
+//! ## Quality & Discipline
+//!
+//! These rules are enforced crate-wide, and `CHANGELOG.md` records how each was introduced:
 //!
 //! - **Checked `Decimal` arithmetic.** Every monetary-path kernel routes
 //!   through `d_add` / `d_sub` / `d_mul` / `d_div` / `d_sum` /
@@ -259,6 +277,7 @@
 //! - `positive_ext.rs`: OptionStratLib extensions of `positive::Positive`
 //! - `types.rs`: common enums (OptionType, Side, OptionStyle)
 //! - `trade.rs`: trade records and their status
+//! - `settlement.rs`: expiry, exercise and assignment obligations
 //! - `format.rs`: data formatting utilities
 //! - **`leg/`**: Multi-instrument leg support for strategies
 //!   - `traits.rs`: Common leg traits (`LegAble`, `Marginable`, `Fundable`, `Expirable`)
@@ -308,12 +327,11 @@
 //!
 //! ### **Volatility** (`volatility/`)
 //! Volatility modeling and analysis:
-//! - `utils.rs`: Implied volatility calculation (Newton-Raphson method)
+//! - `utils.rs`: Implied volatility (Newton's method with a bisection fallback) and estimators
 //! - `traits.rs`: Volatility model interfaces
 //! - `svi.rs`: Raw SVI slices and their weighted calibration
 //! - `arbitrage.rs`: Butterfly and calendar checks of slices and surfaces, on a grid
 //! - `surface.rs`: A calibrated implied volatility surface built from bid and ask quotes
-//! - Advanced volatility surface construction
 //!
 //! ### **Greeks** (`greeks/`)
 //! Complete Greeks calculation suite:
@@ -336,8 +354,8 @@
 //!
 //! ### **Simulation** (`simulation/`)
 //! Monte Carlo and stochastic simulations:
-//! - Random walk implementations
-//! - Telegraph process modeling
+//! - Random walk implementations, including GARCH, Heston and telegraph walks
+//! - The Ornstein-Uhlenbeck path generator and exit policies
 //! - The quadratic rough Heston model and Monte Carlo vanilla prices on it
 //! - Custom simulation frameworks
 //! - Parametrized simulation tools
@@ -380,6 +398,7 @@
 //! - Position risk metrics
 //! - Break-even analysis
 //! - Risk profile generation
+//! - SPAN-style margin (`span.rs`)
 //!
 //! ### **P&L** (`pnl/`)
 //! Profit and loss calculation:
@@ -1494,6 +1513,150 @@
 //! # }
 //! ```
 //!
+//! ### Calibrating a Volatility Surface from Quotes
+//!
+//! Every quote is either used or rejected with a reason, and passing the arbitrage report means
+//! only those checks, on that grid. Nothing here reads a clock: time runs from `as_of`.
+//!
+//! ```rust
+//! # #[cfg(feature = "pricing")]
+//! # mod example {
+//! use chrono::{TimeDelta, TimeZone, Utc};
+//! use optionstratlib::pricing::black_scholes_model::black_scholes;
+//! use optionstratlib::volatility::{
+//!     ImpliedVolatilitySurface, ImpliedVolatilitySurfaceConfig, OptionQuote,
+//! };
+//! use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
+//! use positive::{Positive, pos_or_panic};
+//! use rust_decimal::Decimal;
+//! use rust_decimal_macros::dec;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let as_of = Utc
+//!         .with_ymd_and_hms(2030, 1, 1, 12, 0, 0)
+//!         .single()
+//!         .ok_or("a valid date")?;
+//!     let (spot, rate) = (Positive::HUNDRED, dec!(0.03));
+//!
+//!     // Illustrative quotes, 1% either side of a Black-Scholes price at a 20% volatility.
+//!     let mut quotes = Vec::new();
+//!     for days in [30_i64, 90, 180] {
+//!         for strike in (85..=115).step_by(5) {
+//!             let strike = Positive::new_decimal(Decimal::from(strike))?;
+//!             let mid = black_scholes(&Options::new(
+//!                 OptionType::European,
+//!                 Side::Long,
+//!                 "XYZ".to_string(),
+//!                 strike,
+//!                 ExpirationDate::Days(Positive::new_decimal(Decimal::from(days))?),
+//!                 pos_or_panic!(0.2),
+//!                 Positive::ONE,
+//!                 spot,
+//!                 rate,
+//!                 OptionStyle::Call,
+//!                 Positive::ZERO,
+//!                 None,
+//!             ))?;
+//!             quotes.push(OptionQuote {
+//!                 expiry: as_of + TimeDelta::try_days(days).ok_or("days fit")?,
+//!                 strike,
+//!                 style: OptionStyle::Call,
+//!                 bid: Positive::new_decimal(mid * dec!(0.99))?,
+//!                 ask: Positive::new_decimal(mid * dec!(1.01))?,
+//!                 quoted_at: as_of,
+//!             });
+//!         }
+//!     }
+//!
+//!     let surface = ImpliedVolatilitySurface::calibrate(
+//!         &quotes,
+//!         spot,
+//!         rate,
+//!         Positive::ZERO,
+//!         as_of,
+//!         &ImpliedVolatilitySurfaceConfig::default(),
+//!     )?;
+//!     assert_eq!(surface.expiries().len(), 3);
+//!     assert!(surface.rejections().is_empty() && surface.unfitted().is_empty());
+//!     assert!(surface.arbitrage_report().passed());
+//!
+//!     // A strike and an expiry inside the data, read between the first two slices.
+//!     let expiry = as_of + TimeDelta::try_days(60).ok_or("days fit")?;
+//!     let point = surface.point_at_strike(Positive::HUNDRED, expiry)?;
+//!     assert!((point.implied_volatility.to_dec() - dec!(0.2)).abs() < dec!(0.001));
+//!     Ok(())
+//! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(feature = "pricing")]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
+//! ```
+//!
+//! `calibrated_surface` in `examples_pricing` also shows extrapolation, shocks and residuals.
+//!
+//! ### Simulating the Quadratic Rough Heston Model
+//!
+//! Every parameter below is illustrative, and none is calibrated to any underlying. One run does
+//! not show that a price has converged, even with a small standard error: compare seeds and step
+//! counts.
+//!
+//! ```rust
+//! # #[cfg(feature = "simulation")]
+//! # mod example {
+//! use optionstratlib::OptionStyle;
+//! use optionstratlib::simulation::{
+//!     QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonParams,
+//!     price_vanilla_quadratic_rough_heston,
+//! };
+//! use positive::Positive;
+//! use rust_decimal::Decimal;
+//! use rust_decimal_macros::dec;
+//! use std::num::NonZeroUsize;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // `alpha`, the number of factors and the ratio of the partition.
+//!     let kernel = QuadraticRoughHestonKernel::try_new(dec!(0.6), 5, dec!(5))?;
+//!     // `a`, `b`, `c`, `lambda`, `eta`, the kernel, the initial factors and the spot.
+//!     let params = QuadraticRoughHestonParams::try_new(
+//!         dec!(0.5),
+//!         dec!(0.1),
+//!         dec!(0.01),
+//!         dec!(1.5),
+//!         dec!(1),
+//!         kernel,
+//!         vec![dec!(-0.05); 5],
+//!         Positive::HUNDRED,
+//!     )?;
+//!     let grid = QuadraticRoughHestonGrid::try_new(dec!(0.25), 50)?;
+//!     let estimate = price_vanilla_quadratic_rough_heston(
+//!         &params,
+//!         &grid,
+//!         OptionStyle::Call,
+//!         Positive::HUNDRED,
+//!         NonZeroUsize::try_from(2_000_usize)?,
+//!         958,
+//!     )?;
+//!     assert!(estimate.price() > Decimal::ZERO);
+//!     Ok(())
+//! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(feature = "simulation")]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
+//! ```
+//!
+//! ### Settlement Obligations
+//!
+//! `settlement_obligation` works out what expiry, exercise or assignment obliges a contract
+//! holder to pay and deliver, with no clock or ledger. `settlement_obligations` in
+//! `examples_pricing` covers cash and physical settlement on each side.
+//!
 //! ## Testing
 //!
 //! OptionStratLib ships with a large, fully deterministic test suite
@@ -1536,8 +1699,7 @@
 //! - **Deterministic Monte-Carlo Tests**: Seeded via
 //!   [`utils::deterministic_rng`] so arithmetic-precision shifts can't
 //!   flip assertions.
-//! - **Exotic Options Tests**: Complete coverage for all 14 exotic
-//!   option types.
+//! - **Exotic Options Tests**: Coverage for the exotic option types.
 //!
 //! ### **Benchmarking**
 //!
@@ -1556,7 +1718,7 @@
 //! Examples live in self-contained sub-crates under `examples/`, each
 //! with its own `Cargo.toml`:
 //!
-//! - **`examples_strategies/`**: 25+ strategy demos
+//! - **`examples_strategies/`**: Strategy demos
 //! - **`examples_strategies_best/`**: Optimizer entry points
 //!   (`get_best_area` / `get_best_ratio`) per strategy
 //! - **`examples_strategies_delta/`**: Delta-neutrality workflows
@@ -1569,11 +1731,14 @@
 //!   temporal / composite metric curves and surfaces
 //! - **`examples_volatility/`**: Implied-volatility solver walkthroughs
 //! - **`examples_simulation/`**: Monte-Carlo random-walk demos for
-//!   `LongCall`, `ShortPut`, position / strategy simulators, and
-//!   random-walk-of-chain
+//!   `LongCall`, `ShortPut`, position / strategy simulators,
+//!   random-walk-of-chain, and the quadratic rough Heston model
+//! - **`examples_pricing/`**: Black-76, Garman-Kohlhagen, SVI calibration,
+//!   static arbitrage checks, a calibrated surface, and settlement obligations
 //! - **`examples_exotics/`**: Exotic option pricing (barrier,
 //!   cliquet, …)
 //! - **`examples_visualization/`**: Interactive chart wiring
+//! - **`direct/`**: One crate per component, using it without the facade
 //!
 //! Run any binary with the usual cargo invocation (from the repo
 //! root, so relative data-fixture paths resolve correctly):
@@ -1592,47 +1757,6 @@
 //! hourly grid so `cargo run` finishes in a few seconds in debug mode;
 //! bump `n_steps` / `n_simulations` inside the binary if you want a
 //! finer sample.
-//!
-//! ## Contribution and Contact
-//!
-//! ### **Contributing**
-//!
-//! Contributions are welcome! Please follow these guidelines:
-//!
-//! 1. **Fork** the repository
-//! 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-//! 3. **Commit** your changes: `git commit -m 'Add amazing feature'`
-//! 4. **Push** to the branch: `git push origin feature/amazing-feature`
-//! 5. **Open** a Pull Request
-//!
-//! ### **Development Setup**
-//!
-//! ```bash
-//! git clone https://github.com/joaquinbejar/OptionStratLib.git
-//! cd OptionStratLib
-//! cargo build --all-features
-//! cargo test --all-features
-//! ```
-//!
-//! ### **Code Quality**
-//!
-//! - All code must pass `cargo clippy` without warnings
-//! - Format code with `cargo fmt`
-//! - Add tests for new functionality
-//! - Update documentation for API changes
-//! - Follow Rust 2024 edition best practices
-//!
-//!
-//! ### **Support**
-//!
-//! - **Issues**: Report bugs and request features on GitHub
-//! - **Discussions**: Join community discussions on GitHub Discussions
-//! - **Documentation**: Comprehensive docs available at docs.rs
-//!
-//! ---
-//!
-//! **OptionStratLib v0.24.0** - Built with ❤️ in Rust for the financial community
-//!
 
 /// # OptionsStratLib: Financial Options Trading Library
 ///

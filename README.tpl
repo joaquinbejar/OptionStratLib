@@ -68,6 +68,18 @@ We welcome contributions to this project! If you would like to contribute, pleas
 5. Commit your changes and push your branch to your forked repository.
 6. Submit a pull request to the main repository.
 
+To build and test from source:
+
+```bash
+git clone https://github.com/joaquinbejar/OptionStratLib.git
+cd OptionStratLib
+cargo build --all-features
+cargo test --all-features
+```
+
+Code must pass `cargo clippy` without warnings and be formatted with `cargo fmt`. Add tests
+for new functionality, and update the documentation when the API changes.
+
 If you have any questions, issues, or would like to provide feedback, please feel free to contact the project maintainer:
 
 
