@@ -116,16 +116,22 @@ impl QuadraticRoughHestonKernel {
             return Err(QuadraticRoughHestonError::RatioNotAboveOne { ratio });
         }
 
-        // `1 - alpha` comes from the `Decimal`, so an `alpha` just below one keeps its
-        // distance from one. It is in `(0, 1/2)`, `Gamma(alpha) Gamma(1 - alpha)` is
-        // `pi / sin(pi (1 - alpha))`, and `exp_m1` keeps the differences of powers
-        // accurate for a ratio close to one.
+        // `1 - alpha` and `ratio - 1` come from the `Decimal`, so an `alpha` just below one
+        // and a ratio just above it keep their distance from one, which an `f64` of the
+        // whole value would round away. `1 - alpha` is in `(0, 1/2)`,
+        // `Gamma(alpha) Gamma(1 - alpha)` is `pi / sin(pi (1 - alpha))`, and `exp_m1` keeps
+        // the differences of powers accurate for a ratio close to one.
         let beta = decimal_to_f64(d_sub(
             Decimal::ONE,
             alpha,
             "quadratic_rough_heston::kernel",
         )?)?;
-        let log_ratio = decimal_to_f64(ratio)?.ln(); // scan-banned: allow -- f64 `ln` of a value above one: positive and finite, and it does not abort
+        let log_ratio = decimal_to_f64(d_sub(
+            ratio,
+            Decimal::ONE,
+            "quadratic_rough_heston::kernel",
+        )?)?
+        .ln_1p(); // scan-banned: allow -- f64 `ln_1p` of a positive value: positive and finite, and it does not abort
         let sin_pi_beta = (PI * beta).sin(); // scan-banned: allow -- f64 `sin` of a finite value: finite, and it does not abort
         let weight_scale = -(-beta * log_ratio).exp_m1() * sin_pi_beta / (beta * PI);
         let discount_scale = beta * ((1.0 + beta) * log_ratio).exp_m1()
@@ -1071,6 +1077,24 @@ mod tests {
             let kernel = QuadraticRoughHestonKernel::try_new(alpha, 2, dec!(4)).unwrap();
             assert!(kernel.raw_weights.iter().all(|weight| *weight > 0.0));
         }
+    }
+
+    #[test]
+    fn test_kernel_ratio_just_above_one_keeps_its_distance_from_one() {
+        // An `f64` of the whole ratio rounds 1 + 1e-16 to one, and 1 + 3e-16 to 1 + 2.2e-16.
+        let lowest = QuadraticRoughHestonKernel::try_new(dec!(0.75), 2, dec!(1.0000000000000001));
+        assert!(lowest.is_ok());
+
+        // With `alpha = 0.75`, `n = 2`, `i = 1`, the exponent is zero and the first weight is
+        // `(1 - x^(-1/4)) sin(pi / 4) / (pi / 4)`, about `(x - 1) sin(pi / 4) / pi`.
+        let kernel =
+            QuadraticRoughHestonKernel::try_new(dec!(0.75), 2, dec!(1.0000000000000003)).unwrap();
+        let weight = decimal_to_f64(kernel.weights()[0]).unwrap();
+        let expected = 3e-16 * (PI / 4.0).sin() / PI;
+        assert!(
+            (weight / expected - 1.0).abs() < 1e-6,
+            "weight {weight}, expected {expected}"
+        );
     }
 
     #[test]
