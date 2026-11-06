@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The facade README and crate docs named v0.23.0 in their title and footer, and did not
   point to the 0.24 migration guide. The README and docs of the published 0.24.0 still do.
+- The facade README and crate docs now list the volatility, simulation, risk, settlement and
+  pricing features the Features section had left out, with usage examples for a calibrated
+  surface and the quadratic rough Heston model. They no longer present 0.16 as the current
+  line, count 14 exotic types where 12 are listed, or describe the implied volatility solver
+  as plain Newton-Raphson. The duplicated contribution section is gone.
 
 ## [0.24.0] - 2026-11-06
 
