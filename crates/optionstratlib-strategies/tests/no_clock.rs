@@ -128,6 +128,7 @@ mod without_clock {
     use optionstratlib_market::chains::utils::{
         FindOptimalSide, OptionChainBuildParams, OptionDataPriceParams,
     };
+    use optionstratlib_strategies::error::AdjustmentError;
     use optionstratlib_strategies::strategies::StrategyConstructor;
     use optionstratlib_strategies::strategies::base::Optimizable;
     use optionstratlib_strategies::strategies::delta_neutral::{
@@ -138,6 +139,10 @@ mod without_clock {
 
     /// A 21-strike chain, built from the reference datetime, so the search is parallel.
     fn chain() -> OptionChain {
+        chain_expiring(ExpirationDate::Days(pos_or_panic!(30.0)))
+    }
+
+    fn chain_expiring(expiration: ExpirationDate) -> OptionChain {
         ExpirationDate::set_reference_datetime(Some(date()));
         let built = OptionChain::build_chain(&OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -150,7 +155,7 @@ mod without_clock {
             2,
             OptionDataPriceParams::new(
                 Some(Box::new(Positive::HUNDRED)),
-                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(expiration),
                 Some(dec!(0.05)),
                 spos!(0.02),
                 Some("TEST".to_string()),
@@ -192,11 +197,8 @@ mod without_clock {
         assert_eq!(strategy.long_call.date, date());
     }
 
-    /// Candidates for a new leg used to vanish: with no date, `get_position` asks the clock.
-    #[test]
-    fn test_adjustment_optimizer_finds_new_leg_candidates() {
-        let chain = chain();
-        let positions = vec![Position::new(
+    fn long_call_leg() -> Vec<Position> {
+        vec![Position::new(
             Options::new(
                 OptionType::European,
                 Side::Long,
@@ -217,7 +219,14 @@ mod without_clock {
             Positive::ZERO,
             None,
             None,
-        )];
+        )]
+    }
+
+    /// Candidates for a new leg used to vanish: with no date, `get_position` asks the clock.
+    #[test]
+    fn test_adjustment_optimizer_finds_new_leg_candidates() {
+        let chain = chain();
+        let positions = long_call_leg();
         let config = AdjustmentConfig {
             prefer_existing_legs: false,
             ..AdjustmentConfig::default()
@@ -231,6 +240,29 @@ mod without_clock {
         .optimize()
         .unwrap();
         assert!(!plan.actions.is_empty());
+    }
+
+    /// With no time to measure the chain from, every candidate would be dropped and the
+    /// plan come back empty: an unhedged delta reported as a success.
+    #[test]
+    fn test_adjustment_optimizer_on_a_datetime_chain_without_a_time_is_an_error() {
+        let chain = chain_expiring(ExpirationDate::DateTime(date() + Duration::days(30)));
+        let positions = long_call_leg();
+        let optimizer = AdjustmentOptimizer::with_chain(
+            &positions,
+            &chain,
+            AdjustmentConfig::default(),
+            AdjustmentTarget::delta_neutral(),
+        );
+        assert!(matches!(
+            optimizer.optimize(),
+            Err(AdjustmentError::GreeksError(_))
+        ));
+
+        ExpirationDate::set_reference_datetime(Some(date()));
+        let plan = optimizer.optimize();
+        ExpirationDate::set_reference_datetime(None);
+        assert!(!plan.unwrap().actions.is_empty());
     }
 
     /// Fails if anything in this configuration turned the clock on.

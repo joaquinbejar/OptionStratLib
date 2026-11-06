@@ -113,7 +113,10 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// empty, `AdjustmentError::InfeasibleTarget` when no combination
     /// of candidate strikes can close the delta gap within the
     /// configured tolerance, or `AdjustmentError::CostCeilingBreached`
-    /// when every viable plan exceeds the configured `max_cost`.
+    /// when every viable plan exceeds the configured `max_cost`. Returns
+    /// [`AdjustmentError::GreeksError`] when new legs are allowed and the time to expiry
+    /// of the chain cannot be measured: a `DateTime` chain in a build with neither the
+    /// `clock` feature nor a reference datetime on this thread.
     pub fn optimize(&self) -> Result<AdjustmentPlan, AdjustmentError> {
         if self.positions.is_empty() {
             return Err(AdjustmentError::NoPositions);
@@ -133,6 +136,17 @@ impl<'a> AdjustmentOptimizer<'a> {
                 current_greeks,
                 Decimal::ZERO,
             ));
+        }
+
+        // A candidate leg whose delta cannot be computed is dropped below, so with no
+        // time to measure the chain from, every candidate would vanish and the plan come
+        // back empty: an unhedged delta reported as a success.
+        if self.config.allow_new_legs
+            && let Some(chain) = self.chain
+        {
+            chain
+                .require_time_to_expiry()
+                .map_err(|error| AdjustmentError::GreeksError(error.to_string()))?;
         }
 
         let delta_gap = self.target.delta_gap(&current_greeks)?;
