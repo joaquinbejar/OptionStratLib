@@ -394,6 +394,7 @@ SURFACES: dict[str, dict] = {
     "none": {"features": []},
     "default": {
         "features": [
+            "clock",
             "pricing",
             "market",
             "analytics",
