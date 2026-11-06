@@ -26,7 +26,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -44,6 +44,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -190,7 +191,7 @@ impl ShortStraddle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
-        mut strike: Positive,
+        strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: Positive,
         risk_free_rate: Decimal,
@@ -203,6 +204,52 @@ impl ShortStraddle {
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_short_call,
+            premium_short_put,
+            open_fee_short_call,
+            close_fee_short_call,
+            open_fee_short_put,
+            close_fee_short_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        mut strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_short_call: Positive,
+        premium_short_put: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_short_put: Positive,
+        close_fee_short_put: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         if strike == Positive::ZERO {
             strike = underlying_price;
         }
@@ -212,8 +259,8 @@ impl ShortStraddle {
             kind: StrategyType::ShortStraddle,
             description: SHORT_STRADDLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_call: Position::default(),
-            short_put: Position::default(),
+            short_call: Position::blank_at(date),
+            short_put: Position::blank_at(date),
         };
 
         let short_call_option = Options::new(
@@ -233,7 +280,7 @@ impl ShortStraddle {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -258,7 +305,7 @@ impl ShortStraddle {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee_short_put,
             close_fee_short_put,
             None,
@@ -347,7 +394,7 @@ impl StrategyConstructor for ShortStraddle {
         let short_call = Position::new(
             call_position.option.clone(),
             call_position.premium,
-            Utc::now(),
+            now_or(call_position.date),
             call_position.open_fee,
             call_position.close_fee,
             call_position.epic.clone(),
@@ -357,7 +404,7 @@ impl StrategyConstructor for ShortStraddle {
         let short_put = Position::new(
             put_position.option.clone(),
             put_position.premium,
-            Utc::now(),
+            now_or(put_position.date),
             put_position.open_fee,
             put_position.close_fee,
             put_position.epic.clone(),
@@ -908,7 +955,7 @@ impl Optimizable for ShortStraddle {
                 "missing put_bid for short put leg",
             )
         })?;
-        let mut strategy = ShortStraddle::new(
+        let mut strategy = ShortStraddle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -923,6 +970,7 @@ impl Optimizable for ShortStraddle {
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.short_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1118,17 +1166,20 @@ impl PnLCalculator for ShortStraddle {
 #[cfg(test)]
 mod tests_short_straddle {
     use super::*;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 
     use num_traits::ToPrimitive;
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
     use rust_decimal_macros::dec;
 
     fn setup() -> ShortStraddle {
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(150.0),
@@ -1143,6 +1194,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1150,7 +1202,7 @@ mod tests_short_straddle {
     #[test]
     fn test_atm_strike_initialization() {
         let underlying_price = pos_or_panic!(150.0);
-        let strategy = ShortStraddle::new(
+        let strategy = ShortStraddle::new_at(
             "AAPL".to_string(),
             underlying_price,
             Positive::ZERO,
@@ -1165,6 +1217,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1205,7 +1258,7 @@ mod tests_short_straddle {
             "Strategy should be valid with equal strikes"
         );
 
-        let valid_strategy = ShortStraddle::new(
+        let valid_strategy = ShortStraddle::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0), // Diferente strike
@@ -1220,6 +1273,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert!(valid_strategy.validate());
@@ -1323,6 +1377,7 @@ mod tests_short_straddle {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_best_ratio() {
         let mut strategy = setup();
@@ -1335,6 +1390,7 @@ mod tests_short_straddle {
         assert!(strategy.validate());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_best_area() {
         let mut strategy = setup();
@@ -1357,6 +1413,7 @@ mod tests_short_straddle {
         assert!(*range.last().unwrap() >= strategy.break_even_points[1]);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_valid_short_option() {
         let strategy = setup();
@@ -1383,6 +1440,7 @@ mod tests_short_straddle {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_create_strategy() {
         let strategy = setup();
@@ -1407,6 +1465,7 @@ mod tests_short_straddle {
         assert!(new_strategy.validate());
     }
 
+    #[cfg(feature = "clock")]
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             Some(Box::new(Positive::HUNDRED)),
@@ -1454,7 +1513,7 @@ mod tests_short_straddle_probability {
     /// Helper function that creates a basic short Straddle for testing purposes
     /// Returns a ShortStraddle instance with predefined test values
     fn create_test_short_straddle() -> ShortStraddle {
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
@@ -1469,6 +1528,7 @@ mod tests_short_straddle_probability {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1594,7 +1654,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     fn create_test_short_straddle() -> ShortStraddle {
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
@@ -1609,6 +1669,7 @@ mod tests_short_straddle_probability_bis {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1722,21 +1783,32 @@ mod tests_short_straddle_probability_bis {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos_or_panic!(7138.5);
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
@@ -1751,10 +1823,12 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7460.0));
@@ -1802,6 +1876,7 @@ mod tests_short_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7050.0));
@@ -1849,6 +1924,7 @@ mod tests_short_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7245.0));
@@ -1866,25 +1942,40 @@ mod tests_short_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Side;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
+    #[cfg(feature = "clock")]
     use std::str::FromStr;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos_or_panic!(7138.5);
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
@@ -1899,10 +1990,12 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7460.0));
@@ -1953,6 +2046,7 @@ mod tests_short_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7050.0));
@@ -2002,6 +2096,7 @@ mod tests_short_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7245.0));
@@ -2017,7 +2112,7 @@ mod tests_short_straddle_delta_size {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2191,7 +2286,7 @@ mod tests_short_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_short_straddle_pnl {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
@@ -2323,7 +2418,7 @@ mod tests_straddle_position_management {
     use tracing::error;
 
     fn create_test_short_straddle() -> ShortStraddle {
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
@@ -2338,6 +2433,7 @@ mod tests_straddle_position_management {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2434,7 +2530,7 @@ mod tests_adjust_option_position {
     use rust_decimal_macros::dec;
 
     fn create_test_short_straddle() -> ShortStraddle {
-        ShortStraddle::new(
+        ShortStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
@@ -2449,6 +2545,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

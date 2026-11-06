@@ -14,7 +14,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortButterflySpread strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = ShortButterflySpread::new(
+    let strategy = ShortButterflySpread::new_at(
         "SP500".to_string(),
         underlying_price,
         pos_or_panic!(5700.0),
@@ -34,6 +34,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

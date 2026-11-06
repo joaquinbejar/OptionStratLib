@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -61,6 +62,7 @@ fn create_empty_chain() -> OptionChain {
 mod theta_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve_basic() {
         let chain = create_test_chain();
@@ -71,6 +73,7 @@ mod theta_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve_negative_values() {
         let chain = create_test_chain();
@@ -82,6 +85,7 @@ mod theta_curve_tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -112,6 +116,7 @@ mod theta_curve_tests {
 mod theta_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_surface_basic() {
         let chain = create_test_chain();
@@ -126,6 +131,7 @@ mod theta_surface_tests {
         assert_eq!(surface.points.len(), 33);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_surface_single_day() {
         let chain = create_test_chain();
@@ -139,6 +145,7 @@ mod theta_surface_tests {
         assert_eq!(surface.points.len(), 11);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_surface_empty_days() {
         let chain = create_test_chain();
@@ -167,6 +174,7 @@ mod theta_surface_tests {
 mod charm_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_curve_basic() {
         let chain = create_test_chain();
@@ -177,6 +185,7 @@ mod charm_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -207,6 +216,7 @@ mod charm_curve_tests {
 mod charm_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_surface_basic() {
         let chain = create_test_chain();
@@ -220,6 +230,7 @@ mod charm_surface_tests {
         assert_eq!(surface.points.len(), 33);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_surface_single_day() {
         let chain = create_test_chain();
@@ -233,6 +244,7 @@ mod charm_surface_tests {
         assert_eq!(surface.points.len(), 11);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_surface_empty_days() {
         let chain = create_test_chain();
@@ -261,6 +273,7 @@ mod charm_surface_tests {
 mod color_curve_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_curve_basic() {
         let chain = create_test_chain();
@@ -271,6 +284,7 @@ mod color_curve_tests {
         assert!(!curve.points.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_curve_strike_ordering() {
         let chain = create_test_chain();
@@ -301,6 +315,7 @@ mod color_curve_tests {
 mod color_surface_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_surface_basic() {
         let chain = create_test_chain();
@@ -314,6 +329,7 @@ mod color_surface_tests {
         assert_eq!(surface.points.len(), 33);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_surface_single_day() {
         let chain = create_test_chain();
@@ -327,6 +343,7 @@ mod color_surface_tests {
         assert_eq!(surface.points.len(), 11);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_surface_empty_days() {
         let chain = create_test_chain();
@@ -355,6 +372,7 @@ mod color_surface_tests {
 mod edge_case_tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_near_expiration_theta() {
         let chain = create_test_chain();
@@ -365,6 +383,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_near_expiration_charm() {
         let chain = create_test_chain();
@@ -375,6 +394,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_near_expiration_color() {
         let chain = create_test_chain();
@@ -385,6 +405,7 @@ mod edge_case_tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_wide_price_range() {
         let chain = create_test_chain();
@@ -400,6 +421,7 @@ mod edge_case_tests {
         assert!(color_result.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_single_point_surface() {
         let chain = create_test_chain();

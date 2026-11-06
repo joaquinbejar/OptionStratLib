@@ -8,6 +8,7 @@ use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::utils::TimeFrame;
 use optionstratlib_core::utils::time::convert_time_frame;
+use optionstratlib_core::utils::time::{days_to_expiration, evaluation_time};
 use serde::{Serialize, Serializer};
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
@@ -93,9 +94,11 @@ where
     /// * `time_unit` - The time unit for this step (e.g., Day, Week, Month)
     /// * `datetime` - The expiration date. Stored as-is when the variant is
     ///   [`ExpirationDate::Days`]; [`ExpirationDate::DateTime`] is normalized
-    ///   to `Days` via [`ExpirationDate::get_days`]. If that conversion fails
+    ///   to `Days` via [`days_to_expiration`]. If that conversion fails
     ///   (past date / invalid datetime), the step falls back to
-    ///   `ExpirationDate::Days(Positive::ZERO)` and emits `tracing::error!`.
+    ///   `ExpirationDate::Days(Positive::ZERO)` and emits `tracing::error!`. In a
+    ///   build with neither the `clock` feature nor a reference datetime on this
+    ///   thread it stays a `DateTime`, and [`Xstep::days_left`] reports why.
     ///
     /// # Returns
     ///
@@ -103,7 +106,11 @@ where
     pub fn new(value: T, time_unit: TimeFrame, datetime: ExpirationDate) -> Self {
         let datetime = match datetime {
             ExpirationDate::Days(_) => datetime,
-            ExpirationDate::DateTime(dt) => match datetime.get_days() {
+            // With no time to measure from there is no day count yet. The step
+            // keeps the instant, and `days_left` reports it, instead of reading
+            // as already expired.
+            ExpirationDate::DateTime(_) if evaluation_time().is_err() => datetime,
+            ExpirationDate::DateTime(dt) => match days_to_expiration(&datetime) {
                 Ok(days) => ExpirationDate::Days(days),
                 Err(e) => {
                     tracing::error!(
@@ -186,7 +193,7 @@ where
     /// [`ExpirationDate`] cannot be resolved to a non-negative day
     /// count (e.g. the datetime is in the past).
     pub fn days_left(&self) -> Result<Positive, SimulationError> {
-        Ok(self.datetime.get_days()?)
+        Ok(days_to_expiration(&self.datetime)?)
     }
 
     /// Generates the next step by reducing the expiration days by the step value.
@@ -203,13 +210,13 @@ where
     /// Returns [`SimulationError::ExpirationReached`] when the
     /// current step is already at expiration (no forward step is
     /// possible), [`SimulationError::ExpirationDate`] when the
-    /// underlying [`ExpirationDate::get_days`] call fails,
+    /// underlying [`days_to_expiration`] call fails,
     /// [`SimulationError::PositiveError`] when the step cannot be expressed
     /// in days (a custom time unit with no periods in a year, or a step
     /// beyond the `Positive` range), and [`SimulationError::StepError`]
     /// when the step index overflows `i32::MAX`.
     pub fn next(&self) -> Result<Self, SimulationError> {
-        let days = self.datetime.get_days()?;
+        let days = days_to_expiration(&self.datetime)?;
         if days == Positive::ZERO {
             return Err(SimulationError::ExpirationReached);
         }
@@ -251,14 +258,14 @@ where
     /// # Errors
     ///
     /// Returns [`SimulationError::ExpirationDate`] when the underlying
-    /// [`ExpirationDate::get_days`] call fails,
+    /// [`days_to_expiration`] call fails,
     /// [`SimulationError::StepError`] when the step-size conversion to
     /// `Positive` fails or when the step index underflows `i32::MIN`, and
     /// [`SimulationError::PositiveError`] when the step cannot be
     /// expressed in days or rewinding the expiration leaves the
     /// representable `Positive` range.
     pub fn previous(&self) -> Result<Self, SimulationError> {
-        let days = self.datetime.get_days()?;
+        let days = days_to_expiration(&self.datetime)?;
         let days_to_rest = convert_time_frame(
             self.step_size_in_time.try_into().map_err(|_| {
                 SimulationError::step_error("Failed to convert step size to Positive")
@@ -530,6 +537,7 @@ mod tests_serialize {
         // panics for DateTime variant, which matches the implementation
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_datetime_constructor_normalizes_to_days() {
         // `Xstep::new` now normalizes `ExpirationDate::DateTime` to

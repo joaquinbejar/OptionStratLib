@@ -61,7 +61,7 @@ use crate::strategies::shared::{
     apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
 };
 use crate::strategies::{BasicAble, Strategies, StrategyConstructor};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::ProbabilityError;
@@ -78,6 +78,7 @@ use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use optionstratlib_core::model::utils::sub_floor_zero;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
@@ -200,6 +201,50 @@ impl CoveredCall {
         call_open_fee: Positive,
         call_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            call_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_short_call,
+            spot_open_fee,
+            spot_close_fee,
+            call_open_fee,
+            call_close_fee,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        call_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_short_call: Positive,
+        spot_open_fee: Positive,
+        spot_close_fee: Positive,
+        call_open_fee: Positive,
+        call_close_fee: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         // Create the spot position (long underlying)
         // Every per-share figure this strategy reports — the effective cost
         // basis, the break-even, the premium per share — divides by the size
@@ -217,7 +262,7 @@ impl CoveredCall {
             quantity,
             underlying_price,
             Side::Long,
-            Utc::now(),
+            date,
             spot_open_fee,
             spot_close_fee,
         );
@@ -241,7 +286,7 @@ impl CoveredCall {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             call_open_fee,
             call_close_fee,
             None,
@@ -1018,7 +1063,7 @@ impl PnLCalculator for CoveredCall {
             unrealized: Some(profit),
             initial_costs: spot_cost,
             initial_income: premium_received,
-            date_time: Utc::now(),
+            date_time: now_or(self.short_call.date),
         })
     }
 }
@@ -1142,7 +1187,7 @@ mod tests {
     use rust_decimal_macros::dec;
 
     fn create_test_covered_call() -> CoveredCall {
-        CoveredCall::new(
+        CoveredCall::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1156,6 +1201,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

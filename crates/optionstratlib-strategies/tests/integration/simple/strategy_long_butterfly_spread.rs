@@ -15,7 +15,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongButterflySpread strategy
     let underlying_price = pos_or_panic!(5795.88);
 
-    let strategy = LongButterflySpread::new(
+    let strategy = LongButterflySpread::new_at(
         "SP500".to_string(),
         underlying_price,
         pos_or_panic!(5710.0),
@@ -35,6 +35,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

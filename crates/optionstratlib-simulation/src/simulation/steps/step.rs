@@ -203,6 +203,11 @@ where
     /// * `Positive` - A guaranteed positive decimal value representing the number of days
     ///   until expiration. This value is extracted from the step's x-component's expiration date.
     ///
+    /// A chart position, not a figure to compute with: where the days cannot be read
+    /// it logs a warning and gives zero. That includes a `DateTime` step in a build
+    /// with neither the `clock` feature nor a reference datetime on this thread. Use
+    /// [`Xstep::days_left`] for the error.
+    ///
     pub fn get_graph_x_in_days_left(&self) -> Positive {
         // Used by visualization; on error we fall back to ZERO so the
         // chart renders the step at the rightmost edge instead of
@@ -369,6 +374,7 @@ mod tests {
         assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_new_with_datetime_is_normalized_to_days() {
         // `Xstep::new` used to panic on `ExpirationDate::DateTime`. After
@@ -562,6 +568,7 @@ mod tests_positive {
         assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_new_with_datetime_is_normalized_to_days() {
         // `Xstep::new` now normalizes `ExpirationDate::DateTime` into
@@ -981,6 +988,7 @@ mod tests_step {
 mod tests_step_serialization {
     use super::*;
 
+    #[cfg(feature = "clock")]
     use chrono::{TimeZone, Utc};
     use optionstratlib_core::pos_or_panic;
     use serde_json::{self, Value};
@@ -1021,6 +1029,7 @@ mod tests_step_serialization {
         assert_eq!(y["value"], "100");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_step_with_datetime_is_normalized() {
         // `Step::new` now normalizes `ExpirationDate::DateTime` into

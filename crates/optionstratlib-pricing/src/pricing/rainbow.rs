@@ -39,6 +39,7 @@ use crate::kernels::discount_factor;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub, decimal_to_f64};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, RainbowType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
@@ -129,9 +130,7 @@ fn price_two_asset_rainbow(
     }
 
     let r = option.risk_free_rate;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?
         .to_dec();
 

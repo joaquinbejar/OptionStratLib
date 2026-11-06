@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate, optionstratlib_core::model::Side,
@@ -9,12 +10,13 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the BearPutSpread strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let mut strategy = BearPutSpread::new(
+    let mut strategy = BearPutSpread::new_at(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5850.0), // long_strike
@@ -30,6 +32,7 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

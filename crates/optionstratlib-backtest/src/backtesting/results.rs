@@ -226,7 +226,7 @@ mod tests {
                 None,
                 pos_or_panic!(10.0),
                 pos_or_panic!(5.0),
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
             ),
             holding_period,
             exit_reason: ExitPolicy::Expiration,

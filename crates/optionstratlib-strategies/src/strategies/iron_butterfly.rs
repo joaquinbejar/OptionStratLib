@@ -29,7 +29,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -46,6 +46,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -211,15 +212,65 @@ impl IronButterfly {
         open_fee: Positive,
         close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            short_strike,
+            long_call_strike,
+            long_put_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_short_call,
+            premium_short_put,
+            premium_long_call,
+            premium_long_put,
+            open_fee,
+            close_fee,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        short_strike: Positive,
+        long_call_strike: Positive,
+        long_put_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_short_call: Positive,
+        premium_short_put: Positive,
+        premium_long_call: Positive,
+        premium_long_put: Positive,
+        open_fee: Positive,
+        close_fee: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = IronButterfly {
             name: "Iron Butterfly".to_string(),
             kind: StrategyType::IronButterfly,
             description: IRON_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            short_call: Position::default(),
-            short_put: Position::default(),
-            long_call: Position::default(),
-            long_put: Position::default(),
+            short_call: Position::blank_at(date),
+            short_put: Position::blank_at(date),
+            long_call: Position::blank_at(date),
+            long_put: Position::blank_at(date),
         };
 
         // Short Call
@@ -240,7 +291,7 @@ impl IronButterfly {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -266,7 +317,7 @@ impl IronButterfly {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -292,7 +343,7 @@ impl IronButterfly {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -318,7 +369,7 @@ impl IronButterfly {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee,
             close_fee,
             None,
@@ -1106,7 +1157,7 @@ impl Optimizable for IronButterfly {
                     &self.long_put,
                 ])?
                 .checked_div_f64(8.0)?;
-                let mut strategy = IronButterfly::new(
+                let mut strategy = IronButterfly::new_at(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     short_strike.strike_price,
@@ -1123,6 +1174,7 @@ impl Optimizable for IronButterfly {
                     long_put_ask,
                     fee_per_leg,
                     fee_per_leg,
+                    now_or(self.short_call.date),
                 )?;
                 // The rebuilt legs keep the contract size of the strategy they
                 // are rebuilt from.
@@ -1344,7 +1396,7 @@ impl PnLCalculator for IronButterfly {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(IronButterfly, test_short_call_implementations);
 
 #[cfg(test)]
@@ -1358,7 +1410,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_iron_butterfly_creation() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0), // underlying price
             pos_or_panic!(150.0), // short strike (at the money)
@@ -1375,6 +1427,7 @@ mod tests_iron_butterfly {
             Positive::ONE,       // premium long put
             pos_or_panic!(5.0),  // open fee
             pos_or_panic!(5.0),  // close fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1394,7 +1447,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_max_loss() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             Positive::HUNDRED,    // underlying price
             Positive::HUNDRED,    // short strike (at the money)
@@ -1411,6 +1464,7 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1420,7 +1474,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_max_profit() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             Positive::HUNDRED,    // underlying price
             Positive::HUNDRED,    // short strike (at the money)
@@ -1437,6 +1491,7 @@ mod tests_iron_butterfly {
             Positive::TWO,
             pos_or_panic!(0.07),
             pos_or_panic!(0.07),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1447,7 +1502,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             Positive::HUNDRED,    // underlying price
             Positive::HUNDRED,    // short strike (at the money)
@@ -1464,6 +1519,7 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1486,7 +1542,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_fees() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -1503,6 +1559,7 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1520,7 +1577,7 @@ mod tests_iron_butterfly {
     #[test]
     fn test_calculate_profit_at() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "AAPL".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -1537,6 +1594,7 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1593,7 +1651,7 @@ mod tests_iron_butterfly_validable {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1602,7 +1660,7 @@ mod tests_iron_butterfly_validable {
     }
 
     fn create_valid_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             Positive::HUNDRED,    // short strike (both call and put)
@@ -1619,6 +1677,7 @@ mod tests_iron_butterfly_validable {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1762,7 +1821,7 @@ mod tests_iron_butterfly_strategies {
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             Positive::HUNDRED,    // short strike (both call and put)
@@ -1779,6 +1838,7 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1804,7 +1864,7 @@ mod tests_iron_butterfly_strategies {
                 None,
             ),
             pos_or_panic!(2.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1835,7 +1895,7 @@ mod tests_iron_butterfly_strategies {
                 None,
             ),
             pos_or_panic!(1.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1932,7 +1992,7 @@ mod tests_iron_butterfly_strategies {
 
     #[test]
     fn test_with_multiple_contracts() {
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -1949,6 +2009,7 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1957,7 +2018,7 @@ mod tests_iron_butterfly_strategies {
 
     #[test]
     fn test_with_asymmetric_premiums() {
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -1974,6 +2035,7 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1993,7 +2055,7 @@ mod tests_iron_butterfly_optimizable {
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             Positive::HUNDRED,    // short strike (both call and put)
@@ -2010,6 +2072,7 @@ mod tests_iron_butterfly_optimizable {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2132,6 +2195,7 @@ mod tests_iron_butterfly_optimizable {
         );
     }
 
+    #[cfg(feature = "clock")]
     /// The strikes of `butterfly`: long put, short put, short call, long call.
     fn butterfly_strikes(butterfly: &IronButterfly) -> [Positive; 4] {
         [
@@ -2142,6 +2206,7 @@ mod tests_iron_butterfly_optimizable {
         ]
     }
 
+    #[cfg(feature = "clock")]
     /// Runs the search on the priced chain, which has valid iron
     /// butterflies, and checks the legs moved off the seed into a body
     /// shared by the short legs with a wing on each side.
@@ -2161,16 +2226,19 @@ mod tests_iron_butterfly_optimizable {
         strikes
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_butterfly_find_optimal_priced_chain_ratio_moves_legs() {
         search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Ratio);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_butterfly_find_optimal_priced_chain_area_moves_legs() {
         search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Area);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_iron_butterfly_find_optimal_priced_chain_range_within_bounds() {
         // Four legs paying 1.0 of fees each need wings wider than the 95 to
@@ -2313,7 +2381,7 @@ mod tests_iron_butterfly_profit {
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             Positive::HUNDRED,    // short strike (both call and put)
@@ -2330,6 +2398,7 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2434,7 +2503,7 @@ mod tests_iron_butterfly_profit {
 
     #[test]
     fn test_profit_with_fees() {
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -2451,6 +2520,7 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2465,7 +2535,7 @@ mod tests_iron_butterfly_profit {
 
     #[test]
     fn test_profit_with_multiple_contracts() {
-        let butterfly = IronButterfly::new(
+        let butterfly = IronButterfly::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -2482,6 +2552,7 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2536,20 +2607,31 @@ mod tests_iron_butterfly_profit {
 
 #[cfg(test)]
 mod tests_iron_butterfly_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::iron_butterfly::IronButterfly;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "GOLD".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -2566,10 +2648,12 @@ mod tests_iron_butterfly_delta {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2900.0));
@@ -2643,6 +2727,7 @@ mod tests_iron_butterfly_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2500.0));
@@ -2715,6 +2800,7 @@ mod tests_iron_butterfly_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2100.0));
@@ -2732,20 +2818,31 @@ mod tests_iron_butterfly_delta {
 
 #[cfg(test)]
 mod tests_iron_butterfly_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::iron_butterfly::IronButterfly;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "GOLD".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -2762,10 +2859,12 @@ mod tests_iron_butterfly_delta_size {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2900.0));
@@ -2839,6 +2938,7 @@ mod tests_iron_butterfly_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2700.0));
@@ -2912,6 +3012,7 @@ mod tests_iron_butterfly_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(2090.0));
@@ -2949,7 +3050,7 @@ mod tests_iron_butterfly_probability {
 
     /// Creates a test Iron Butterfly with standard parameters
     fn create_test_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -2966,6 +3067,7 @@ mod tests_iron_butterfly_probability {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3153,7 +3255,7 @@ mod tests_iron_butterfly_position_management {
     use rust_decimal_macros::dec;
 
     fn create_test_iron_butterfly() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3170,6 +3272,7 @@ mod tests_iron_butterfly_position_management {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3348,7 +3451,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> IronButterfly {
-        IronButterfly::new(
+        IronButterfly::new_at(
             "GOLD".to_string(),
             pos_or_panic!(2646.9), // underlying_price
             pos_or_panic!(2725.0), // short_call_strike
@@ -3365,6 +3468,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3459,7 +3563,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -3635,7 +3739,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_iron_butterfly_pnl {
     use super::*;
     use optionstratlib_core::pos_or_panic;

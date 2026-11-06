@@ -35,6 +35,7 @@ use optionstratlib_core::pos_or_panic;
 //! ## Example Usage
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use std::error::Error;
 //! use optionstratlib_analytics::pnl::utils::{PnL, PnLCalculator};
 //! use chrono::{DateTime, Utc};
@@ -86,6 +87,7 @@ use optionstratlib_core::pos_or_panic;
 //!      ))
 //!  }
 //! }
+//! # }
 //! ```
 //!
 //! ## Applications

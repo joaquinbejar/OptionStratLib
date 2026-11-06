@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_analytics::pnl::DeltaAdjustment;
 use optionstratlib_core::model::types::OptionStyle;
 use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
@@ -9,12 +10,13 @@ use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortButterflySpread strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = ShortButterflySpread::new(
+    let strategy = ShortButterflySpread::new_at(
         "SP500".to_string(),
         underlying_price,
         pos_or_panic!(5700.0),
@@ -34,6 +36,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let greeks = strategy.greeks().unwrap();

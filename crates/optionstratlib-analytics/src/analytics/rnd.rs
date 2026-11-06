@@ -126,12 +126,13 @@
 //! particularly for extreme market conditions.
 
 use crate::error::RNDError;
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use num_traits::FromPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
 use optionstratlib_core::model::utils::sub_floor_zero;
+use optionstratlib_core::utils::time::evaluation_time;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionChain;
 use rust_decimal::Decimal;
@@ -595,7 +596,9 @@ impl RNDAnalysis for OptionChain {
                 )
             })?;
 
-        let now = Utc::now().naive_utc();
+        let now = evaluation_time()
+            .map_err(|error| RNDError::invalid_parameters("evaluation_time", &error.to_string()))?
+            .naive_utc();
         let time_to_expiry =
             Decimal::from_f64(expiry_date.signed_duration_since(now).num_days() as f64 / 365.0)
                 .unwrap_or_default();
@@ -925,6 +928,7 @@ mod tests {
     mod rnd_calculation_tests {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_calculate_rnd_normal_case() {
             let chain = create_test_option_chain();
@@ -977,6 +981,7 @@ mod tests {
             );
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_calculate_rnd_high_risk_free_rate() {
             let chain = create_test_option_chain();
@@ -1085,8 +1090,10 @@ mod tests {
     }
 
     mod integration_tests {
+        #[cfg(feature = "clock")]
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_full_rnd_workflow() {
             let chain = create_test_option_chain();
@@ -1108,6 +1115,7 @@ mod tests {
             );
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_extreme_market_conditions() {
             let mut chain = OptionChain::new(
@@ -1230,11 +1238,15 @@ mod additional_tests {
     }
 
     mod rnd_calculation_extended_tests {
+        #[cfg(feature = "clock")]
         use super::*;
+        #[cfg(feature = "clock")]
         use optionstratlib_core::{pos_or_panic, spos};
 
+        #[cfg(feature = "clock")]
         use optionstratlib_market::chains::chain::OptionChain;
 
+        #[cfg(feature = "clock")]
         fn create_test_option_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
@@ -1264,6 +1276,7 @@ mod additional_tests {
             chain
         }
 
+        #[cfg(feature = "clock")]
         fn create_wide_spread_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
@@ -1293,6 +1306,7 @@ mod additional_tests {
             chain
         }
 
+        #[cfg(feature = "clock")]
         fn create_high_vol_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
@@ -1322,6 +1336,7 @@ mod additional_tests {
             chain
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_calculate_rnd_wide_spread() {
             let chain = create_wide_spread_chain();
@@ -1340,6 +1355,7 @@ mod additional_tests {
             );
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_calculate_rnd_high_volatility() {
             let chain = create_high_vol_chain();
@@ -1358,6 +1374,7 @@ mod additional_tests {
             );
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_calculate_rnd_different_tolerances() {
             let chain = create_test_option_chain();
@@ -1840,7 +1857,7 @@ mod statistical_validation_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod chain_test {
     use crate::analytics::rnd::{RNDAnalysis, RNDParameters};
     use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
@@ -2141,6 +2158,7 @@ mod rnd_analysis_tests {
     mod calculate_rnd_tests {
         use super::*;
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_basic_rnd_calculation() {
             let chain = create_standard_chain();
@@ -2165,6 +2183,7 @@ mod rnd_analysis_tests {
             assert!(rnd.densities.values().all(|&d| !d.is_sign_negative()));
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_tolerance_adjustment() {
             let chain = create_standard_chain();
@@ -2216,6 +2235,7 @@ mod rnd_analysis_tests {
             );
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_expired_option() {
             let mut chain = create_standard_chain();
@@ -2336,6 +2356,7 @@ mod rnd_analysis_tests {
             assert!(result.is_err());
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_negative_risk_free_rate() {
             let chain = create_standard_chain();
@@ -2348,6 +2369,7 @@ mod rnd_analysis_tests {
             assert!(result.is_ok());
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_verify_rnd_properties() {
             let chain = create_standard_chain();
@@ -2375,6 +2397,7 @@ mod rnd_analysis_tests {
             }
         }
 
+        #[cfg(feature = "clock")]
         #[test]
         fn test_strike_interval_detection() {
             let mut chain = create_standard_chain();

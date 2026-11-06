@@ -51,6 +51,7 @@ asserts its resolved graph.
 
 | Feature         | Default | Effect                                                                 |
 |-----------------|---------|------------------------------------------------------------------------|
+| `clock`  | yes     | The wall clock, forwarded to the crates below. See the `clock` feature of `optionstratlib-core` |
 | `plotly`        | no      | Plotly rendering: `to_plot`, `write_html`, `show`, `render`, trace builders. Resolves no image-export or async package |
 | `static_export` | no      | PNG and SVG export (`write_png`, `write_svg`), drawn natively with Plotters: no browser, WebDriver or installed font; implies `plotly` |
 

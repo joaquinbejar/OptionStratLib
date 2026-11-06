@@ -39,6 +39,9 @@ impl BasicCurves for OptionChain {
                 axis: format!("{axis:?}"),
             });
         }
+        // A strike that fails below is skipped, so with no time to measure from this
+        // would be an empty curve reported as a success.
+        self.require_time_to_expiry()?;
         let points = self
             .get_single_iter()
             .filter_map(|opt| {
@@ -89,6 +92,7 @@ impl BasicSurfaces for OptionChain {
             });
         }
 
+        self.require_time_to_expiry()?;
         let mut points = BTreeSet::new();
 
         for opt in self.get_single_iter() {
@@ -152,6 +156,7 @@ impl BasicSurfaces for OptionChain {
             });
         }
 
+        self.require_time_to_expiry()?;
         let mut points = BTreeSet::new();
 
         for opt in self.get_single_iter() {
@@ -597,7 +602,7 @@ impl OptionChainProjections for OptionChain {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_basic_curves {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -797,7 +802,7 @@ mod tests_basic_curves {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_option_chain_surfaces {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -1059,7 +1064,7 @@ mod tests_option_chain_surfaces {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_option_chain_time_surfaces {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -1352,9 +1357,11 @@ mod tests_gamma_calculations_projections {
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::get_x_days_formatted;
 
     // Helper function to create a test chain with predefined gamma values
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1368,6 +1375,7 @@ mod tests_gamma_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_gamma_curve() {
         let mut chain = create_test_chain_with_gamma();
@@ -1414,13 +1422,16 @@ mod tests_delta_calculations_projections {
 
     use super::OptionChainProjections;
     use optionstratlib_market::chains::chain::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_math::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1429,6 +1440,7 @@ mod tests_delta_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_curve() {
         let mut chain = create_test_chain_with_delta();
@@ -1468,6 +1480,7 @@ mod tests_delta_calculations_projections {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_curve_shape() {
         let mut chain = create_test_chain_with_delta();
@@ -1499,13 +1512,16 @@ mod tests_vega_calculations_projections {
 
     use super::OptionChainProjections;
     use optionstratlib_market::chains::chain::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_math::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1514,6 +1530,7 @@ mod tests_vega_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_curve() {
         let mut chain = create_test_chain_with_vega();
@@ -1553,6 +1570,7 @@ mod tests_vega_calculations_projections {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_curve_shape() {
         let mut chain = create_test_chain_with_vega();
@@ -1584,13 +1602,16 @@ mod tests_theta_calculations_projections {
 
     use super::OptionChainProjections;
     use optionstratlib_market::chains::chain::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_math::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1599,6 +1620,7 @@ mod tests_theta_calculations_projections {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve() {
         let mut chain = create_test_chain_with_theta();
@@ -1638,6 +1660,7 @@ mod tests_theta_calculations_projections {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_curve_shape() {
         let mut chain = create_test_chain_with_theta();
@@ -1674,6 +1697,7 @@ mod tests_vanna_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for vanna calculations
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1686,6 +1710,7 @@ mod tests_vanna_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_curve() {
         let mut chain = create_test_chain_with_vanna();
@@ -1737,6 +1762,7 @@ mod tests_veta_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for veta calculations
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1749,6 +1775,7 @@ mod tests_veta_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_veta_curve() {
         let mut chain = create_test_chain_with_veta();
@@ -1800,6 +1827,7 @@ mod tests_charm_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1812,6 +1840,7 @@ mod tests_charm_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_curve() {
         let mut chain = create_test_chain_with_charm();
@@ -1863,6 +1892,7 @@ mod tests_color_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "clock")]
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -1875,6 +1905,7 @@ mod tests_color_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_curve() {
         let mut chain = create_test_chain_with_color();
@@ -1919,18 +1950,27 @@ mod tests_color_calculations_projections {
 mod chain_coverage_tests_projections {
     #![allow(clippy::indexing_slicing)]
 
+    #[cfg(feature = "clock")]
     use super::OptionChainProjections;
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Positive;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::chain::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
+    #[cfg(feature = "clock")]
     fn create_test_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -1954,6 +1994,7 @@ mod chain_coverage_tests_projections {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_all_curves() {
         let mut chain = create_test_chain();
@@ -1990,16 +2031,25 @@ mod chain_coverage_tests_projections {
 
 #[cfg(test)]
 mod chain_coverage_tests_bis_projections {
+    #[cfg(feature = "clock")]
     use super::OptionChainProjections;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Positive;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::chain::OptionChain;
+    #[cfg(feature = "clock")]
     use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
+    #[cfg(feature = "clock")]
     fn create_test_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -2023,6 +2073,7 @@ mod chain_coverage_tests_bis_projections {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_all_curves() {
         let mut chain = create_test_chain();

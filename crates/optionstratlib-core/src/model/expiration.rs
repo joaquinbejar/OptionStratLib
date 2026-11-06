@@ -12,6 +12,7 @@
 //! [`reject_unrepresentable_expiration`] rather than calling `get_date` and
 //! friends directly.
 
+use crate::utils::time::{evaluation_time, resolution_base};
 use chrono::{DateTime, TimeDelta, Utc};
 pub use expiration_date::ExpirationDate;
 pub use expiration_date::error::ExpirationDateError;
@@ -51,16 +52,11 @@ fn checked_offset_days(
         .ok_or_else(|| unrepresentable(days))
 }
 
-/// The base a relative expiration is resolved from: the reference datetime
-/// when one has been installed, the current instant otherwise.
-fn relative_base() -> DateTime<Utc> {
-    ExpirationDate::get_reference_datetime().unwrap_or_else(Utc::now)
-}
-
 /// The fixed base `ExpirationDate::get_date_string` resolves from: today at
-/// [`FIXED_BASE_HOUR`]:[`FIXED_BASE_MINUTE`] UTC.
-fn fixed_base() -> Option<DateTime<Utc>> {
-    Utc::now()
+/// [`FIXED_BASE_HOUR`]:[`FIXED_BASE_MINUTE`] UTC, or `None` if that is no
+/// instant.
+fn fixed_base(today: DateTime<Utc>) -> Option<DateTime<Utc>> {
+    today
         .date_naive()
         .and_hms_opt(FIXED_BASE_HOUR, FIXED_BASE_MINUTE, 0)
         .map(|naive| DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
@@ -68,7 +64,7 @@ fn fixed_base() -> Option<DateTime<Utc>> {
 
 /// Resolves an expiration into a calendar instant without aborting on overflow.
 ///
-/// Drop-in replacement for [`ExpirationDate::get_date`]: it returns the same
+/// Drop-in replacement for `ExpirationDate::get_date`: it returns the same
 /// instant for every representable input, and a typed error instead of a
 /// process abort for the rest. `Days(1_000_000_000)` overflows the
 /// `DateTime + TimeDelta` addition and `Days(1e15)` overflows `TimeDelta`
@@ -80,12 +76,14 @@ fn fixed_base() -> Option<DateTime<Utc>> {
 ///   the range a `DateTime<Utc>` can hold.
 /// * [`ExpirationDateError::ConversionError`] - the day count does not fit an
 ///   `i64`, propagated from the `Positive` conversion.
+/// * [`ExpirationDateError::InvalidDateTime`] - a relative expiration with no
+///   reference datetime, in a build without the `clock` feature.
 #[must_use = "the resolved instant carries the failure the panicking form would have aborted on"]
 pub fn resolve_expiration_date(
     expiration_date: &ExpirationDate,
 ) -> Result<DateTime<Utc>, ExpirationDateError> {
     match expiration_date {
-        ExpirationDate::Days(days) => checked_offset_days(relative_base(), *days),
+        ExpirationDate::Days(days) => checked_offset_days(resolution_base()?, *days),
         ExpirationDate::DateTime(datetime) => Ok(*datetime),
     }
 }
@@ -106,27 +104,33 @@ pub fn resolve_expiration_date(
 ///   the range a `DateTime<Utc>` can hold, from either base.
 /// * [`ExpirationDateError::ConversionError`] - the day count does not fit an
 ///   `i64`, propagated from the `Positive` conversion.
+/// * [`ExpirationDateError::InvalidDateTime`] - a relative expiration with no
+///   base to check it from, in a build without the `clock` feature.
 pub fn reject_unrepresentable_expiration(
     expiration_date: &ExpirationDate,
 ) -> Result<(), ExpirationDateError> {
     let ExpirationDate::Days(days) = expiration_date else {
         return Ok(());
     };
-    checked_offset_days(relative_base(), *days)?;
-    let fixed = fixed_base().ok_or_else(|| unrepresentable(*days))?;
+    checked_offset_days(resolution_base()?, *days)?;
+    let fixed = fixed_base(evaluation_time()?).ok_or_else(|| unrepresentable(*days))?;
     checked_offset_days(fixed, *days)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn pos(value: rust_decimal::Decimal) -> Positive {
         Positive::new_decimal(value).unwrap_or(Positive::ZERO)
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_days_matches_get_date() {
         let expiration = ExpirationDate::Days(pos(dec!(30.0)));
@@ -135,6 +139,7 @@ mod tests {
         assert_eq!(resolved.date_naive(), reference.date_naive());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_datetime_is_returned_unchanged() {
         let instant = Utc::now();
@@ -143,6 +148,7 @@ mod tests {
         assert_eq!(resolved, instant);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_datetime_overflow_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(pos(dec!(1000000000.0))))
@@ -150,6 +156,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_span_overflow_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(pos(dec!(1000000000000000.0))))
@@ -157,6 +164,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_resolve_expiration_date_beyond_i64_returns_error() {
         let error = resolve_expiration_date(&ExpirationDate::Days(Positive::MAX))
@@ -167,6 +175,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_accepts_ordinary_horizons() {
         for days in [dec!(0.0), dec!(1.0), dec!(30.0), dec!(3650.0)] {
@@ -175,6 +184,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_rejects_billion_days() {
         let error =
@@ -183,6 +193,7 @@ mod tests {
         assert!(matches!(error, ExpirationDateError::ArithmeticOverflow(_)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_reject_unrepresentable_expiration_accepts_any_datetime() {
         reject_unrepresentable_expiration(&ExpirationDate::DateTime(Utc::now()))

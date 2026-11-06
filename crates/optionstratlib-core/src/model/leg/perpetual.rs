@@ -20,6 +20,7 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::leg::{PerpetualPosition, MarginType};
 //! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
@@ -38,12 +39,15 @@
 //!     Utc::now(),
 //!     pos_or_panic!(5.0),           // $5 fees
 //! );
+//! # }
 //! ```
 
 use crate::error::PositionError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::{Fundable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -182,6 +186,7 @@ impl PerpetualPosition {
     /// * `entry_price` - Entry price
     /// * `leverage` - Leverage multiplier
     /// * `margin` - Collateral posted
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn long(
         symbol: String,
@@ -199,7 +204,7 @@ impl PerpetualPosition {
             margin,
             MarginType::Isolated,
             Decimal::ZERO,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -213,6 +218,7 @@ impl PerpetualPosition {
     /// * `entry_price` - Entry price
     /// * `leverage` - Leverage multiplier
     /// * `margin` - Collateral posted
+    #[cfg(feature = "clock")]
     #[must_use]
     pub fn short(
         symbol: String,
@@ -230,7 +236,7 @@ impl PerpetualPosition {
             margin,
             MarginType::Isolated,
             Decimal::ZERO,
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         )
     }
@@ -571,6 +577,7 @@ impl std::fmt::Display for PerpetualPosition {
     }
 }
 
+#[cfg(feature = "clock")]
 impl Default for PerpetualPosition {
     fn default() -> Self {
         Self {
@@ -582,7 +589,7 @@ impl Default for PerpetualPosition {
             margin: Positive::ZERO,
             margin_type: MarginType::default(),
             funding_rate: Decimal::ZERO,
-            date: Utc::now(),
+            date: wall_clock(),
             fees: Positive::ZERO,
         }
     }
@@ -591,14 +598,17 @@ impl Default for PerpetualPosition {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "clock")]
     use positive::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     /// Both ratios divide by a notional whose product leaves the `Positive`
     /// range for a large quantity at a large price. Both signatures promise a
     /// `Result`, so both have to report it rather than abort inside the raw
     /// multiplication `notional_value_at_price` performs.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_perpetual_ratios_report_a_notional_that_overflows() {
         let perp = PerpetualPosition::new(
@@ -610,7 +620,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -618,6 +628,7 @@ mod tests {
         assert!(perp.effective_leverage(pos_or_panic!(50000.0)).is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_perpetual_position_new() {
         let perp = PerpetualPosition::new(
@@ -629,7 +640,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             pos_or_panic!(5.0),
         );
 
@@ -643,6 +654,7 @@ mod tests {
         assert_eq!(perp.funding_rate, dec!(0.0001));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_perpetual_long_convenience() {
         let perp = PerpetualPosition::long(
@@ -657,6 +669,7 @@ mod tests {
         assert_eq!(perp.margin_type, MarginType::Isolated);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_perpetual_short_convenience() {
         let perp = PerpetualPosition::short(
@@ -670,6 +683,7 @@ mod tests {
         assert_eq!(perp.side, Side::Short);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_notional_value() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::long(
@@ -688,6 +702,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long() {
         let perp = PerpetualPosition::long(
@@ -708,6 +723,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short() {
         let perp = PerpetualPosition::short(
@@ -728,6 +744,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_roe_percentage() {
         let perp = PerpetualPosition::long(
@@ -742,6 +759,7 @@ mod tests {
         assert_eq!(roe.ok(), Some(dec!(100)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_funding_payment_long() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::new(
@@ -753,7 +771,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         );
 
@@ -762,6 +780,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_funding_payment_short() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::new(
@@ -773,7 +792,7 @@ mod tests {
             pos_or_panic!(5000.0),
             MarginType::Isolated,
             dec!(0.0001),
-            Utc::now(),
+            wall_clock(),
             Positive::ZERO,
         );
 
@@ -782,6 +801,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_liquidation_price_long() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::long(
@@ -800,6 +820,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_liquidation_price_long_below_zero_is_unreachable()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -818,6 +839,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_liquidation_price_short() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::short(
@@ -835,6 +857,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_effective_leverage() {
         let perp = PerpetualPosition::long(
@@ -855,6 +878,7 @@ mod tests {
         assert_eq!(format!("{}", MarginType::Isolated), "Isolated");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_display() {
         let perp = PerpetualPosition::long(
@@ -873,6 +897,7 @@ mod tests {
 
     // The default position has a zero quantity; the per-unit buffer
     // division aborted with `Division by zero` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_liquidation_price_default_is_error() {
         let perp = PerpetualPosition::default();
@@ -888,6 +913,7 @@ mod tests {
 
     // `Positive * Positive` aborted with `Positive arithmetic overflow in
     // mul`, and `Decimal * Decimal` with `Multiplication overflowed` (#788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_notional_and_funding_overflow_is_error() {
         let perp = PerpetualPosition {

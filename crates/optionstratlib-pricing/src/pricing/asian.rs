@@ -30,6 +30,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub,
 };
 use optionstratlib_core::model::types::{AsianAveragingType, OptionStyle, OptionType};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -138,9 +139,7 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
@@ -278,9 +277,7 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {

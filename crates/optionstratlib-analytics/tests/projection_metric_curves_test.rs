@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! `theta_curve`, `charm_curve` and `color_curve` exist twice on
 //! `OptionChain`: as `OptionChainProjections` (analytics) and as the
 //! `ThetaCurve`, `CharmCurve` and `ColorCurve` metrics. Until #524 the
@@ -41,6 +42,7 @@ fn assert_same(
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_theta_curve_projection_matches_metric() {
     let chain = sample_chain();
@@ -50,6 +52,7 @@ fn test_theta_curve_projection_matches_metric() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_charm_curve_projection_matches_metric() {
     let chain = sample_chain();
@@ -59,6 +62,7 @@ fn test_charm_curve_projection_matches_metric() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_color_curve_projection_matches_metric() {
     let chain = sample_chain();

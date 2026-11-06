@@ -35,6 +35,8 @@ pub fn optionstratlib_simulation::error::SimulationError::invalid_parameters(&st
 pub fn optionstratlib_simulation::error::SimulationError::non_finite(&'static str, f64) -> Self
 pub fn optionstratlib_simulation::error::SimulationError::step_error(&str) -> Self
 pub fn optionstratlib_simulation::error::SimulationError::walk_error(&str) -> Self
+impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_simulation::error::SimulationError
+pub fn optionstratlib_simulation::error::SimulationError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::volatility::VolatilityError> for optionstratlib_simulation::error::SimulationError
 pub fn optionstratlib_simulation::error::SimulationError::from(optionstratlib_pricing::error::volatility::VolatilityError) -> Self
 pub type optionstratlib_simulation::error::SimulationResult<T> = core::result::Result<T, optionstratlib_simulation::error::SimulationError>

@@ -1,6 +1,7 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
 use crate::model::types::{OptionStyle, Side};
+use crate::utils::time::now;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -230,7 +231,8 @@ impl Trade {
     ///
     /// # Errors
     /// Returns [`TradeError::ArithmeticOverflow`] when the current time in nanoseconds since the
-    /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds.
+    /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds, and
+    /// [`TradeError::Clock`] in a build without the `clock` feature: use [`Trade::new_at`].
     ///
     /// # Remarks
     /// - Ensure all `Positive` values are validated and created using the appropriate constructors.
@@ -252,7 +254,50 @@ impl Trade {
         notes: Option<String>,
         status: TradeStatus,
     ) -> Result<Self, TradeError> {
-        let timestamp = timestamp_nanos(&Utc::now(), "Trade::new")?;
+        Self::new_at(
+            id,
+            action,
+            side,
+            option_style,
+            fee,
+            symbol,
+            strike,
+            expiry,
+            quantity,
+            premium,
+            underlying_price,
+            notes,
+            status,
+            now()?,
+        )
+    }
+
+    /// Creates a trade stamped with `timestamp` instead of the current time.
+    ///
+    /// The other parameters are those of [`Trade::new`]. Reads no clock, so it
+    /// exists and gives the same trade with or without the `clock` feature.
+    ///
+    /// # Errors
+    /// Returns [`TradeError::ArithmeticOverflow`] when `timestamp` in nanoseconds since the Unix
+    /// epoch leaves the `i64` range, even when truncated to whole seconds.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_at(
+        id: uuid::Uuid,
+        action: Action,
+        side: Side,
+        option_style: OptionStyle,
+        fee: Positive,
+        symbol: Option<String>,
+        strike: Positive,
+        expiry: DateTime<Utc>,
+        quantity: Positive,
+        premium: Positive,
+        underlying_price: Positive,
+        notes: Option<String>,
+        status: TradeStatus,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Self, TradeError> {
+        let timestamp = timestamp_nanos(&timestamp, "Trade::new")?;
         Ok(Self {
             id,
             action,
@@ -736,6 +781,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_trade_new_contract_size_is_one() {
         let trade = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -749,6 +795,7 @@ mod tests {
         assert_eq!(dt.timestamp_nanos_opt().unwrap(), trade.timestamp);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn new_sets_reasonable_timestamp() {
         // Allow up to 5 s drift between now() in ctor and now() here.
@@ -782,6 +829,7 @@ mod tests {
         assert!(v["timestamp"].is_number());
     }
 
+    #[cfg(feature = "clock")]
     /// Build a reproducible sample trade so tests stay deterministic.
     fn sample_trade_bis(action: Action, side: Side, status: TradeStatus) -> Trade {
         Trade::new(
@@ -802,6 +850,7 @@ mod tests {
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn new_sets_current_timestamp() {
         let before = Utc::now().timestamp_nanos_opt().unwrap();
@@ -810,6 +859,7 @@ mod tests {
         assert!(tr.timestamp >= before && tr.timestamp <= after);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn datetime_roundtrip() {
         let tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -817,6 +867,7 @@ mod tests {
         assert_eq!(dt.timestamp_nanos_opt().unwrap(), tr.timestamp);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn set_timestamp_overwrites_value() {
         let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -825,6 +876,7 @@ mod tests {
         assert_eq!(tr.datetime(), new_dt);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_trade_set_timestamp_falls_back_to_whole_seconds() {
         // The nanoseconds of the last second before i64::MAX overflow, its
@@ -836,6 +888,7 @@ mod tests {
         assert_eq!(tr.timestamp, 9_223_372_036_000_000_000);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_trade_set_timestamp_overflow_reports_error() {
         let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -854,6 +907,7 @@ mod tests {
 
     /* ---------- cost / income / net math ---------- */
 
+    #[cfg(feature = "clock")]
     fn expect_cost_income(action: Action, side: Side, exp_cost: Decimal, exp_income: Decimal) {
         let tr = sample_trade_bis(action, side, TradeStatus::Open);
 
@@ -862,6 +916,7 @@ mod tests {
         assert_eq!(tr.net().unwrap(), exp_income - exp_cost);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn cash_flows_buy_long() {
         // cost  = (premium + fee) * qty  = (2.50 + 0.15) * 3 = 7.95
@@ -869,6 +924,7 @@ mod tests {
         expect_cost_income(Action::Buy, Side::Long, dec!(7.95), dec!(0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn cash_flows_sell_long() {
         // cost   = fee * qty            = 0.15 * 3 = 0.45
@@ -876,6 +932,7 @@ mod tests {
         expect_cost_income(Action::Sell, Side::Long, dec!(0.45), dec!(7.50));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn cash_flows_buy_short() {
         // cost   = fee * qty            = 0.45
@@ -883,6 +940,7 @@ mod tests {
         expect_cost_income(Action::Buy, Side::Short, dec!(0.45), dec!(7.50));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn cash_flows_sell_short() {
         // cost   = (premium + fee) * qty = 7.95
@@ -892,6 +950,7 @@ mod tests {
 
     /* ---------- status helpers ---------- */
 
+    #[cfg(feature = "clock")]
     #[test]
     fn status_helpers_work() {
         let open = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -905,6 +964,7 @@ mod tests {
 
     /* ---------- Display ---------- */
 
+    #[cfg(feature = "clock")]
     #[test]
     fn display_outputs_json() {
         let tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -914,6 +974,7 @@ mod tests {
 
     /* ---------- TradeAble trait ---------- */
 
+    #[cfg(feature = "clock")]
     #[test]
     fn tradeable_returns_same_ref() {
         let tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -926,6 +987,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn tradeable_mut_allows_mutation() {
         let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -939,6 +1001,7 @@ mod tests {
         assert!(tr.is_closed());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn tradeable_returns_cloned_trade() {
         let tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -968,6 +1031,7 @@ mod tests {
 
     /* ---------- TradeStatusAble ---------- */
 
+    #[cfg(feature = "clock")]
     /// helper: assert that two trades are identical except for the `status` field
     fn assert_same_except_status(a: &Trade, b: &Trade) {
         let mut aa = a.clone();
@@ -1013,6 +1077,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn status_transitions_return_new_trade() {
         let base = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
@@ -1044,6 +1109,7 @@ mod tests {
         assert_same_except_status(&base, &reopened);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn status_other_sets_custom_string() {
         let base = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);

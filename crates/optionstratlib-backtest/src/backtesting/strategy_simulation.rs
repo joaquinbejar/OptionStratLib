@@ -21,11 +21,13 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::{ExpirationDate, Options};
 use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::time::{ReferenceCarrier, evaluation_time, now_or};
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_simulation::error::SimulationError;
 use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
 use optionstratlib_simulation::simulation::simulator::Simulator;
 use optionstratlib_simulation::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};
+use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::base::Positionable;
 use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut, Strategies};
 use rayon::prelude::*;
@@ -237,6 +239,14 @@ where
         let option = self.strategy.simulated_option()?;
         let initial_premium = self.initial_premium;
         let mark_adjustment = self.strategy.mark_adjustment()?.to_dec();
+        // What an exit is stamped with when the build has no clock.
+        let opened_at = self
+            .strategy
+            .get_positions()
+            .map_err(StrategyError::from)?
+            .first()
+            .map(|leg| leg.date)
+            .ok_or_else(|| SimulationError::invalid_parameters("the strategy has no leg"))?;
 
         let mut max_premium = initial_premium;
         let mut min_premium = initial_premium;
@@ -259,6 +269,10 @@ where
         for step in random_walk.get_steps().iter().skip(1) {
             let days_left = match step.x.days_left() {
                 Ok(days) => days,
+                // With no time to measure from nothing has expired: the leg's
+                // life is unknown, and a path that read as expired would report
+                // a P&L for a date no one chose.
+                Err(error) if evaluation_time().is_err() => return Err(error.into()),
                 Err(_) => {
                     expired = true;
                     break;
@@ -349,7 +363,7 @@ where
                     unrealized: None,
                     initial_costs: Positive::ZERO,
                     initial_income: Positive::ZERO,
-                    date_time: chrono::Utc::now(),
+                    date_time: now_or(opened_at),
                 };
                 final_pnl = Some(pnl);
                 break;
@@ -439,11 +453,12 @@ where
     // how to show it.
     let walks = sim.get_random_walks();
     let walk_count = walks.len();
+    let carrier = ReferenceCarrier::capture();
     let outcomes: Vec<Result<SimulationResult, BacktestError>> = walks
         .into_par_iter()
         .enumerate()
         .map(|(path, random_walk)| {
-            let outcome = evaluator.evaluate_path(random_walk, &exit);
+            let outcome = carrier.run(|| evaluator.evaluate_path(random_walk, &exit));
             tracing::debug!(path, total = walk_count, "simulated path evaluated");
             outcome
         })
@@ -517,7 +532,7 @@ mod test_support {
     //! Each strategy is built the way its constructor builds it: the
     //! default strategy plus one position with the test leg.
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::position::Position;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
     use optionstratlib_core::pos_or_panic;
@@ -549,7 +564,7 @@ mod test_support {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -558,7 +573,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_long_call() -> LongCall {
-        LongCall::new(
+        LongCall::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -570,12 +585,13 @@ mod test_support {
             pos_or_panic!(5.0),
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
     pub(super) fn create_test_long_put() -> LongPut {
-        let mut strategy = LongPut::default();
+        let mut strategy = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Long, OptionStyle::Put))
             .unwrap();
@@ -583,7 +599,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_short_call() -> ShortCall {
-        let mut strategy = ShortCall::default();
+        let mut strategy = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Short, OptionStyle::Call))
             .unwrap();
@@ -591,7 +607,7 @@ mod test_support {
     }
 
     pub(super) fn create_test_short_put() -> ShortPut {
-        let mut strategy = ShortPut::default();
+        let mut strategy = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         strategy
             .add_position(&test_leg(Side::Short, OptionStyle::Put))
             .unwrap();
@@ -1439,5 +1455,79 @@ mod tests_simulate_short_put {
         // Verify win rate is calculated
         assert!(stats.win_rate >= dec!(0.0));
         assert!(stats.win_rate <= dec!(100.0));
+    }
+}
+
+/// A path whose steps cannot read their days is not a path that expired.
+#[cfg(all(test, not(feature = "clock")))]
+mod tests_without_clock {
+    use super::*;
+    use chrono::{Duration, TimeZone, Utc};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_simulation::simulation::steps::Step;
+    use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
+    use optionstratlib_strategies::strategies::LongCall;
+    use rust_decimal_macros::dec;
+    use std::convert::Infallible;
+
+    #[derive(Clone)]
+    struct Walker;
+    impl WalkTypeAble<Positive, Positive> for Walker {}
+
+    #[test]
+    fn test_dated_step_without_a_time_is_an_error_not_an_expiry() {
+        let date = Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap();
+        let strategy = LongCall::new_at(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(5.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            date,
+        )
+        .unwrap();
+        let step = || {
+            Step::new(
+                Positive::ONE,
+                TimeFrame::Day,
+                ExpirationDate::DateTime(date + Duration::days(30)),
+                Positive::HUNDRED,
+            )
+        };
+        let params = WalkParams {
+            size: 2,
+            init_step: step(),
+            walker: Box::new(Walker),
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices: vec![Positive::HUNDRED, Positive::HUNDRED],
+                symbol: None,
+            },
+            seed: None,
+        };
+        let walk = RandomWalk::new("dated".to_string(), &params, |_| {
+            Ok::<_, Infallible>(vec![step(), step()])
+        })
+        .unwrap();
+        let result = SingleLegPathEvaluator::new(&strategy)
+            .unwrap()
+            .evaluate_path(&walk, &ExitPolicy::Expiration);
+        assert!(matches!(result, Err(BacktestError::Simulation(_))));
+
+        // With a reference datetime the same path has days to read and runs.
+        ExpirationDate::set_reference_datetime(Some(date));
+        let result = SingleLegPathEvaluator::new(&strategy)
+            .unwrap()
+            .evaluate_path(&walk, &ExitPolicy::Expiration);
+        ExpirationDate::set_reference_datetime(None);
+        assert!(result.is_ok());
     }
 }

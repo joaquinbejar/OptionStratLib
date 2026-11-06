@@ -71,6 +71,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 #[cfg(test)]
 use rust_decimal::MathematicalOps;
@@ -126,7 +127,7 @@ fn cost_of_carry(option: &Options) -> Result<Decimal, GreeksError> {
 /// BSM Greeks in `src/greeks/equations.rs`, where the d-values are
 /// undefined and the Greeks collapse to discrete intrinsic-state values.
 fn time_to_expiry(option: &Options) -> Result<Option<Positive>, GreeksError> {
-    let years = option.expiration_date.get_years()?;
+    let years = years_to_expiration(&option.expiration_date)?;
     if years == Positive::ZERO {
         Ok(None)
     } else {
@@ -161,7 +162,7 @@ fn delta_at_expiry(option: &Options) -> Decimal {
 // Not `kernels::calculate_d_values`: it reads the years once, before the
 // carry, under the GK error label, so the error precedence differs.
 fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
-    let years = option.expiration_date.get_years()?;
+    let years = years_to_expiration(&option.expiration_date)?;
     let b = cost_of_carry(option)?;
     let d1_value = d1(
         option.underlying_price,
@@ -651,7 +652,7 @@ mod tests {
     #[test]
     fn test_delta_call_in_range() {
         let opt = create_fx_option(1.10, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Call);
-        let years = opt.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
         let upper = (-opt.dividend_yield.to_dec() * years).exp();
         let d = delta_gk(&opt).expect("delta call");
         assert!(
@@ -665,7 +666,7 @@ mod tests {
     #[test]
     fn test_delta_put_in_range() {
         let opt = create_fx_option(1.10, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Put);
-        let years = opt.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
         let lower = -((-opt.dividend_yield.to_dec() * years).exp());
         let d = delta_gk(&opt).expect("delta put");
         assert!(
@@ -692,7 +693,7 @@ mod tests {
         let dc = delta_gk(&call).unwrap();
         let dp = delta_gk(&put).unwrap();
 
-        let years = call.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
         let expected = (-call.dividend_yield.to_dec() * years).exp();
         assert!(
             close(dc - dp, expected, dec!(1e-9)),

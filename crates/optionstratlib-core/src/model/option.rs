@@ -3,6 +3,7 @@ use crate::error::{OptionsError, OptionsResult};
 use crate::model::ExpirationDate;
 use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::utils::time::years_to_expiration;
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -345,11 +346,13 @@ impl Options {
     /// # Errors
     ///
     /// Propagates any [`expiration_date::error::ExpirationDateError`] returned by
-    /// [`ExpirationDate::get_years`] (wrapped as [`OptionsError::ExpirationDate`])
+    /// [`years_to_expiration`] (wrapped as [`OptionsError::ExpirationDate`])
     /// when the stored expiration cannot be converted to a positive
-    /// year fraction (e.g. past expiration or invalid date).
+    /// year fraction (e.g. past expiration or invalid date), or when it is a
+    /// `DateTime` and the build has neither the `clock` feature nor a reference
+    /// datetime on this thread. A `Days` needs no clock.
     pub fn time_to_expiration(&self) -> OptionsResult<Positive> {
-        Ok(self.expiration_date.get_years()?)
+        Ok(years_to_expiration(&self.expiration_date)?)
     }
 
     /// Determines if the option position is long (purchased).
@@ -618,7 +621,9 @@ mod tests_options {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
 
+    #[cfg(feature = "clock")]
     use approx::assert_relative_eq;
+    #[cfg(feature = "clock")]
     use chrono::{Duration, Utc};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -631,6 +636,7 @@ mod tests_options {
         assert_eq!(option.implied_volatility, 0.2);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);

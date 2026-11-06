@@ -3,6 +3,7 @@ use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::time::ReferenceCarrier;
 use optionstratlib_core::utils::{Len, deterministic_rng};
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::pricing::Profit;
@@ -169,6 +170,8 @@ where
                 if jobs.is_empty() {
                     break;
                 }
+                // The generator's steps may read their days on a rayon worker.
+                let carrier = ReferenceCarrier::capture();
                 let built: Vec<Result<RandomWalk<X, Y>, E>> = jobs
                     .into_par_iter()
                     .map_init(
@@ -177,7 +180,13 @@ where
                             if seed.is_some() {
                                 walk_params.seed = seed;
                             }
-                            RandomWalk::new(format!("{title}_{i}"), walk_params, generator.clone())
+                            carrier.run(|| {
+                                RandomWalk::new(
+                                    format!("{title}_{i}"),
+                                    walk_params,
+                                    generator.clone(),
+                                )
+                            })
                         },
                     )
                     .collect();

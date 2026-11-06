@@ -42,6 +42,7 @@ use optionstratlib_core::model::decimal::{
 };
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 #[cfg(test)]
 use rust_decimal::prelude::*;
@@ -329,9 +330,7 @@ fn price_compound(
     let r = compound.risk_free_rate;
     let q = compound.dividend_yield.to_dec();
     let sigma = compound.implied_volatility;
-    let t1 = compound
-        .expiration_date
-        .get_years()
+    let t1 = years_to_expiration(&compound.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t1 == Positive::ZERO {

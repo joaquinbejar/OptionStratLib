@@ -98,6 +98,8 @@ pub optionstratlib_backtest::backtesting::results::SimulationResult::min_premium
 pub optionstratlib_backtest::backtesting::results::SimulationResult::pnl: optionstratlib_analytics::pnl::utils::PnL
 pub optionstratlib_backtest::backtesting::results::SimulationResult::risk_metrics: core::option::Option<optionstratlib_analytics::risk::model::RiskMetricsSimulation>
 pub optionstratlib_backtest::backtesting::results::SimulationResult::simulation_count: usize
+impl optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::from_outcome_at(optionstratlib_simulation::simulation::outcome::PathOutcome, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 impl core::convert::From<&optionstratlib_backtest::backtesting::SimulationResult> for optionstratlib_simulation::simulation::outcome::PathOutcome
 pub fn optionstratlib_simulation::simulation::outcome::PathOutcome::from(&optionstratlib_backtest::backtesting::SimulationResult) -> Self
 impl core::convert::From<optionstratlib_simulation::simulation::outcome::PathOutcome> for optionstratlib_backtest::backtesting::SimulationResult
@@ -411,6 +413,8 @@ pub optionstratlib_backtest::backtesting::SimulationResult::min_premium: rust_de
 pub optionstratlib_backtest::backtesting::SimulationResult::pnl: optionstratlib_analytics::pnl::utils::PnL
 pub optionstratlib_backtest::backtesting::SimulationResult::risk_metrics: core::option::Option<optionstratlib_analytics::risk::model::RiskMetricsSimulation>
 pub optionstratlib_backtest::backtesting::SimulationResult::simulation_count: usize
+impl optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::from_outcome_at(optionstratlib_simulation::simulation::outcome::PathOutcome, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 impl core::convert::From<&optionstratlib_backtest::backtesting::SimulationResult> for optionstratlib_simulation::simulation::outcome::PathOutcome
 pub fn optionstratlib_simulation::simulation::outcome::PathOutcome::from(&optionstratlib_backtest::backtesting::SimulationResult) -> Self
 impl core::convert::From<optionstratlib_simulation::simulation::outcome::PathOutcome> for optionstratlib_backtest::backtesting::SimulationResult
@@ -535,6 +539,8 @@ pub optionstratlib_backtest::error::BacktestError::Simulation(alloc::boxed::Box<
 pub optionstratlib_backtest::error::BacktestError::Strategy(alloc::boxed::Box<optionstratlib_strategies::error::strategies::StrategyError>)
 impl optionstratlib_backtest::error::BacktestError
 pub fn optionstratlib_backtest::error::BacktestError::counter_overflow(&'static str) -> Self
+impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_backtest::error::BacktestError
 pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_backtest::error::BacktestError

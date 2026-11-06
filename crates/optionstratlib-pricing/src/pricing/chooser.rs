@@ -56,6 +56,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64,
 };
 use optionstratlib_core::model::types::OptionType;
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -101,9 +102,7 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t_big = option
-        .expiration_date
-        .get_years()
+    let t_big = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     // Convert choice_date from days to years. A year fraction that is not a
@@ -304,9 +303,7 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {

@@ -530,7 +530,7 @@ impl fmt::Display for AdjustmentTarget {
 #[cfg(test)]
 mod tests_portfolio_greeks {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::Options;
     use optionstratlib_core::model::Positive;
@@ -557,7 +557,7 @@ mod tests_portfolio_greeks {
         Position::new(
             option,
             pos_or_panic!(3.5),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,

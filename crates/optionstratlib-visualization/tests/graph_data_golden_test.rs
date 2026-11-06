@@ -440,7 +440,7 @@ fn collect() -> Result<Value, Box<dyn Error>> {
     let symbol = || SYMBOL.to_string();
     charts.insert(
         "strategy_long_call".into(),
-        entry(&LongCall::new(
+        entry(&LongCall::new_at(
             symbol(),
             hundred,
             days,
@@ -452,17 +452,18 @@ fn collect() -> Result<Value, Box<dyn Error>> {
             pos(dec!(4.5))?,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?)?,
     );
-    let mut long_put = LongPut::default();
+    let mut long_put = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
     long_put.add_position(&leg(Side::Long, OptionStyle::Put, dec!(100), dec!(4.1))?)?;
     charts.insert("strategy_long_put".into(), entry(&long_put)?);
-    let mut short_call = ShortCall::default();
+    let mut short_call = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
     short_call.add_position(&leg(Side::Short, OptionStyle::Call, dec!(100), dec!(4.5))?)?;
     charts.insert("strategy_short_call".into(), entry(&short_call)?);
     charts.insert(
         "strategy_short_put".into(),
-        entry(&ShortPut::new(
+        entry(&ShortPut::new_at(
             symbol(),
             hundred,
             days,
@@ -474,11 +475,12 @@ fn collect() -> Result<Value, Box<dyn Error>> {
             pos(dec!(4.1))?,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?)?,
     );
     charts.insert(
         "strategy_covered_call".into(),
-        entry(&CoveredCall::new(
+        entry(&CoveredCall::new_at(
             symbol(),
             hundred,
             pos(dec!(105))?,
@@ -492,11 +494,12 @@ fn collect() -> Result<Value, Box<dyn Error>> {
             fee,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?)?,
     );
     charts.insert(
         "strategy_collar".into(),
-        entry(&Collar::new(
+        entry(&Collar::new_at(
             symbol(),
             hundred,
             pos(dec!(95))?,
@@ -514,11 +517,12 @@ fn collect() -> Result<Value, Box<dyn Error>> {
             fee,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?)?,
     );
     charts.insert(
         "strategy_protective_put".into(),
-        entry(&ProtectivePut::new(
+        entry(&ProtectivePut::new_at(
             symbol(),
             hundred,
             pos(dec!(95))?,
@@ -532,6 +536,7 @@ fn collect() -> Result<Value, Box<dyn Error>> {
             fee,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?)?,
     );
 
@@ -622,9 +627,9 @@ fn test_single_leg_added_to_default_charts_like_new() -> Result<(), Box<dyn Erro
     for premium in [dec!(4.1), dec!(4.5)] {
         let premium_pos = pos(premium)?;
         let call = leg(Side::Long, OptionStyle::Call, dec!(100), premium)?;
-        let mut added = LongCall::default();
+        let mut added = LongCall::blank_at(chrono::DateTime::UNIX_EPOCH);
         added.add_position(&call)?;
-        let built = LongCall::new(
+        let built = LongCall::new_at(
             symbol(),
             hundred,
             days,
@@ -636,13 +641,14 @@ fn test_single_leg_added_to_default_charts_like_new() -> Result<(), Box<dyn Erro
             premium_pos,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?;
         assert_eq!(entry(&added)?, entry(&built)?, "LongCall at {premium}");
 
         let put = leg(Side::Short, OptionStyle::Put, dec!(100), premium)?;
-        let mut added = ShortPut::default();
+        let mut added = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         added.add_position(&put)?;
-        let built = ShortPut::new(
+        let built = ShortPut::new_at(
             symbol(),
             hundred,
             days,
@@ -654,6 +660,7 @@ fn test_single_leg_added_to_default_charts_like_new() -> Result<(), Box<dyn Erro
             premium_pos,
             fee,
             fee,
+            chrono::DateTime::UNIX_EPOCH,
         )?;
         assert_eq!(entry(&added)?, entry(&built)?, "ShortPut at {premium}");
     }

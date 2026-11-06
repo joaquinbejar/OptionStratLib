@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-optionstratlib = { workspace = true, default-features = false, features = ["static_export"] }
+optionstratlib = { workspace = true, default-features = false, features = ["clock", "static_export"] }
 osl-example-support = { path = "../support" }
 positive = { workspace = true }
 tracing = { workspace = true }

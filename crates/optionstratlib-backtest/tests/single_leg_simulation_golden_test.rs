@@ -21,6 +21,8 @@
 //! every count, exit reason and holding period, still matches exactly.
 //! Regenerate only when a numerical change is intended and reviewed.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_backtest::backtesting::Simulate;
 use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
 use optionstratlib_core::model::ExpirationDate;
@@ -128,7 +130,7 @@ fn run<S: Simulate<Positive, Positive>>(
 
 fn collect() -> Value {
     let mut out = serde_json::Map::new();
-    let long_call = LongCall::new(
+    let long_call = LongCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -140,6 +142,7 @@ fn collect() -> Value {
         pos_or_panic!(5.0),
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let leg = |side: Side, style: OptionStyle| {
@@ -167,15 +170,15 @@ fn collect() -> Value {
             None,
         )
     };
-    let mut long_put = LongPut::default();
+    let mut long_put = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
     long_put
         .add_position(&leg(Side::Long, OptionStyle::Put))
         .unwrap_or_else(|e| panic!("{e}"));
-    let mut short_call = ShortCall::default();
+    let mut short_call = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
     short_call
         .add_position(&leg(Side::Short, OptionStyle::Call))
         .unwrap_or_else(|e| panic!("{e}"));
-    let mut short_put = ShortPut::default();
+    let mut short_put = ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH);
     short_put
         .add_position(&leg(Side::Short, OptionStyle::Put))
         .unwrap_or_else(|e| panic!("{e}"));

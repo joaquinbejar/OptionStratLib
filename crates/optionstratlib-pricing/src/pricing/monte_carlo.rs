@@ -8,6 +8,7 @@ use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_sub, decimal_to_f64, finite_decimal,
 };
 use optionstratlib_core::model::types::{OptionStyle, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rust_decimal::Decimal;
@@ -79,10 +80,7 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
     // the same conversion and division, checked (#788).
     let steps_dec = Decimal::from_f64(steps_raw as f64)
         .ok_or_else(|| PricingError::non_finite("pricing::monte_carlo::steps", steps_raw as f64))?;
-    let dt = option
-        .expiration_date
-        .get_years()?
-        .checked_div_dec(steps_dec)?;
+    let dt = years_to_expiration(&option.expiration_date)?.checked_div_dec(steps_dec)?;
     let mut payoff_sum = 0.0;
 
     let dt_dec = dt.to_dec();
@@ -159,7 +157,7 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
             rate_f64,
         ));
     }
-    let years = decimal_to_f64(option.expiration_date.get_years()?.to_dec())?;
+    let years = decimal_to_f64(years_to_expiration(&option.expiration_date)?.to_dec())?;
     if !years.is_finite() {
         return Err(PricingError::non_finite(
             "pricing::monte_carlo::years",
@@ -248,7 +246,7 @@ pub fn price_option_monte_carlo(
     // never enters the discount factor `e^(-rT)`.
     let discount_factor = discount_factor(
         option.risk_free_rate,
-        option.expiration_date.get_years()?.to_dec(),
+        years_to_expiration(&option.expiration_date)?.to_dec(),
         "pricing::monte_carlo::discount_exponent",
         "pricing::monte_carlo::discount_factor",
     )?;
@@ -818,7 +816,10 @@ mod tests_f64_path_kernel {
         rng: &mut R,
     ) -> Decimal {
         let steps_dec = Decimal::from(steps);
-        let dt = option.expiration_date.get_years().unwrap().to_dec() / steps_dec;
+        let dt = years_to_expiration(&option.expiration_date)
+            .unwrap()
+            .to_dec()
+            / steps_dec;
         let carry = option.risk_free_rate - option.dividend_yield.to_dec();
         let growth_drift = Decimal::ONE + carry * dt;
         let sigma = option.implied_volatility.to_dec();
@@ -839,7 +840,12 @@ mod tests_f64_path_kernel {
             payoff_sum += decimal_to_f64(payoff).unwrap();
         }
         let rate = decimal_to_f64(option.risk_free_rate).unwrap();
-        let years = decimal_to_f64(option.expiration_date.get_years().unwrap().to_dec()).unwrap();
+        let years = decimal_to_f64(
+            years_to_expiration(&option.expiration_date)
+                .unwrap()
+                .to_dec(),
+        )
+        .unwrap();
         let price =
             finite_decimal(payoff_sum / simulations as f64 * (-rate * years).exp()).unwrap();
         match option.side {

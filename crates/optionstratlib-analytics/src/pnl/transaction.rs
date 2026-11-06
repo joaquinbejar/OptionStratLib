@@ -5,6 +5,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::TradeStatus;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
 use optionstratlib_core::model::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::{now, now_or};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -291,8 +292,22 @@ impl Transaction {
             None,
             self.premium_per_contract()?,
             self.fees,
-            Utc::now(),
+            self.pnl_stamp()?,
         ))
+    }
+
+    /// The instant a computed P&L is stamped with: the current time, or without
+    /// the `clock` feature the time of the transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError::Clock`] in a build without the `clock`
+    /// feature when the transaction has no time of its own.
+    fn pnl_stamp(&self) -> Result<DateTime<Utc>, TransactionError> {
+        match self.date_time {
+            Some(date_time) => Ok(now_or(date_time)),
+            None => Ok(now()?),
+        }
     }
 
     /// The premium of one contract: `premium × contract_size`.
@@ -369,12 +384,12 @@ impl Transaction {
             None,
             self.premium_per_contract()?,
             self.fees,
-            Utc::now(),
+            self.pnl_stamp()?,
         ))
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
 
@@ -790,7 +805,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_transaction_getters {
     use super::*;
 
@@ -874,7 +889,7 @@ mod tests_transaction_getters {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_transaction_updaters {
     use super::*;
 
@@ -919,7 +934,7 @@ mod tests_transaction_updaters {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_transaction_status_pnl {
     use super::*;
 
@@ -1118,7 +1133,7 @@ mod tests_transaction_status_pnl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_transaction_contract_size {
     use super::*;
 

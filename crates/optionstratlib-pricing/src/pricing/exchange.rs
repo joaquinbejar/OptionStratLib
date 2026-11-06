@@ -28,6 +28,7 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -90,7 +91,7 @@ pub fn exchange_black_scholes(option: &Options) -> Result<Decimal, PricingError>
     let s2 = second_asset_price;
     let q1 = Decimal::from(option.dividend_yield);
     let sigma1 = Decimal::from(option.implied_volatility);
-    let t = Decimal::from(option.expiration_date.get_years()?);
+    let t = Decimal::from(years_to_expiration(&option.expiration_date)?);
 
     let price = margrabe_formula(
         s1,

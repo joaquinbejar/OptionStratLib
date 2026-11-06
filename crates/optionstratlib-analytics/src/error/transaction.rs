@@ -43,6 +43,10 @@ pub enum TransactionError {
         /// Human-readable description of the failure.
         reason: String,
     },
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] optionstratlib_core::error::ClockError),
 }
 
 impl TransactionError {

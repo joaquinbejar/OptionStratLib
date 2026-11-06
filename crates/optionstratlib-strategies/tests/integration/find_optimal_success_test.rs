@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! `Optimizable::find_optimal` on a chain that has candidates (#814).
 //!
 //! `find_optimal_result_test` covers the searches that find nothing. Here
@@ -126,10 +127,11 @@ where
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_bull_call_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = BullCallSpread::new(
+    let seed = BullCallSpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(95.0),
@@ -145,6 +147,7 @@ fn test_find_optimal_priced_chain_bull_call_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -154,10 +157,11 @@ fn test_find_optimal_priced_chain_bull_call_spread_moves_legs() {
     });
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_bear_call_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = BearCallSpread::new(
+    let seed = BearCallSpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(95.0),
@@ -173,6 +177,7 @@ fn test_find_optimal_priced_chain_bear_call_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -182,10 +187,11 @@ fn test_find_optimal_priced_chain_bear_call_spread_moves_legs() {
     });
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_bull_put_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = BullPutSpread::new(
+    let seed = BullPutSpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(90.0),
@@ -201,6 +207,7 @@ fn test_find_optimal_priced_chain_bull_put_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -210,10 +217,11 @@ fn test_find_optimal_priced_chain_bull_put_spread_moves_legs() {
     });
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_bear_put_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = BearPutSpread::new(
+    let seed = BearPutSpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(105.0),
@@ -229,6 +237,7 @@ fn test_find_optimal_priced_chain_bear_put_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let check = |legs: &[Leg]| {
@@ -247,10 +256,11 @@ fn test_find_optimal_priced_chain_bear_put_spread_moves_legs() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_bull_call_ladder_moves_legs() {
     let z = Positive::ZERO;
-    let seed = BullCallLadder::new(
+    let seed = BullCallLadder::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(95.0),
@@ -270,6 +280,7 @@ fn test_find_optimal_priced_chain_bull_call_ladder_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -282,10 +293,11 @@ fn test_find_optimal_priced_chain_bull_call_ladder_moves_legs() {
     });
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_poor_mans_covered_call_moves_legs() {
     let z = Positive::ZERO;
-    let seed = PoorMansCoveredCall::new(
+    let seed = PoorMansCoveredCall::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(90.0),
@@ -302,6 +314,7 @@ fn test_find_optimal_priced_chain_poor_mans_covered_call_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let check = |legs: &[Leg]| {
@@ -319,10 +332,11 @@ fn test_find_optimal_priced_chain_poor_mans_covered_call_moves_legs() {
     assert!(strikes(&center, OptionStyle::Call, Side::Short)[0] > Positive::HUNDRED);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_long_butterfly_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = LongButterflySpread::new(
+    let seed = LongButterflySpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(90.0),
@@ -342,6 +356,7 @@ fn test_find_optimal_priced_chain_long_butterfly_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -354,10 +369,11 @@ fn test_find_optimal_priced_chain_long_butterfly_spread_moves_legs() {
     });
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_short_butterfly_spread_moves_legs() {
     let z = Positive::ZERO;
-    let seed = ShortButterflySpread::new(
+    let seed = ShortButterflySpread::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(90.0),
@@ -377,6 +393,7 @@ fn test_find_optimal_priced_chain_short_butterfly_spread_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -400,10 +417,11 @@ fn assert_iron_condor_order(legs: &[Leg]) {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_iron_condor_moves_legs() {
     let z = Positive::ZERO;
-    let seed = IronCondor::new(
+    let seed = IronCondor::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(105.0),
@@ -421,6 +439,7 @@ fn test_find_optimal_priced_chain_iron_condor_moves_legs() {
         p(0.08),
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, assert_iron_condor_order);
@@ -441,10 +460,11 @@ fn test_find_optimal_priced_chain_iron_condor_moves_legs() {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_iron_butterfly_moves_legs() {
     let z = Positive::ZERO;
-    let seed = IronButterfly::new(
+    let seed = IronButterfly::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(100.0),
@@ -461,6 +481,7 @@ fn test_find_optimal_priced_chain_iron_butterfly_moves_legs() {
         p(0.08),
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| {
@@ -485,10 +506,11 @@ fn assert_straddle_shape(legs: &[Leg], side: Side) {
     assert_eq!(call, put, "both legs share a strike: {legs:?}");
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_long_straddle_moves_legs() {
     let z = Positive::ZERO;
-    let seed = LongStraddle::new(
+    let seed = LongStraddle::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(100.0),
@@ -503,15 +525,17 @@ fn test_find_optimal_priced_chain_long_straddle_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| assert_straddle_shape(legs, Side::Long));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_short_straddle_moves_legs() {
     let z = Positive::ZERO;
-    let seed = ShortStraddle::new(
+    let seed = ShortStraddle::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(100.0),
@@ -526,6 +550,7 @@ fn test_find_optimal_priced_chain_short_straddle_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| assert_straddle_shape(legs, Side::Short));
@@ -537,10 +562,11 @@ fn assert_strangle_shape(legs: &[Leg], side: Side) {
     assert!(put < call, "put strike below call strike: {legs:?}");
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_long_strangle_moves_legs() {
     let z = Positive::ZERO;
-    let seed = LongStrangle::new(
+    let seed = LongStrangle::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(110.0),
@@ -556,6 +582,7 @@ fn test_find_optimal_priced_chain_long_strangle_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| assert_strangle_shape(legs, Side::Long));
@@ -568,10 +595,11 @@ fn test_find_optimal_priced_chain_long_strangle_moves_legs() {
     assert!(strikes(&center, OptionStyle::Call, Side::Long)[0] >= Positive::HUNDRED);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_find_optimal_priced_chain_short_strangle_moves_legs() {
     let z = Positive::ZERO;
-    let seed = ShortStrangle::new(
+    let seed = ShortStrangle::new_at(
         SYMBOL.to_string(),
         Positive::HUNDRED,
         p(110.0),
@@ -588,6 +616,7 @@ fn test_find_optimal_priced_chain_short_strangle_moves_legs() {
         z,
         z,
         z,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_both_criteria_move_legs(&seed, |legs| assert_strangle_shape(legs, Side::Short));

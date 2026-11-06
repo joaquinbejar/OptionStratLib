@@ -38,6 +38,7 @@ tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+chrono = { workspace = true }
 serde_json = { workspace = true }
 approx = { workspace = true }
 proptest = { workspace = true }

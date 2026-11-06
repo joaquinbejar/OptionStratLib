@@ -12,7 +12,9 @@ a requirement the checkout's version satisfies, so the requirement of every
 each build the resolved graph must take every `optionstratlib` crate from
 the checkout, never from the registry (#927). A `toml` block not followed by a `rust` block,
 or a notes file without any, fails, so an example cannot silently lose its
-check. The doctests of the facade (`ReleaseNotesDoctests`) compile the same
+check. The notes also predate the `clock` feature (#944), which their programs
+read the time through and which every selection of theirs then included, so a
+requirement with `default-features = false` is built with `clock` added. The doctests of the facade (`ReleaseNotesDoctests`) compile the same
 programs with every feature on; this check proves the feature selection
 shown is enough.
 
@@ -53,6 +55,10 @@ COMPONENTS = (
     "visualization",
 )
 FENCE = re.compile(r"^```(\w*)\s*$")
+OWN_NARROWED = re.compile(
+    r'(?P<head>^\s*optionstratlib(?:-[a-z]+)?\s*=\s*\{[^}\n]*default-features\s*=\s*false,\s*features\s*=\s*\[)',
+    re.MULTILINE,
+)
 USES_DEC = re.compile(r"\bdec!")
 DECLARES_RUST_DECIMAL = re.compile(r"^\s*rust_decimal\s*=", re.MULTILINE)
 # `optionstratlib = "0.22.0"` or `optionstratlib-core = { version = "0.22.0", ... }`:
@@ -81,7 +87,12 @@ def checkout_version():
 
 def local_requirements(dependencies, version):
     """`dependencies` with every requirement on this repository's crates set to `version`."""
-    return OWN_REQUIREMENT.sub(lambda match: f'{match.group("head")}"{version}"', dependencies)
+    return with_clock(OWN_REQUIREMENT.sub(lambda match: f'{match.group("head")}"{version}"', dependencies))
+
+
+def with_clock(dependencies):
+    """`dependencies` with `clock` on every own requirement that drops the default features."""
+    return OWN_NARROWED.sub(lambda match: f'{match.group("head")}"clock", ', dependencies)
 
 
 def registry_crates(manifest):
@@ -248,6 +259,10 @@ def self_test():
         'rust_decimal = "1.43"\n'
         'optionstratlib_other = "0.1"\n'
     )
+    if with_clock('optionstratlib = { version = "1", default-features = false, features = ["pricing"] }\n') != (
+        'optionstratlib = { version = "1", default-features = false, features = ["clock", "pricing"] }\n'
+    ):
+        raise SystemExit("self-test: a narrowed requirement must gain `clock`")
     if rewritten != expected:
         raise SystemExit(f"self-test: the requirement rewrite gave {rewritten!r}")
     without = local_requirements(SELF_TEST_FACADE, version)

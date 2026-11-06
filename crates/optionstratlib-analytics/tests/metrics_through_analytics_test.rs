@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -59,6 +60,7 @@ fn test_iv_curve_through_metrics_trait_has_one_point_per_strike() {
     assert!(points.iter().all(|p| p.y == dec!(0.17)));
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_rnd_through_analytics_trait_normalises_densities() {
     let chain = create_small_chain();

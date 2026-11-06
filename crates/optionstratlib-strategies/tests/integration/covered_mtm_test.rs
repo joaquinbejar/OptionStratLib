@@ -104,7 +104,7 @@ fn assert_converges_to_expiry<S: PnLCalculator>(strategy: &S, volatility: Positi
 
 #[test]
 fn test_covered_call_mark_to_market_is_sum_of_legs() {
-    let strategy = CoveredCall::new(
+    let strategy = CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -118,6 +118,7 @@ fn test_covered_call_mark_to_market_is_sum_of_legs() {
         Positive::ONE,
         pos_or_panic!(0.65),
         pos_or_panic!(0.65),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let (expiration, volatility) = (days(dec!(10)), pos_or_panic!(0.3));
@@ -142,7 +143,7 @@ fn test_covered_call_mark_to_market_is_sum_of_legs() {
 
 #[test]
 fn test_covered_call_mark_to_market_converges_to_expiry() {
-    let mut strategy = CoveredCall::new(
+    let mut strategy = CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -156,6 +157,7 @@ fn test_covered_call_mark_to_market_converges_to_expiry() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     fair_premium(&mut strategy.short_call);
@@ -164,7 +166,7 @@ fn test_covered_call_mark_to_market_converges_to_expiry() {
 
 #[test]
 fn test_protective_put_mark_to_market_is_sum_of_legs() {
-    let strategy = ProtectivePut::new(
+    let strategy = ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -178,6 +180,7 @@ fn test_protective_put_mark_to_market_is_sum_of_legs() {
         Positive::ONE,
         pos_or_panic!(0.65),
         pos_or_panic!(0.65),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let (expiration, volatility) = (days(dec!(10)), pos_or_panic!(0.3));
@@ -200,7 +203,7 @@ fn test_protective_put_mark_to_market_is_sum_of_legs() {
 
 #[test]
 fn test_protective_put_mark_to_market_converges_to_expiry() {
-    let mut strategy = ProtectivePut::new(
+    let mut strategy = ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -214,6 +217,7 @@ fn test_protective_put_mark_to_market_converges_to_expiry() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     fair_premium(&mut strategy.long_put);
@@ -221,7 +225,7 @@ fn test_protective_put_mark_to_market_converges_to_expiry() {
 }
 
 fn collar(premium_put: Positive, premium_call: Positive, fee: Positive) -> Collar {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -239,6 +243,7 @@ fn collar(premium_put: Positive, premium_call: Positive, fee: Positive) -> Colla
         fee,
         fee,
         fee,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }

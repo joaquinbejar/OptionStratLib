@@ -391,7 +391,8 @@ behind one version and one prelude, choosing capabilities with its
 features; its default enables every capability plus `io`, `synthetic`
 and `schema`. Depend on component crates directly when you want the
 smallest dependency graph or only one layer (a pricing service needs
-neither market data nor charts): each has empty default features, so you
+neither market data nor charts): each has only `clock` in its default
+features (`optionstratlib-math` has none and reads no clock), so you
 opt into `io`, `async`, `synthetic`, `schema`, `plotly` or
 `static_export` explicitly. Both routes give identical types, so they mix
 freely. Runnable direct-component programs, one per capability with the
@@ -412,15 +413,15 @@ compatibility with 0.21.
 
 | Crate | Owns | Own features | Facade feature | Facade paths |
 | --- | --- | --- | --- | --- |
-| `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
+| `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `clock`, `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`ClockError`, `DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
 | `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
-| `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks | `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError` and the `error::greeks` module) |
-| `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
-| `optionstratlib-market` | option chains, option series, OHLCV candles | `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
-| `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |
-| `optionstratlib-strategies` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis | `schema` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult`, `AdjustmentError` and the `error::strategies` module in `error` |
-| `optionstratlib-backtest` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics | `schema` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` |
-| `optionstratlib-visualization` | chart data, the `Graph` contract and its implementations, terminal reports, Plotly rendering and PNG/SVG export | `plotly`, `static_export` | `visualization` (implies `backtest`); `plotly` and `static_export` forward to its features | `visualization`; `GraphError` and the aggregate `Error` in `error`; the `impl_graph_for_payoff_strategy!` macro at the root |
+| `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks | `clock`, `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError` and the `error::greeks` module) |
+| `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
+| `optionstratlib-market` | option chains, option series, OHLCV candles | `clock`, `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
+| `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `clock`, `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |
+| `optionstratlib-strategies` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis | `clock`, `schema` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult`, `AdjustmentError` and the `error::strategies` module in `error` |
+| `optionstratlib-backtest` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics | `clock`, `schema` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` |
+| `optionstratlib-visualization` | chart data, the `Graph` contract and its implementations, terminal reports, Plotly rendering and PNG/SVG export | `clock`, `plotly`, `static_export` | `visualization` (implies `backtest`); `plotly` and `static_export` forward to its features | `visualization`; `GraphError` and the aggregate `Error` in `error`; the `impl_graph_for_payoff_strategy!` macro at the root |
 
 The facade also has `schema` (forwarded to every enabled component). Each facade path is an explicit module or
 item re-export (`pub use optionstratlib_core::model;`, `pub use
@@ -1021,6 +1022,7 @@ rust_decimal = "1.43"
   `optionstratlib-visualization/static_export`). What the images are and
   how they differ from Plotly's: the visualization crate's README,
   section "Static export"
+- `clock` (default): the wall clock, see [Building without the clock](#building-without-the-clock)
 - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
   `default-features = false` drops it, and `csv` and `zip` with it
@@ -1063,6 +1065,7 @@ crate whichever features are on.
 | `async` | | `optionstratlib-market/async` | `market`, `io` | no |
 | `synthetic` | | `optionstratlib-market/synthetic` | `market`, `simulation` | yes |
 | `schema` | | `optionstratlib-core/schema`, `optionstratlib-{math,pricing,simulation,market,analytics,strategies,backtest}?/schema` | | yes |
+| `clock` | | `optionstratlib-core/clock`, `optionstratlib-{pricing,simulation,market,analytics,strategies,backtest}?/clock` | | yes |
 
 The facade depends on `optionstratlib-core` always and declares no other
 optional dependency: `async` adds `tokio` through the market crate, and
@@ -1073,14 +1076,83 @@ any package other than the visualization crate declares Plotly, and
 `make check-feature-trees` pins the resolved graph of the facade with no
 capability, of each capability alone and of the default.
 
-**The default** (unchanged since 0.22) is every capability that 0.21 shipped without a
+**The default** is every capability that 0.21 shipped without a
 feature flag: `pricing`, `market`, `analytics`, `strategies`,
-`simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
+`simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`,
+plus `clock`, which those capabilities always had before it was a feature, so a
 plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
 Plotly, image-export, async-runtime or HTTP package. The default is a
 compatibility contract since the 0.22 line, not a statement that a consumer
 needs all of it: opt out with `default-features = false` and name only the
 capability you use, or depend on a component crate directly.
+
+##### Building without the clock
+
+`clock` is on by default. With `default-features = false` and without naming
+it, no package in the build enables `chrono/clock`, so `Utc::now` does not
+exist and the build cannot read the wall clock, which simulators and replay
+engines need. `make check-no-clock` asserts this for every published crate
+and facade combination. What changes:
+
+- **A `Days` expiration needs no time to price.** Its time to expiry, price and
+  Greeks come from its day count, to the same decimal in every build. It needs a time
+  only where it must become a calendar date, and then the reference datetime is that
+  time: `build_chain` and `build_series`, which store the date; `expiration_date_string`
+  and `resolve_expiration_date`; and the P&L of a bare `Options`, which is stamped with
+  the expiry. A `Position` counts from its own open date instead, so its P&L at
+  expiration and a single-leg `simulate` need no reference at all.
+- **A `DateTime` expiration needs a time for any time to expiry**: the thread's
+  reference datetime, from `ExpirationDate::set_reference_datetime`. Parallel sections
+  carry the caller's reference to their workers. With none, a result that depends on
+  that time to expiry and can report an error does, and is never computed from a
+  made-up instant. The error is usually `ExpirationDateError::InvalidDateTime` inside
+  the crate's error (for example `PricingError::Options`) or a `Clock` variant. A metric
+  curve with no point left returns its construction error instead, and
+  `AdjustmentOptimizer::optimize` carries the message in an `AdjustmentError`. What
+  cannot report an error is listed below. A path that does not measure
+  the expiry succeeds with no time: a search over quotes, a rebuild from positions, or a
+  refresh from a chain row, whose record keeps the date it already carries.
+- **The `*_at` forms take the time as an argument** and exist in every build:
+  `Trade::new_at`, `Position::days_held_at`, `days_to_expiration_at` and
+  `trade_at`, `OptionSeries::odte_at`, `OptionChain::get_random_positions_at`, `new_at`
+  on the strategies with a public `new`,
+  `SimulationResult::from_outcome_at`, and on `ExpirationDate` itself
+  `get_years_at`, `get_days_at`, `get_date_at` and `cmp_at`.
+- **`optionstratlib::utils::time`** has `now()`, which is `ClockError` without
+  the clock, and `years_to_expiration`, `days_to_expiration` and
+  `expiration_date_string`, the replacements for `ExpirationDate::get_years`,
+  `get_days` and `get_date_string`, which exist only with the clock.
+- **Constructors that return a `Result` stay and return an error**: `Trade::new`
+  and each strategy's `new`, as `TradeError::Clock` and `StrategyError::Clock`;
+  `PositionError`, `ChainError` and `TransactionError` have the same variant. `get_strategy` works and keeps the date each leg
+  already carries.
+- **Filling a chain's Greeks reports a missing time**: `OptionChain::try_update_greeks`
+  and `try_update_greek_snapshots` fail on it, and `delta_exposure` and `gamma_exposure`
+  fail on a strike with no Greek, where a build with the clock adds it as zero.
+- **What cannot report an error needs the feature**: the `Default` of
+  `Position`, of the strategies, of `TradeRecord` and `PnLMetrics`;
+  `long` and `short` on the spot, future and perpetual legs (`new` takes the
+  date); `create_sample_position`, `get_today_formatted` and
+  `get_today_or_tomorrow_formatted`; `From<PathOutcome> for SimulationResult`.
+  So do the methods whose fallback would read as an answer: `OptionSeries::odte`
+  (use `odte_at`), `OptionChain::update_greeks` and `update_greek_snapshots` (use the
+  `try_` forms), `is_delta_neutral` and `meets_greek_targets` (use `delta` and
+  `portfolio_greeks`).
+- **Without an error channel, three things still fall back**, each logged and none a
+  figure: `Step::get_graph_x_in_days_left` places a step at zero on a chart, the
+  per-strike `OptionData::calculate_delta` and friends leave the Greek empty, and the
+  chart of an option falls back to a default price range.
+- **The two builds can differ on purpose** in two places, both documented where
+  they are defined: `now_or` stamps a record with the time of the call or, without
+  the clock, the time it already carries; `evaluation_time` measures a `DateTime`
+  from the wall clock or, without it, from the reference datetime. For the same
+  answer in every build, use the `*_at` forms.
+
+`clock` is **not behaviourally additive**. Features unify across a build: if any crate
+in the final graph enables it, this build has it, nothing fails to compile, and a
+replay engine driven by the reference datetime silently measures a `DateTime` from the
+wall clock instead. A consumer that depends on the reference should say so at startup:
+`assert!(optionstratlib::utils::time::now().is_err())`.
 
 **Combinations that do not exist.** The implications are the whole
 dependency story, so some builds cannot be asked for:

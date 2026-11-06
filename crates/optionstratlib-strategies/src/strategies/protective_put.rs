@@ -22,7 +22,7 @@ use crate::strategies::shared::{
     apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
 };
 use crate::strategies::{BasicAble, Strategies, StrategyConstructor};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::ProbabilityError;
@@ -38,6 +38,7 @@ use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{DisplayMoney, UNLIMITED};
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
@@ -114,6 +115,50 @@ impl ProtectivePut {
         put_open_fee: Positive,
         put_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            put_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_put,
+            spot_open_fee,
+            spot_close_fee,
+            put_open_fee,
+            put_close_fee,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        put_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_put: Positive,
+        spot_open_fee: Positive,
+        spot_close_fee: Positive,
+        put_open_fee: Positive,
+        put_close_fee: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         // Every per-share figure this strategy reports — the effective cost
         // basis, the break-even, the premium per share — divides by the size
         // of the spot leg. A protective put with no shares is not a position, and
@@ -141,7 +186,7 @@ impl ProtectivePut {
             quantity,
             underlying_price,
             Side::Long,
-            Utc::now(),
+            date,
             spot_open_fee,
             spot_close_fee,
         );
@@ -164,7 +209,7 @@ impl ProtectivePut {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             // Per share, like the covered call's and the collar's option
             // fees; no longer divided by 100 (#731).
             put_open_fee,
@@ -835,7 +880,7 @@ impl PnLCalculator for ProtectivePut {
             unrealized: Some(profit),
             initial_costs: spot_cost.checked_add(&put_cost)?,
             initial_income: Positive::ZERO,
-            date_time: Utc::now(),
+            date_time: now_or(self.long_put.date),
         })
     }
 }
@@ -962,7 +1007,7 @@ mod tests {
     use rust_decimal_macros::dec;
 
     fn create_test_protective_put() -> ProtectivePut {
-        ProtectivePut::new(
+        ProtectivePut::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -976,6 +1021,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

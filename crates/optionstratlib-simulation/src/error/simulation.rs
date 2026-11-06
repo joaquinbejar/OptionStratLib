@@ -193,6 +193,14 @@ impl From<optionstratlib_pricing::error::VolatilityError> for SimulationError {
 /// This is a convenience type for functions that return simulation results.
 pub type SimulationResult<T> = Result<T, SimulationError>;
 
+impl From<optionstratlib_core::error::ClockError> for SimulationError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_core::error::ClockError) -> Self {
+        Self::ExpirationDate(err.into())
+    }
+}
+
 #[cfg(test)]
 mod tests_typed_causes {
     use super::*;

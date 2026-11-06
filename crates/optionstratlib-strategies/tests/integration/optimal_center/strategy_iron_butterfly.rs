@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{assert_pos_relative_eq, model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate,
@@ -11,12 +12,13 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the IronButterfly strategy
     let underlying_price = pos_or_panic!(5672.9);
 
-    let mut strategy = IronButterfly::new(
+    let mut strategy = IronButterfly::new_at(
         "SP500".to_string(),
         underlying_price, // underlying_price
         // Seed legs, replaced by the optimizer; `new` validates them since
@@ -35,6 +37,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(16.8),   // premium_long_put
         pos_or_panic!(0.96),   // open_fee
         pos_or_panic!(0.96),   // close_fee
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

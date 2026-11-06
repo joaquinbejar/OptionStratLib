@@ -98,6 +98,14 @@ impl From<SimulationError> for BacktestError {
     }
 }
 
+impl From<optionstratlib_core::error::ClockError> for BacktestError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_core::error::ClockError) -> Self {
+        SimulationError::from(err).into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

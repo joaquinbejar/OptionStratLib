@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! `CustomStrategy` break-evens refreshed by its edits (#784).
 //!
 //! `add_position`, `modify_position` and `replace_position` leave the
@@ -204,6 +205,7 @@ fn test_custom_strategy_invalid_edit_rejected_and_unchanged() {
     assert_eq!(snapshot(&strategy), before);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_custom_strategy_find_optimal_failed_recomputation_leaves_strategy_unchanged() {
     // With every recomputation failing no candidate is eligible: the search

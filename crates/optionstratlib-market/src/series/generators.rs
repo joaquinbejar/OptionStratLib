@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::sync::Mutex;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::pos_or_panic;
 
 /// Creates a new `OptionSeries` from pre-derived build parameters, a new price,
@@ -201,7 +201,7 @@ pub fn generator_optionseries(
     walk_steps_par(walk_params, build_step)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_generator_optionseries {
     use super::*;
     use optionstratlib_core::{assert_pos_relative_eq, spos};
@@ -211,6 +211,7 @@ mod tests_generator_optionseries {
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::utils::TimeFrame;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::convert_time_frame;
     use optionstratlib_simulation::error::SimulationError;
     use optionstratlib_simulation::simulation::steps::{Step, Xstep, Ystep};
@@ -266,6 +267,7 @@ mod tests_generator_optionseries {
         OptionSeries::build_series(&series_params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_generator_optionseries_basic() -> Result<(), Box<dyn std::error::Error>> {
         // Setup

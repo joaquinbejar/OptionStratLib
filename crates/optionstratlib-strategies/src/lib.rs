@@ -145,6 +145,7 @@
 //! ## Minimal example
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_core::model::{ExpirationDate, Positive};
 //! use optionstratlib_core::pos_or_panic;
 //! use optionstratlib_strategies::strategies::base::BreakEvenable;
@@ -171,6 +172,7 @@
 //! )?;
 //! assert!(spread.validate());
 //! assert_eq!(spread.get_break_even_points()?, &vec![pos_or_panic!(100.0)]);
+//! # }
 //! # Ok::<(), optionstratlib_strategies::error::StrategyError>(())
 //! ```
 //!
@@ -197,6 +199,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Compiles the Rust examples of this crate's `README.md` as doctests, so the
 /// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
-#[cfg(doctest)]
+#[cfg(all(doctest, feature = "clock"))]
 #[doc = include_str!("../README.md")]
 pub struct ReadmeDoctests;

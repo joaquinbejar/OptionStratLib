@@ -75,6 +75,7 @@ asserts its resolved graph.
 
 | Feature  | Default | Effect                                                              |
 |----------|---------|---------------------------------------------------------------------|
+| `clock`  | yes     | The wall clock, forwarded to the crates below. See the `clock` feature of `optionstratlib-core` |
 | `schema` | no      | Derives `utoipa::ToSchema` on pricing types and enables `schema` in core and math |
 
 ## License

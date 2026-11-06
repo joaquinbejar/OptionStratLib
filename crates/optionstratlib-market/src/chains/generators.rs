@@ -9,8 +9,10 @@ use crate::error::ChainError;
 use core::option::Option;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 use optionstratlib_core::pos_or_panic;
+#[cfg(all(test, feature = "clock"))]
+use optionstratlib_core::utils::time::days_to_expiration;
 use optionstratlib_simulation::simulation::steps::{Step, Xstep};
 use optionstratlib_simulation::simulation::{WalkParams, walk_steps_par};
 use rust_decimal_macros::dec;
@@ -149,7 +151,7 @@ pub fn generator_optionchain(
     walk_steps_par(walk_params, build_step)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
 
@@ -410,7 +412,7 @@ mod tests {
             // The rebuilt chain's expiration follows the x-step (parsed back
             // from a date string, so allow a one-day rounding tolerance).
             let chain_days = match chain.get_expiration() {
-                Some(exp) => match exp.get_days() {
+                Some(exp) => match days_to_expiration(&exp) {
                     Ok(days) => days,
                     Err(e) => panic!("chain expiration days failed at step {i}: {e}"),
                 },
@@ -596,7 +598,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod generators_coverage_tests {
     use super::*;
     use optionstratlib_core::{model::Positive, spos};

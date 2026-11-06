@@ -1,3 +1,5 @@
+#![cfg(feature = "clock")]
+
 use chrono::Utc;
 use optionstratlib_analytics::error::TransactionError;
 use optionstratlib_analytics::pnl::DeltaAdjustment;
@@ -42,7 +44,7 @@ impl PnLCalculator for TestPnLCalculator {
             None,
             pos_or_panic!(10.0),
             pos_or_panic!(20.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         ))
     }
 }
@@ -116,6 +118,7 @@ fn test_pnl_calculator_adjustments_pnl_default_implementation() {
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_transaction_able_trait() {
     let mut manager = TestTransactionManager::new();

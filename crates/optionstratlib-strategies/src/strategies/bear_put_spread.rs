@@ -7,6 +7,7 @@ use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use optionstratlib_core::model::Positive;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 /*
 Bear Put Spread Strategy
@@ -35,7 +36,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -160,6 +161,53 @@ impl BearPutSpread {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
+        long_strike: Positive,
+        short_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_put: Positive,
+        premium_short_put: Positive,
+        open_fee_long_put: Positive,
+        close_fee_long_put: Positive,
+        open_fee_short_put: Positive,
+        close_fee_short_put: Positive,
+    ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            long_strike,
+            short_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_put,
+            premium_short_put,
+            open_fee_long_put,
+            close_fee_long_put,
+            open_fee_short_put,
+            close_fee_short_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
         mut long_strike: Positive,
         mut short_strike: Positive,
         expiration: ExpirationDate,
@@ -173,6 +221,7 @@ impl BearPutSpread {
         close_fee_long_put: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
+        date: DateTime<Utc>,
     ) -> Result<Self, StrategyError> {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
@@ -186,8 +235,8 @@ impl BearPutSpread {
             kind: StrategyType::BearPutSpread,
             description: BEAR_PUT_SPREAD_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_put: Position::default(),
-            short_put: Position::default(),
+            long_put: Position::blank_at(date),
+            short_put: Position::blank_at(date),
         };
 
         let long_put_option = Options::new(
@@ -207,7 +256,7 @@ impl BearPutSpread {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee_long_put,
             close_fee_long_put,
             None,
@@ -232,7 +281,7 @@ impl BearPutSpread {
         let short_put = Position::new(
             short_put_option,
             premium_short_put,
-            Utc::now(),
+            date,
             open_fee_short_put,
             close_fee_short_put,
             None,
@@ -319,7 +368,7 @@ impl StrategyConstructor for BearPutSpread {
         let short_put = Position::new(
             lower_strike_position.option.clone(),
             lower_strike_position.premium,
-            Utc::now(),
+            now_or(lower_strike_position.date),
             lower_strike_position.open_fee,
             lower_strike_position.close_fee,
             None,
@@ -329,7 +378,7 @@ impl StrategyConstructor for BearPutSpread {
         let long_put = Position::new(
             higher_strike_position.option.clone(),
             higher_strike_position.premium,
-            Utc::now(),
+            now_or(higher_strike_position.date),
             higher_strike_position.open_fee,
             higher_strike_position.close_fee,
             None,
@@ -852,7 +901,7 @@ impl Optimizable for BearPutSpread {
                 "missing put_bid for short leg",
             )
         })?;
-        let mut strategy = BearPutSpread::new(
+        let mut strategy = BearPutSpread::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -868,6 +917,7 @@ impl Optimizable for BearPutSpread {
             self.long_put.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
+            now_or(self.long_put.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1024,7 +1074,7 @@ impl PnLCalculator for BearPutSpread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BearPutSpread, test_short_call_implementations);
 
 #[cfg(test)]
@@ -1037,7 +1087,7 @@ mod tests_bear_put_spread_strategy {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
@@ -1053,6 +1103,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1088,7 +1139,7 @@ mod tests_bear_put_spread_strategy {
                 None,
             ),
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1143,7 +1194,7 @@ mod tests_bear_put_spread_strategy {
 
     #[test]
     fn test_fees() {
-        let spread = BearPutSpread::new(
+        let spread = BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -1159,6 +1210,7 @@ mod tests_bear_put_spread_strategy {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1195,7 +1247,7 @@ mod tests_bear_put_spread_strategy {
         long_strike: Positive,
         short_strike: Positive,
     ) -> Result<BearPutSpread, StrategyError> {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             long_strike,
@@ -1211,6 +1263,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
     }
 
@@ -1253,7 +1306,7 @@ mod tests_bear_put_spread_strategy {
 
     #[test]
     fn test_with_different_quantities() {
-        let spread = BearPutSpread::new(
+        let spread = BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -1269,6 +1322,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1288,7 +1342,6 @@ mod tests_bear_put_spread_validation {
 
     use optionstratlib_core::model::ExpirationDate;
 
-    use chrono::Utc;
     use rust_decimal_macros::dec;
 
     fn create_valid_position(
@@ -1312,7 +1365,7 @@ mod tests_bear_put_spread_validation {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1588,7 +1641,7 @@ mod tests_bear_put_spread_optimization {
     }
 
     fn create_base_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -1604,6 +1657,7 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1788,7 +1842,7 @@ mod tests_bear_put_spread_optimization {
 
     #[test]
     fn test_optimization_with_different_quantities() {
-        let mut spread = BearPutSpread::new(
+        let mut spread = BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -1804,6 +1858,7 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1826,6 +1881,7 @@ mod tests_bear_put_spread_optimization {
         assert_eq!(spread.short_put.option.quantity, Positive::TWO);
     }
 
+    #[cfg(feature = "clock")]
     /// The two strikes of `spread`: long put, short put.
     fn put_strikes(spread: &BearPutSpread) -> (Positive, Positive) {
         (
@@ -1834,6 +1890,7 @@ mod tests_bear_put_spread_optimization {
         )
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_bear_put_spread_find_optimal_priced_chain_moves_legs() {
         // A chain whose put quotes rise with the strike has valid bear put
@@ -1852,6 +1909,7 @@ mod tests_bear_put_spread_optimization {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_bear_put_spread_find_optimal_priced_chain_upper_side_above_spot() {
         let mut spread = create_base_spread();
@@ -1867,6 +1925,7 @@ mod tests_bear_put_spread_optimization {
         assert!(spread.validate());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_bear_put_spread_find_optimal_priced_chain_range_within_bounds() {
         let mut spread = create_base_spread();
@@ -1886,6 +1945,7 @@ mod tests_bear_put_spread_optimization {
         assert!(spread.validate());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_bear_put_spread_find_optimal_priced_chain_keeps_quantity() {
         let mut spread = create_base_spread();
@@ -1973,7 +2033,7 @@ mod tests_bear_put_spread_optimizable {
     }
 
     fn create_test_bear_put_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // long strike (higher)
@@ -1989,6 +2049,7 @@ mod tests_bear_put_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2175,7 +2236,7 @@ mod tests_bear_put_spread_profit {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
@@ -2191,6 +2252,7 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2292,7 +2354,7 @@ mod tests_bear_put_spread_profit {
 
     #[test]
     fn test_profit_with_different_quantities() {
-        let spread = BearPutSpread::new(
+        let spread = BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2308,6 +2370,7 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2330,7 +2393,7 @@ mod tests_bear_put_spread_profit {
 
     #[test]
     fn test_profit_with_fees() {
-        let spread = BearPutSpread::new(
+        let spread = BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(105.0),
@@ -2346,6 +2409,7 @@ mod tests_bear_put_spread_profit {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -2395,7 +2459,7 @@ mod tests_bear_put_spread_probability {
     }
 
     fn create_test_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
@@ -2411,6 +2475,7 @@ mod tests_bear_put_spread_probability {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2547,7 +2612,7 @@ mod tests_bear_put_spread_graph {
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
@@ -2563,6 +2628,7 @@ mod tests_bear_put_spread_graph {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2579,24 +2645,34 @@ mod tests_bear_put_spread_graph {
 
 #[cfg(test)]
 mod tests_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bear_put_spread::BearPutSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos_or_panic!(5810.5);
-        let mut strategy = BearPutSpread::new(
+        let mut strategy = BearPutSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::TWO,    // long_strike placeholder
@@ -2612,6 +2688,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.long_put.option.strike_price = long_strike;
@@ -2620,6 +2697,7 @@ mod tests_delta {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5800.0), pos_or_panic!(5820.0));
@@ -2668,6 +2746,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5840.0), pos_or_panic!(5820.0));
@@ -2717,6 +2796,7 @@ mod tests_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5820.0), pos_or_panic!(5820.0));
@@ -2734,25 +2814,36 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bear_put_spread::BearPutSpread;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
     // The delta tests drive the adjustment engine through both signs of net
     // delta and through zero, which takes inverted and equal strikes. `new`
     // rejects such legs since #696, so the strategy is built on valid
     // placeholder strikes and the requested strikes are set on the legs.
+    #[cfg(feature = "clock")]
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        let mut strategy = BearPutSpread::new(
+        let mut strategy = BearPutSpread::new_at(
             "SP500".to_string(),
             underlying_price, // underlying_price
             Positive::TWO,    // long_strike placeholder
@@ -2768,6 +2859,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         strategy.long_put.option.strike_price = long_strike;
@@ -2776,6 +2868,7 @@ mod tests_delta_size {
         strategy
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos_or_panic!(5800.0);
@@ -2826,6 +2919,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos_or_panic!(5820.0);
@@ -2876,6 +2970,7 @@ mod tests_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5820.0), pos_or_panic!(5820.0));
@@ -2902,7 +2997,7 @@ mod tests_bear_call_spread_position_management {
     use tracing::error;
 
     fn create_test_short_bear_put_spread() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5850.0),  // long_strike
@@ -2918,6 +3013,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3014,7 +3110,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BearPutSpread {
-        BearPutSpread::new(
+        BearPutSpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5850.0),  // long_strike
@@ -3030,6 +3126,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3127,7 +3224,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bear_put_spread_constructor {
     use super::*;
 
@@ -3333,7 +3430,7 @@ mod tests_bear_put_spread_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bear_put_spread_pnl {
     use super::*;
 
@@ -3554,7 +3651,7 @@ mod tests_bear_put_spread_degenerate_ranges {
         let tiny = Positive::new_decimal(dec!(0.0000000000000000000000000001))
             .expect("literal is positive");
         let expiration = ExpirationDate::Days(Positive::new_decimal(dec!(3650)).expect("literal"));
-        let result = BearPutSpread::new(
+        let result = BearPutSpread::new_at(
             "PROP".to_string(),
             Positive::MAX,
             Positive::ZERO,
@@ -3570,6 +3667,7 @@ mod tests_bear_put_spread_degenerate_ranges {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            chrono::DateTime::UNIX_EPOCH,
         );
         // Both strikes default to the spot, which is no vertical, and the
         // short leg has no premium: `new` rejects the input since #696.
@@ -3600,7 +3698,7 @@ mod tests_bear_put_spread_degenerate_ranges {
                     None,
                 ),
                 Positive::ZERO,
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
                 Positive::ONE,
                 Positive::ONE,
                 None,

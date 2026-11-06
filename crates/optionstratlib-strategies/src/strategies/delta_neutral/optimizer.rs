@@ -25,6 +25,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::Side;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_market::chains::chain::OptionChain;
 use optionstratlib_pricing::greeks::Greeks;
 use rust_decimal::Decimal;
@@ -112,7 +113,10 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// empty, `AdjustmentError::InfeasibleTarget` when no combination
     /// of candidate strikes can close the delta gap within the
     /// configured tolerance, or `AdjustmentError::CostCeilingBreached`
-    /// when every viable plan exceeds the configured `max_cost`.
+    /// when every viable plan exceeds the configured `max_cost`. Returns
+    /// [`AdjustmentError::GreeksError`] when new legs are allowed and the time to expiry
+    /// of the chain cannot be measured: a `DateTime` chain in a build with neither the
+    /// `clock` feature nor a reference datetime on this thread.
     pub fn optimize(&self) -> Result<AdjustmentPlan, AdjustmentError> {
         if self.positions.is_empty() {
             return Err(AdjustmentError::NoPositions);
@@ -132,6 +136,17 @@ impl<'a> AdjustmentOptimizer<'a> {
                 current_greeks,
                 Decimal::ZERO,
             ));
+        }
+
+        // A candidate leg whose delta cannot be computed is dropped below, so with no
+        // time to measure the chain from, every candidate would vanish and the plan come
+        // back empty: an unhedged delta reported as a success.
+        if self.config.allow_new_legs
+            && let Some(chain) = self.chain
+        {
+            chain
+                .require_time_to_expiry()
+                .map_err(|error| AdjustmentError::GreeksError(error.to_string()))?;
         }
 
         let delta_gap = self.target.delta_gap(&current_greeks)?;
@@ -367,6 +382,10 @@ impl<'a> AdjustmentOptimizer<'a> {
         let target_delta_sign = delta_gap.signum();
         let contract_size = self.portfolio_contract_size();
 
+        // The date a candidate would open at: with no date `get_position` asks the
+        // clock, and in a build without one every candidate would vanish here.
+        let opened_at = self.positions.first().map(|leg| now_or(leg.date));
+
         for opt_data in chain.get_single_iter() {
             // Filter by liquidity
             if let Some(min_oi) = self.config.min_liquidity
@@ -385,7 +404,7 @@ impl<'a> AdjustmentOptimizer<'a> {
             // Try both call and put options
             for option_style in &self.config.allowed_styles {
                 if let Ok(position) =
-                    opt_data.get_position(Side::Long, *option_style, None, None, None)
+                    opt_data.get_position(Side::Long, *option_style, opened_at, None, None)
                 {
                     // Size the new leg like the legs it adjusts, so its
                     // delta and quantity are per contract of that size.
@@ -588,10 +607,16 @@ impl<'a> AdjustmentOptimizer<'a> {
                 } => {
                     let mut new_option = *option.clone();
                     new_option.quantity = *quantity;
+                    let date = match positions.first() {
+                        Some(leg) => now_or(leg.date),
+                        None => now().map_err(|error| {
+                            AdjustmentError::ConfigurationViolation(error.to_string())
+                        })?,
+                    };
                     positions.push(Position::new(
                         new_option,
                         Positive::ZERO,
-                        chrono::Utc::now(),
+                        date,
                         Positive::ZERO,
                         Positive::ZERO,
                         None,
@@ -648,7 +673,7 @@ mod tests_optimizer {
         Position::new(
             option,
             Positive::TWO,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -747,7 +772,9 @@ mod tests_optimizer_contract_size {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::types::{OptionStyle, OptionType};
-    use optionstratlib_core::{pos_or_panic, spos};
+    use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::spos;
 
     fn sized_position(side: Side, contract_size: Positive) -> Position {
         let option = optionstratlib_core::model::Options::new(
@@ -768,7 +795,7 @@ mod tests_optimizer_contract_size {
         Position::new(
             option,
             Positive::TWO,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -776,6 +803,7 @@ mod tests_optimizer_contract_size {
         )
     }
 
+    #[cfg(feature = "clock")]
     fn chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
@@ -839,6 +867,7 @@ mod tests_optimizer_contract_size {
         assert_eq!(optimizer.portfolio_contract_size(), Positive::ONE);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_optimizer_contract_size_new_legs_take_the_portfolio_size() {
         let chain = chain();

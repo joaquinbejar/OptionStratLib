@@ -149,6 +149,8 @@ pub fn optionstratlib_pricing::error::PricingError::non_finite(&'static str, f64
 pub fn optionstratlib_pricing::error::PricingError::other(&str) -> Self
 pub fn optionstratlib_pricing::error::PricingError::simulation_error(&str) -> Self
 pub fn optionstratlib_pricing::error::PricingError::unsupported_option_type(&str, &str) -> Self
+impl core::convert::From<optionstratlib_core::error::clock::ClockError> for optionstratlib_pricing::error::PricingError
+pub fn optionstratlib_pricing::error::PricingError::from(optionstratlib_core::error::clock::ClockError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::PricingError> for optionstratlib_core::error::options::OptionsError
 pub fn optionstratlib_core::error::options::OptionsError::from(optionstratlib_pricing::error::PricingError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::PricingError> for optionstratlib_pricing::error::greeks::GreeksError

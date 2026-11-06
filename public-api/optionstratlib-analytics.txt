@@ -344,6 +344,7 @@ pub fn optionstratlib_analytics::error::RNDError::invalid_parameters(&'static st
 impl core::convert::From<optionstratlib_market::error::chains::ChainError> for optionstratlib_analytics::error::RNDError
 pub fn optionstratlib_analytics::error::RNDError::from(optionstratlib_market::error::chains::ChainError) -> Self
 pub enum optionstratlib_analytics::error::TransactionError
+pub optionstratlib_analytics::error::TransactionError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_analytics::error::TransactionError::NotImplemented
 pub optionstratlib_analytics::error::TransactionError::NotImplemented::method: &'static str
 pub optionstratlib_analytics::error::TransactionError::NotImplemented::type_name: &'static str

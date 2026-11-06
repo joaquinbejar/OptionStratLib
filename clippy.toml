@@ -5,3 +5,12 @@
 # crate that reaches `rust_decimal` through `positive`'s re-export first and
 # `rust_decimal::Decimal` elsewhere; both name the same type.
 arithmetic-side-effects-allowed-unary = ["rust_decimal::Decimal", "positive::Decimal"]
+
+# The wall clock has one door, `optionstratlib_core::utils::time` (#944), and
+# `std::time` needs no feature to open another. These resolve aliases and paths,
+# which `scripts/check_no_clock.py` does not. `Instant` is left out: it is monotonic
+# and never tells the time, though nothing here can stop one being used as a seed.
+disallowed-methods = [
+    { path = "std::time::SystemTime::now", reason = "the wall clock goes through optionstratlib_core::utils::time (#944)" },
+    { path = "std::time::SystemTime::elapsed", reason = "it reads the wall clock; go through optionstratlib_core::utils::time (#944)" },
+]

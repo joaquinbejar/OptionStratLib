@@ -28,6 +28,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::get_position_with_delt
 pub fn optionstratlib_market::chains::chain::OptionChain::get_quad_inclusive_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData)>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_quad_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData)>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_random_positions(&self, optionstratlib_market::chains::utils::RandomPositionsParams) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::position::Position>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_random_positions_at(&self, optionstratlib_market::chains::utils::RandomPositionsParams, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::position::Position>, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_single_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = &optionstratlib_market::chains::OptionData>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_single_iter_mut(&mut self) -> impl core::iter::traits::iterator::Iterator<Item = optionstratlib_market::chains::OptionData>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_strikes(&self) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_market::error::chains::ChainError>
@@ -41,6 +42,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::load_from_json(&str) -
 pub async fn optionstratlib_market::chains::chain::OptionChain::load_from_json_async(&str) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::mutate_single_options<F>(&mut self, F) where F: core::ops::function::FnMut(&mut optionstratlib_market::chains::OptionData)
 pub fn optionstratlib_market::chains::chain::OptionChain::new(&str, positive::positive::Positive, alloc::string::String, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<positive::positive::Positive>) -> Self
+pub fn optionstratlib_market::chains::chain::OptionChain::require_time_to_expiry(&self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::save_to_csv(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub async fn optionstratlib_market::chains::chain::OptionChain::save_to_csv_async(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::save_to_json(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
@@ -50,6 +52,8 @@ pub fn optionstratlib_market::chains::chain::OptionChain::set_optiondata_extra_p
 pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, positive::positive::Positive) -> core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
 pub fn optionstratlib_market::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib_market::chains::utils::OptionChainBuildParams, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::try_update_greek_snapshots(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::try_update_greeks(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
 pub fn optionstratlib_market::chains::chain::OptionChain::update_greek_snapshots(&mut self)
 pub fn optionstratlib_market::chains::chain::OptionChain::update_greeks(&mut self)
@@ -249,6 +253,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::get_position_with_delt
 pub fn optionstratlib_market::chains::chain::OptionChain::get_quad_inclusive_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData)>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_quad_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData, &optionstratlib_market::chains::OptionData)>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_random_positions(&self, optionstratlib_market::chains::utils::RandomPositionsParams) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::position::Position>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_random_positions_at(&self, optionstratlib_market::chains::utils::RandomPositionsParams, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::position::Position>, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_single_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = &optionstratlib_market::chains::OptionData>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_single_iter_mut(&mut self) -> impl core::iter::traits::iterator::Iterator<Item = optionstratlib_market::chains::OptionData>
 pub fn optionstratlib_market::chains::chain::OptionChain::get_strikes(&self) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_market::error::chains::ChainError>
@@ -262,6 +267,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::load_from_json(&str) -
 pub async fn optionstratlib_market::chains::chain::OptionChain::load_from_json_async(&str) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::mutate_single_options<F>(&mut self, F) where F: core::ops::function::FnMut(&mut optionstratlib_market::chains::OptionData)
 pub fn optionstratlib_market::chains::chain::OptionChain::new(&str, positive::positive::Positive, alloc::string::String, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<positive::positive::Positive>) -> Self
+pub fn optionstratlib_market::chains::chain::OptionChain::require_time_to_expiry(&self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::save_to_csv(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub async fn optionstratlib_market::chains::chain::OptionChain::save_to_csv_async(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::save_to_json(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
@@ -271,6 +277,8 @@ pub fn optionstratlib_market::chains::chain::OptionChain::set_optiondata_extra_p
 pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, positive::positive::Positive) -> core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
 pub fn optionstratlib_market::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib_market::chains::utils::OptionChainBuildParams, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::try_update_greek_snapshots(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::try_update_greeks(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
 pub fn optionstratlib_market::chains::chain::OptionChain::update_greek_snapshots(&mut self)
 pub fn optionstratlib_market::chains::chain::OptionChain::update_greeks(&mut self)
@@ -443,6 +451,7 @@ pub enum optionstratlib_market::error::chains::ChainError
 pub optionstratlib_market::error::chains::ChainError::AtmNotFound
 pub optionstratlib_market::error::chains::ChainError::AtmNotFound::symbol: alloc::string::String
 pub optionstratlib_market::error::chains::ChainError::ChainBuildError(optionstratlib_market::error::chains::ChainBuildErrorKind)
+pub optionstratlib_market::error::chains::ChainError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_market::error::chains::ChainError::Curve(alloc::boxed::Box<optionstratlib_math::error::curves::CurveError>)
 pub optionstratlib_market::error::chains::ChainError::EmptyChain
 pub optionstratlib_market::error::chains::ChainError::EmptyChain::symbol: alloc::string::String
@@ -524,6 +533,7 @@ pub enum optionstratlib_market::error::ChainError
 pub optionstratlib_market::error::ChainError::AtmNotFound
 pub optionstratlib_market::error::ChainError::AtmNotFound::symbol: alloc::string::String
 pub optionstratlib_market::error::ChainError::ChainBuildError(optionstratlib_market::error::chains::ChainBuildErrorKind)
+pub optionstratlib_market::error::ChainError::Clock(optionstratlib_core::error::clock::ClockError)
 pub optionstratlib_market::error::ChainError::Curve(alloc::boxed::Box<optionstratlib_math::error::curves::CurveError>)
 pub optionstratlib_market::error::ChainError::EmptyChain
 pub optionstratlib_market::error::ChainError::EmptyChain::symbol: alloc::string::String
@@ -609,6 +619,7 @@ pub fn optionstratlib_market::series::OptionSeries::build_series(&optionstratlib
 pub fn optionstratlib_market::series::OptionSeries::get_expiration_dates(&self) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::series::OptionSeries::new(alloc::string::String, positive::positive::Positive) -> Self
 pub fn optionstratlib_market::series::OptionSeries::odte(&self) -> core::option::Option<optionstratlib_market::chains::chain::OptionChain>
+pub fn optionstratlib_market::series::OptionSeries::odte_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::option::Option<optionstratlib_market::chains::chain::OptionChain>
 pub fn optionstratlib_market::series::OptionSeries::to_build_params(&self) -> core::result::Result<optionstratlib_market::series::OptionSeriesBuildParams, optionstratlib_market::error::chains::ChainError>
 impl core::convert::From<&optionstratlib_market::series::OptionSeries> for positive::positive::Positive
 pub fn positive::positive::Positive::from(&optionstratlib_market::series::OptionSeries) -> Self

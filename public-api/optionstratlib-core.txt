@@ -24,6 +24,7 @@ pub static optionstratlib_core::constants::WEEKS_PER_YEAR: std::sync::lazy_lock:
 pub mod optionstratlib_core::error
 pub mod optionstratlib_core::error::position
 pub enum optionstratlib_core::error::position::PositionError
+pub optionstratlib_core::error::position::PositionError::Clock(optionstratlib_core::error::ClockError)
 pub optionstratlib_core::error::position::PositionError::DecimalError(optionstratlib_core::error::DecimalError)
 pub optionstratlib_core::error::position::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
 pub optionstratlib_core::error::position::PositionError::Options(optionstratlib_core::error::OptionsError)
@@ -73,6 +74,10 @@ pub optionstratlib_core::error::position::StrategyErrorKind::StrategyFull::strat
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::operation: alloc::string::String
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::strategy_type: alloc::string::String
+#[non_exhaustive] pub enum optionstratlib_core::error::ClockError
+pub optionstratlib_core::error::ClockError::Unavailable
+impl core::convert::From<optionstratlib_core::error::ClockError> for expiration_date::error::ExpirationDateError
+pub fn expiration_date::error::ExpirationDateError::from(optionstratlib_core::error::ClockError) -> Self
 pub enum optionstratlib_core::error::DecimalError
 pub optionstratlib_core::error::DecimalError::ArithmeticError
 pub optionstratlib_core::error::DecimalError::ArithmeticError::operation: alloc::string::String
@@ -144,6 +149,7 @@ pub fn optionstratlib_core::error::OptionsError::time_error(&str, &str) -> Self
 pub fn optionstratlib_core::error::OptionsError::update_error(&str, &str) -> Self
 pub fn optionstratlib_core::error::OptionsError::validation_error(&str, &str) -> Self
 pub enum optionstratlib_core::error::PositionError
+pub optionstratlib_core::error::PositionError::Clock(optionstratlib_core::error::ClockError)
 pub optionstratlib_core::error::PositionError::DecimalError(optionstratlib_core::error::DecimalError)
 pub optionstratlib_core::error::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
 pub optionstratlib_core::error::PositionError::Options(optionstratlib_core::error::OptionsError)
@@ -178,6 +184,7 @@ pub enum optionstratlib_core::error::TradeError
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow::operation: &'static str
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow::reason: alloc::string::String
+pub optionstratlib_core::error::TradeError::Clock(optionstratlib_core::error::ClockError)
 pub optionstratlib_core::error::TradeError::InvalidTrade
 pub optionstratlib_core::error::TradeError::InvalidTrade::reason: alloc::string::String
 pub optionstratlib_core::error::TradeError::InvalidTradeStatus
@@ -713,9 +720,12 @@ pub optionstratlib_core::model::position::Position::open_fee: positive::positive
 pub optionstratlib_core::model::position::Position::option: optionstratlib_core::model::option::Options
 pub optionstratlib_core::model::position::Position::premium: positive::positive::Positive
 impl optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::blank_at(chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib_core::model::position::Position::break_even(&self) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::position::Position::days_held(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_held_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_to_expiration_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::is_long(&self) -> bool
 pub fn optionstratlib_core::model::position::Position::is_short(&self) -> bool
@@ -725,6 +735,7 @@ pub fn optionstratlib_core::model::position::Position::new(optionstratlib_core::
 pub fn optionstratlib_core::model::position::Position::pnl_at_expiration(&self, &core::option::Option<&positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::trade_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::position::Position::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::validate(&self) -> bool
 impl core::convert::From<optionstratlib_core::model::position::Position> for optionstratlib_core::model::leg::Leg
@@ -950,9 +961,12 @@ pub optionstratlib_core::model::Position::open_fee: positive::positive::Positive
 pub optionstratlib_core::model::Position::option: optionstratlib_core::model::option::Options
 pub optionstratlib_core::model::Position::premium: positive::positive::Positive
 impl optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::blank_at(chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib_core::model::position::Position::break_even(&self) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::position::Position::days_held(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_held_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_to_expiration_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::is_long(&self) -> bool
 pub fn optionstratlib_core::model::position::Position::is_short(&self) -> bool
@@ -962,6 +976,7 @@ pub fn optionstratlib_core::model::position::Position::new(optionstratlib_core::
 pub fn optionstratlib_core::model::position::Position::pnl_at_expiration(&self, &core::option::Option<&positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::trade_at(&self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::position::Position::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::position::Position::validate(&self) -> bool
 impl core::convert::From<optionstratlib_core::model::position::Position> for optionstratlib_core::model::leg::Leg
@@ -1042,6 +1057,7 @@ pub fn optionstratlib_core::model::Trade::is_expired(&self) -> bool
 pub fn optionstratlib_core::model::Trade::is_open(&self) -> bool
 pub fn optionstratlib_core::model::Trade::net(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> core::result::Result<Self, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::new_at(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<Self, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<(), optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::with_contract_size(self, positive::positive::Positive) -> Self
 impl core::fmt::Display for optionstratlib_core::model::Trade
@@ -1117,13 +1133,25 @@ pub fn optionstratlib_core::utils::time::TimeFrame::name() -> alloc::borrow::Cow
 pub fn optionstratlib_core::utils::time::TimeFrame::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::utils::time::TimeFrame
 pub fn optionstratlib_core::utils::time::TimeFrame::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::utils::time::ReferenceCarrier
+impl optionstratlib_core::utils::time::ReferenceCarrier
+pub fn optionstratlib_core::utils::time::ReferenceCarrier::capture() -> Self
+pub fn optionstratlib_core::utils::time::ReferenceCarrier::run<R>(&self, impl core::ops::function::FnOnce() -> R) -> R
 pub fn optionstratlib_core::utils::time::convert_time_frame(positive::positive::Positive, &optionstratlib_core::utils::time::TimeFrame, &optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
+pub fn optionstratlib_core::utils::time::days_to_expiration(&expiration_date::ExpirationDate) -> core::result::Result<positive::positive::Positive, expiration_date::error::ExpirationDateError>
+pub fn optionstratlib_core::utils::time::evaluation_time() -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, optionstratlib_core::error::ClockError>
+pub fn optionstratlib_core::utils::time::expiration_date_string(&expiration_date::ExpirationDate) -> core::result::Result<alloc::string::String, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::utils::time::get_today_formatted() -> alloc::string::String
 pub fn optionstratlib_core::utils::time::get_today_or_tomorrow_formatted() -> alloc::string::String
 pub fn optionstratlib_core::utils::time::get_tomorrow_formatted() -> core::result::Result<alloc::string::String, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::utils::time::get_x_days_formatted(i64) -> core::result::Result<alloc::string::String, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::utils::time::get_x_days_formatted_pos(positive::positive::Positive) -> core::result::Result<alloc::string::String, expiration_date::error::ExpirationDateError>
+pub fn optionstratlib_core::utils::time::now() -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, optionstratlib_core::error::ClockError>
+pub fn optionstratlib_core::utils::time::now_or(chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn optionstratlib_core::utils::time::resolution_base() -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, optionstratlib_core::error::ClockError>
 pub fn optionstratlib_core::utils::time::units_per_year(&optionstratlib_core::utils::time::TimeFrame) -> positive::positive::Positive
+pub fn optionstratlib_core::utils::time::wall_clock() -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn optionstratlib_core::utils::time::years_to_expiration(&expiration_date::ExpirationDate) -> core::result::Result<positive::positive::Positive, expiration_date::error::ExpirationDateError>
 pub enum optionstratlib_core::utils::TimeFrame
 pub optionstratlib_core::utils::TimeFrame::Custom(positive::positive::Positive)
 pub optionstratlib_core::utils::TimeFrame::Day

@@ -14,7 +14,10 @@ categories = ["finance", "data-structures"]
 include = ["/src/**/*", "/testdata/*.json", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
-default = []
+default = ["clock"]
+# The wall clock, on by default: without it this crate reads no clock and
+# `chrono/clock` stays off (#944).
+clock = ["optionstratlib-core/clock", "optionstratlib-pricing/clock", "optionstratlib-simulation?/clock"]
 # Filesystem I/O: CSV, JSON and ZIP readers and writers (ADR-0003).
 io = ["dep:csv", "dep:zip"]
 # `tokio`-backed `*_async` wrappers over the `io` functions (ADR-0003).
@@ -34,7 +37,7 @@ schema = [
 ]
 
 [package.metadata.docs.rs]
-# docs.rs builds the default features, empty for this crate, so name the
+# docs.rs builds the default features, `clock` alone for this crate, so name the
 # optional ones the API documents. Nothing here needs a browser or the network.
 features = ["io", "async", "synthetic", "schema"]
 
@@ -67,6 +70,7 @@ criterion = { workspace = true }
 [[bench]]
 name = "chains"
 harness = false
+required-features = ["clock"]
 
 [[bench]]
 name = "chains_io"

@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! Contract size follow-ups (#760).
 //!
 //! - A strategy set to contract-sized legs keeps that size when it is
@@ -56,7 +57,7 @@ fn assert_sized<S: Positionable + BasicAble>(strategy: &S, size: Positive) {
 }
 
 fn bull_call_spread() -> BullCallSpread {
-    BullCallSpread::new(
+    BullCallSpread::new_at(
         "SP500".to_string(),
         pos_or_panic!(5781.88),
         pos_or_panic!(5750.0),
@@ -72,12 +73,13 @@ fn bull_call_spread() -> BullCallSpread {
         pos_or_panic!(0.78),
         pos_or_panic!(0.73),
         pos_or_panic!(0.73),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn long_straddle() -> LongStraddle {
-    LongStraddle::new(
+    LongStraddle::new_at(
         "SP500".to_string(),
         pos_or_panic!(5781.88),
         pos_or_panic!(5780.0),
@@ -92,12 +94,13 @@ fn long_straddle() -> LongStraddle {
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn short_strangle() -> ShortStrangle {
-    ShortStrangle::new(
+    ShortStrangle::new_at(
         "SP500".to_string(),
         pos_or_panic!(5781.88),
         pos_or_panic!(5850.0),
@@ -114,12 +117,13 @@ fn short_strangle() -> ShortStrangle {
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn long_butterfly() -> LongButterflySpread {
-    LongButterflySpread::new(
+    LongButterflySpread::new_at(
         "SP500".to_string(),
         pos_or_panic!(5781.88),
         pos_or_panic!(5710.0),
@@ -139,12 +143,13 @@ fn long_butterfly() -> LongButterflySpread {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn iron_condor() -> IronCondor {
-    IronCondor::new(
+    IronCondor::new_at(
         "SP500".to_string(),
         pos_or_panic!(5781.88),
         pos_or_panic!(5850.0),
@@ -162,6 +167,7 @@ fn iron_condor() -> IronCondor {
         pos_or_panic!(4.0),
         pos_or_panic!(0.5),
         pos_or_panic!(0.5),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -210,31 +216,37 @@ where
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_bull_call_spread_contract_size_optimisation_keeps_contract_size() {
     assert_optimisation_keeps_size(bull_call_spread());
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_long_straddle_contract_size_optimisation_keeps_contract_size() {
     assert_optimisation_keeps_size(long_straddle());
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_short_strangle_contract_size_optimisation_keeps_contract_size() {
     assert_optimisation_keeps_size(short_strangle());
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_long_butterfly_contract_size_optimisation_keeps_contract_size() {
     assert_optimisation_keeps_size(long_butterfly());
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_iron_condor_contract_size_optimisation_keeps_contract_size() {
     assert_optimisation_keeps_size(iron_condor());
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_bull_call_spread_contract_size_create_strategy_keeps_contract_size() {
     let chain = chain();
@@ -322,6 +334,7 @@ fn test_strategy_contract_size_zero_is_rejected_and_leaves_legs() {
     assert_sized(&covered, Positive::ONE);
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_strategy_contract_size_mixed_legs_have_no_single_size() {
     let mut spread = bull_call_spread();
@@ -358,7 +371,7 @@ fn profit<S: Profit>(strategy: &S, price: f64) -> Decimal {
 }
 
 fn covered_call() -> CoveredCall {
-    CoveredCall::new(
+    CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -372,12 +385,13 @@ fn covered_call() -> CoveredCall {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn protective_put() -> ProtectivePut {
-    ProtectivePut::new(
+    ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -391,12 +405,13 @@ fn protective_put() -> ProtectivePut {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn collar() -> Collar {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -414,6 +429,7 @@ fn collar() -> Collar {
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -473,7 +489,7 @@ fn test_collar_contract_size_re_expression_matches_shares() {
 /// A protective put on 100 shares bought at 100, whose put is resized to
 /// `contracts` contracts of 100 units, with the put fees per contract.
 fn hedged(strike: f64, premium: f64, contracts: Positive) -> ProtectivePut {
-    let mut strategy = ProtectivePut::new(
+    let mut strategy = ProtectivePut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(strike),
@@ -487,6 +503,7 @@ fn hedged(strike: f64, premium: f64, contracts: Positive) -> ProtectivePut {
         Positive::ONE,
         pos_or_panic!(0.01),
         pos_or_panic!(0.01),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let mut put = strategy.long_put.clone();

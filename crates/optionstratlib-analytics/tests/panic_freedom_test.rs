@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 //! Property-based tests for panic freedom of the analytics primitives the
 //! strategies compose: the probability kernels, the SPAN margin model and the
 //! P&L primitives.
@@ -162,7 +163,7 @@ fn extreme_position() -> impl Strategy<Value = Position> {
                         None,
                     ),
                     premium,
-                    chrono::Utc::now(),
+                    chrono::DateTime::UNIX_EPOCH,
                     premium,
                     premium,
                     None,
@@ -225,6 +226,7 @@ proptest! {
 
     /// The P&L primitives: a total whose two halves do not add, and the
     /// per-leg accounting a `Position` reports.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_primitives_never_panic(
         realized in extreme_decimal(),

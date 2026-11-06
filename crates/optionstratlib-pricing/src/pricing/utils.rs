@@ -17,6 +17,7 @@ use optionstratlib_core::model::decimal::{
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::Side;
 use optionstratlib_core::utils::random_decimal;
+use optionstratlib_core::utils::time::years_to_expiration;
 use rand::Rng;
 // Only the tests' `Decimal` reference increment draws here since #859 P3b.
 #[cfg(test)]
@@ -680,7 +681,7 @@ pub fn probability_keep_under_strike(
         Some(strike) => strike,
         None => option.strike_price,
     };
-    let years = option.expiration_date.get_years()?;
+    let years = years_to_expiration(&option.expiration_date)?;
     let d2_val = d2(
         option.underlying_price,
         strike_price,

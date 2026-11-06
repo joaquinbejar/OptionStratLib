@@ -83,6 +83,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -95,6 +96,7 @@ impl PnL {
     ///     pos_or_panic!(350.0),        // Initial income
     ///     Utc::now(),         // Current timestamp
     /// );
+    /// # }
     /// ```
     #[inline]
     #[must_use]
@@ -124,6 +126,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -138,6 +141,7 @@ impl PnL {
     /// );
     ///
     /// assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    /// # }
     /// ```
     #[inline]
     #[must_use]
@@ -176,6 +180,7 @@ impl PnL {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib_analytics::pnl::utils::PnL;
@@ -187,6 +192,7 @@ impl PnL {
     ///
     /// let total = a.try_add(&b)?;
     /// assert_eq!(total.realized, Some(dec!(750.0)));
+    /// # }
     /// # Ok::<(), optionstratlib_pricing::error::PricingError>(())
     /// ```
     pub fn try_add(&self, other: &PnL) -> Result<PnL, PricingError> {
@@ -248,11 +254,15 @@ impl TryFrom<&Trade> for PnL {
 
 #[cfg(test)]
 mod tests_sum {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     /// Totals a sequence the way callers do now that `impl Sum` is gone (#788).
     fn total(items: &[PnL]) -> PnL {
         items
@@ -261,6 +271,7 @@ mod tests_sum {
             .expect("operands are well inside the Decimal range")
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_sum() {
         let pnl1 = PnL {
@@ -287,6 +298,7 @@ mod tests_sum {
         assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_sum_both_none() {
         let pnl1 = PnL {
@@ -313,6 +325,7 @@ mod tests_sum {
         assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_sum_with_none() {
         let pnl1 = PnL {
@@ -339,6 +352,7 @@ mod tests_sum {
         assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_sum_of_borrowed_values() {
         let pnl1 = PnL {
@@ -368,11 +382,15 @@ mod tests_sum {
 
 #[cfg(test)]
 mod tests_add {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_add() {
         let pnl1 = PnL {
@@ -398,6 +416,7 @@ mod tests_add {
         assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_add_is_commutative_in_range() {
         let pnl1 = PnL {
@@ -424,6 +443,7 @@ mod tests_add {
     }
 
     /// `try_add` keeps the later timestamp and adds every leg.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_try_add_in_range() {
         let now = Utc::now();
@@ -458,6 +478,7 @@ mod tests_add {
     }
 
     /// Where the removed operator aborted, `try_add` reports (#471, #788).
+    #[cfg(feature = "clock")]
     #[test]
     fn test_pnl_try_add_reports_an_overflowing_total() {
         let now = Utc::now();
@@ -494,7 +515,7 @@ mod tests_total_pnl {
             Some(dec!(250.0)),
             Positive::HUNDRED,
             pos_or_panic!(350.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
@@ -507,7 +528,7 @@ mod tests_total_pnl {
             None,
             Positive::HUNDRED,
             pos_or_panic!(200.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
@@ -520,12 +541,13 @@ mod tests_total_pnl {
             Some(dec!(150.0)),
             pos_or_panic!(50.0),
             Positive::HUNDRED,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(150.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_total_pnl_both_none() {
         let pnl = PnL::new(None, None, Positive::ZERO, Positive::ZERO, Utc::now());
@@ -540,7 +562,7 @@ mod tests_total_pnl {
             Some(dec!(-100.0)),
             pos_or_panic!(50.0),
             pos_or_panic!(25.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(-300.0)));
@@ -553,14 +575,14 @@ mod tests_total_pnl {
             Some(dec!(-200.0)),
             Positive::HUNDRED,
             pos_or_panic!(300.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_try_from_trade {
     use super::*;
     use optionstratlib_core::model::TradeStatus;

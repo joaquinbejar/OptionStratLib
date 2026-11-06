@@ -14,6 +14,7 @@
 //! Bring [`LegGreeks`] into scope to call them:
 //!
 //! ```rust
+//! # #[cfg(feature = "clock")] {
 //! use optionstratlib_pricing::greeks::LegGreeks;
 //! use optionstratlib_core::model::leg::SpotPosition;
 //! use optionstratlib_core::{pos_or_panic, model::Positive};
@@ -22,6 +23,7 @@
 //! // A long spot unit carries one delta per unit and no convexity.
 //! assert_eq!(spot.delta()?, Positive::ONE.to_dec());
 //! assert_eq!(spot.gamma()?, rust_decimal::Decimal::ZERO);
+//! # }
 //! # Ok::<(), optionstratlib_pricing::error::GreeksError>(())
 //! ```
 
@@ -234,7 +236,7 @@ impl LegGreeks for Leg {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests {
     use super::*;
     use optionstratlib_core::model::ExpirationDate;
@@ -283,6 +285,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_spot_delta_is_one_per_unit_signed_by_side() {
         assert_eq!(ok(spot_long().delta()), Decimal::from(100));
@@ -355,6 +358,7 @@ mod tests {
         assert!(wide_perp.theta().is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_leg_forwards_to_the_wrapped_position() {
         assert_eq!(ok(Leg::spot(spot_long()).delta()), Decimal::from(100));

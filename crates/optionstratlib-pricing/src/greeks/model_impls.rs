@@ -494,7 +494,7 @@ mod tests_greeks_contract_size {
         let position = Position::new(
             option.clone(),
             Positive::ONE,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,

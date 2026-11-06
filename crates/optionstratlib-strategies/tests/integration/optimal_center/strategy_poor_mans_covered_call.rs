@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate, optionstratlib_core::model::Side,
@@ -11,11 +12,12 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     let underlying_price = pos_or_panic!(2703.3);
 
-    let mut strategy = PoorMansCoveredCall::new(
+    let mut strategy = PoorMansCoveredCall::new_at(
         "GOLD".to_string(),                         // underlying_symbol
         underlying_price,                           // underlying_price
         pos_or_panic!(2600.0),                      // long_call_strike
@@ -32,6 +34,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(1.74),                       // close_fee_short_call
         pos_or_panic!(0.85),                       // open_fee_short_put
         pos_or_panic!(0.85),                       // close_fee_short_put
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

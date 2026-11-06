@@ -25,6 +25,7 @@ use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_mul, d_sub, decimal_to_f64};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
@@ -71,7 +72,7 @@ pub fn power_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let r = option.risk_free_rate;
     let q = Decimal::from(option.dividend_yield);
     let sigma = Decimal::from(option.implied_volatility);
-    let t = Decimal::from(option.expiration_date.get_years()?);
+    let t = Decimal::from(years_to_expiration(&option.expiration_date)?);
 
     let price = power_price(s, k, r, q, sigma, t, n, &option.option_style)?;
 

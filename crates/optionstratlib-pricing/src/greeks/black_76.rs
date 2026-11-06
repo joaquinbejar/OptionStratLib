@@ -39,6 +39,7 @@ use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 #[cfg(test)]
 use rust_decimal::MathematicalOps;
@@ -107,7 +108,7 @@ fn discount_factor(option: &Options, t: Decimal) -> Result<Decimal, GreeksError>
 ))]
 pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?.to_dec();
+    let t = years_to_expiration(&option.expiration_date)?.to_dec();
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
     let df = discount_factor(option, t)?;
@@ -152,7 +153,7 @@ pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
     let df = discount_factor(option, t.to_dec())?;
@@ -205,7 +206,7 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
     let df = discount_factor(option, t.to_dec())?;
@@ -258,7 +259,7 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     let (d1, d2) = calculate_d_values_black_76(option)?;
 
     let df = discount_factor(option, t.to_dec())?;
@@ -346,7 +347,7 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn rho_b76(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     let (d1, d2) = calculate_d_values_black_76(option)?;
 
     let df = discount_factor(option, t.to_dec())?;
@@ -509,7 +510,7 @@ mod tests {
         let dc = delta_b76(&call).unwrap();
         let dp = delta_b76(&put).unwrap();
 
-        let years = call.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
         let expected = (-r * years).exp();
         assert!(
             close(dc - dp, expected, dec!(1e-9)),
@@ -587,7 +588,7 @@ mod tests {
         let opt = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
         let rho = rho_b76(&opt).unwrap();
         let price = black_76(&opt).unwrap();
-        let years = opt.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
         let expected = -years * price / Decimal::ONE_HUNDRED;
         assert!(
             close(rho, expected, dec!(1e-15)),
@@ -603,7 +604,7 @@ mod tests {
         let opt = create_option(100.0, 105.0, dec!(0.05), 180.0, 0.2, OptionStyle::Put);
         let rho = rho_b76(&opt).unwrap();
         let price = black_76(&opt).unwrap();
-        let years = opt.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
         let expected = -years * price / Decimal::ONE_HUNDRED;
         assert!(
             close(rho, expected, dec!(1e-15)),
@@ -616,7 +617,9 @@ mod tests {
     // ---- BSM cross-check (S = F·e^(-rT), q = 0) -------------------------
 
     fn make_bsm_match(opt_b76: &Options) -> Options {
-        let years = opt_b76.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&opt_b76.expiration_date)
+            .unwrap()
+            .to_dec();
         let df = (-opt_b76.risk_free_rate * years).exp();
         let s = Positive::new_decimal(opt_b76.underlying_price.to_dec() * df).unwrap();
         let mut bsm = opt_b76.clone();
@@ -632,7 +635,7 @@ mod tests {
             for f in [90.0, 100.0, 110.0] {
                 let opt = create_option(f, 100.0, dec!(0.05), 180.0, 0.2, style);
                 let bsm = make_bsm_match(&opt);
-                let years = opt.expiration_date.get_years().unwrap().to_dec();
+                let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
                 let df = (-opt.risk_free_rate * years).exp();
                 let lhs = delta_b76(&opt).unwrap();
                 let rhs = df * delta(&bsm).unwrap();
@@ -675,7 +678,7 @@ mod tests {
         for f in [90.0, 100.0, 110.0] {
             let opt = create_option(f, 100.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
             let bsm = make_bsm_match(&opt);
-            let years = opt.expiration_date.get_years().unwrap().to_dec();
+            let years = years_to_expiration(&opt.expiration_date).unwrap().to_dec();
             let df2 = (-Decimal::TWO * opt.risk_free_rate * years).exp();
             let lhs = gamma_b76(&opt).unwrap();
             let rhs = df2 * gamma(&bsm).unwrap();

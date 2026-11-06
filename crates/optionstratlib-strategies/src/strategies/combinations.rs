@@ -12,6 +12,7 @@
 
 use crate::error::StrategyError;
 use itertools::Itertools;
+use optionstratlib_core::utils::time::ReferenceCarrier;
 use rayon::prelude::*;
 use rust_decimal::Decimal;
 
@@ -76,6 +77,7 @@ where
 
     let combinations: Vec<_> = positions.iter().combinations_with_replacement(n).collect();
     let process_combination = std::sync::Mutex::new(process_combination);
+    let carrier = ReferenceCarrier::capture();
 
     Ok(combinations
         .par_iter()
@@ -85,7 +87,7 @@ where
             let mut closure = process_combination
                 .lock()
                 .unwrap_or_else(|e| e.into_inner());
-            closure(combination)
+            carrier.run(|| closure(combination))
         })
         .collect())
 }
@@ -112,6 +114,7 @@ where
     // by value there overflowed a worker's stack in debug builds.
     let mut best: Option<(usize, Decimal, Box<S>)> = None;
     let mut indexed = candidates.enumerate();
+    let carrier = ReferenceCarrier::capture();
     loop {
         let round: Vec<(usize, C)> = indexed.by_ref().take(OPTIMISER_ROUND).collect();
         if round.is_empty() {
@@ -120,7 +123,7 @@ where
         let round_best = round
             .into_par_iter()
             .filter_map(|(index, candidate)| {
-                let (value, strategy) = score(candidate)?;
+                let (value, strategy) = carrier.run(|| score(candidate))?;
                 (value > Decimal::MIN).then(|| (index, value, Box::new(strategy)))
             })
             .reduce_with(better_candidate);

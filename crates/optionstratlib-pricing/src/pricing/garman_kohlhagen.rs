@@ -35,6 +35,8 @@ use crate::error::PricingError;
 use crate::pricing::black_scholes_model::black_scholes_european_with_yield;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::types::OptionType;
+#[cfg(test)]
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use tracing::instrument;
 
@@ -241,7 +243,7 @@ mod tests {
         let call_price = garman_kohlhagen(&call).unwrap();
         let put_price = garman_kohlhagen(&put).unwrap();
 
-        let years = call.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
         let discount_d = (-call.risk_free_rate * years).exp();
         let discount_f = (-call.dividend_yield.to_dec() * years).exp();
         let parity =
@@ -325,7 +327,7 @@ mod tests {
         let put = create_fx_option(s, k, r_d, r_f, t_days, sigma, OptionStyle::Put);
         let call_price = garman_kohlhagen(&call).unwrap();
         let put_price = garman_kohlhagen(&put).unwrap();
-        let years = call.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
         let discount_d = (-call.risk_free_rate * years).exp();
         let discount_f = (-call.dividend_yield.to_dec() * years).exp();
         let expected =
@@ -371,7 +373,7 @@ mod tests {
         let put = create_fx_option(s, k, r, r_f, t_days, sigma, OptionStyle::Put);
         let call_price = garman_kohlhagen(&call).unwrap();
         let put_price = garman_kohlhagen(&put).unwrap();
-        let years = call.expiration_date.get_years().unwrap().to_dec();
+        let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
         let discount = (-r * years).exp();
         let expected = discount
             * (Decimal::from_f64_retain(s).unwrap() - Decimal::from_f64_retain(k).unwrap());
@@ -654,7 +656,7 @@ mod tests_foreign_rate {
             for s in [dec!(0.90), dec!(1.00), dec!(1.10)] {
                 let call = signed_rate_option(s, r_f, OptionStyle::Call);
                 let put = signed_rate_option(s, r_f, OptionStyle::Put);
-                let years = call.expiration_date.get_years().unwrap().to_dec();
+                let years = years_to_expiration(&call.expiration_date).unwrap().to_dec();
                 let parity = s * (-r_f * years).exp()
                     - call.strike_price.to_dec() * (-call.risk_free_rate * years).exp();
                 let actual = garman_kohlhagen(&call).unwrap() - garman_kohlhagen(&put).unwrap();

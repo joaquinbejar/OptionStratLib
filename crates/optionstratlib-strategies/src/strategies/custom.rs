@@ -1220,7 +1220,10 @@ mod tests_find_optimal_break_evens {
     use super::*;
     use chrono::{DateTime, Utc};
     use optionstratlib_core::model::types::OptionType;
-    use optionstratlib_core::{pos_or_panic, spos};
+    use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
+    use optionstratlib_core::spos;
+    #[cfg(feature = "clock")]
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn leg(side: Side, style: OptionStyle, strike: f64, premium: f64) -> Position {
@@ -1266,6 +1269,7 @@ mod tests_find_optimal_break_evens {
         .unwrap_or_else(|e| panic!("{e}"))
     }
 
+    #[cfg(feature = "clock")]
     /// Five strikes around 100, optionally leaving one out.
     fn chain(without: Option<f64>) -> OptionChain {
         let mut chain = OptionChain::new(
@@ -1304,6 +1308,7 @@ mod tests_find_optimal_break_evens {
         chain
     }
 
+    #[cfg(feature = "clock")]
     fn legs(strategy: &CustomStrategy) -> Vec<(Positive, Positive)> {
         strategy
             .positions
@@ -1320,6 +1325,7 @@ mod tests_find_optimal_break_evens {
         StrategyError::invalid_parameters("test", "break-evens cannot be recomputed")
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_find_optimal_normal_run_refreshes_break_evens() {
         let mut strategy = base();
@@ -1347,6 +1353,7 @@ mod tests_find_optimal_break_evens {
         assert_eq!(strategy.break_even_points, rebuilt.break_even_points);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_find_optimal_failed_candidate_skipped() {
         // The strike the unrestricted search picks for the long call.
@@ -1400,6 +1407,7 @@ mod tests_find_optimal_break_evens {
         assert_eq!(skipping.break_even_points, reference.break_even_points);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_find_optimal_failed_final_application_leaves_strategy_unchanged() {
         // Count the recomputations of a run: every candidate, then the best.
@@ -1443,6 +1451,7 @@ mod tests_find_optimal_break_evens {
         assert_eq!(snapshot(&strategy), before);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_find_optimal_every_recomputation_failing_leaves_strategy_unchanged() {
         let mut strategy = base();
@@ -1486,6 +1495,7 @@ mod tests_find_optimal_break_evens {
         assert_eq!(snapshot(&strategy), before);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_custom_find_optimal_failed_position_update_leaves_strategy_unchanged() {
         // A strike with no call ask: the long call cannot take its premium.
@@ -1555,7 +1565,7 @@ mod tests_empty_legs {
                 None,
             ),
             Positive::ONE,
-            chrono::Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,

@@ -197,6 +197,10 @@ pub enum ChainError {
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] optionstratlib_core::model::PositiveError),
+
+    /// The current time was asked for and this build has no clock.
+    #[error(transparent)]
+    Clock(#[from] optionstratlib_core::error::ClockError),
 }
 
 /// Represents specific error types related to option data validation and calculations.

@@ -13,7 +13,7 @@ use crate::strategies::shared::{
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -29,6 +29,7 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::utils::time::now;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_pricing::error::GreeksError;
@@ -137,7 +138,47 @@ impl LongCall {
         open_fee_long_call: Positive,
         close_fee_long_call: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = LongCall::default();
+        Self::new_at(
+            underlying_symbol,
+            long_call_strike,
+            long_call_expiration,
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate,
+            dividend_yield,
+            premium_long_call,
+            open_fee_long_call,
+            close_fee_long_call,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments, dead_code)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        long_call_strike: Positive,
+        long_call_expiration: ExpirationDate,
+        implied_volatility: Positive,
+        quantity: Positive,
+        underlying_price: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        premium_long_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
+        let mut strategy = LongCall::blank_at(date);
 
         let long_call_option = Options::new(
             OptionType::European,
@@ -156,7 +197,7 @@ impl LongCall {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long_call,
             close_fee_long_call,
             None,
@@ -465,7 +506,7 @@ impl StrategyConstructor for LongCall {
             Side::Long,
             "LongCall",
         )?;
-        let mut strategy = LongCall::default();
+        let mut strategy = LongCall::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(

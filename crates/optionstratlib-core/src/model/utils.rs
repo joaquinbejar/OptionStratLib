@@ -4,10 +4,13 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::error::DecimalError;
+#[cfg(feature = "clock")]
 use crate::model::Position;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub, decimal_to_f64};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::{ExpirationDate, Options};
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use positive::{Positive, PositiveError};
 use rust_decimal::Decimal;
@@ -168,6 +171,7 @@ pub fn create_sample_option(
 ///     pos_or_panic!(0.25)    // implied volatility
 /// );
 /// ```
+#[cfg(feature = "clock")]
 #[allow(dead_code)]
 #[must_use]
 pub fn create_sample_position(
@@ -195,7 +199,7 @@ pub fn create_sample_position(
             exotic_params: None,
         },
         premium: pos_lit(dec!(5.0)),
-        date: Utc::now(),
+        date: wall_clock(),
         open_fee: pos_lit(dec!(0.5)),
         close_fee: pos_lit(dec!(0.5)),
         epic: Some("Epic123".to_string()),

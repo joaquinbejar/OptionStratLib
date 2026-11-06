@@ -14,7 +14,7 @@ fn test_bull_call_ladder_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the BullCallLadder strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = BullCallLadder::new(
+    let strategy = BullCallLadder::new_at(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5750.0), // long_call_strike
@@ -34,6 +34,7 @@ fn test_bull_call_ladder_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.73),  // close_fee_short
         pos_or_panic!(0.73),  // close_fee_short
         pos_or_panic!(0.73),  // open_fee_short
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     // Assertions to validate strategy properties and computations

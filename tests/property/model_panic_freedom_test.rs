@@ -7,6 +7,8 @@
 //! overflow their accumulation, quantities that overflow the product, and
 //! horizons the calendar cannot hold. Whatever comes back, it must come back.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::model::{ExpirationDate, Options, Position};
 use optionstratlib::pnl::PnLCalculator;

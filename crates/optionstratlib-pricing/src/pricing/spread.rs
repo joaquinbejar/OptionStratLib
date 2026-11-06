@@ -24,6 +24,7 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -94,7 +95,7 @@ pub fn spread_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let r = option.risk_free_rate;
     let q1 = Decimal::from(option.dividend_yield);
     let sigma1 = Decimal::from(option.implied_volatility);
-    let t = Decimal::from(option.expiration_date.get_years()?);
+    let t = Decimal::from(years_to_expiration(&option.expiration_date)?);
 
     let price = if k.abs() < dec!(0.0001) {
         // With no strike the spread is an exchange option: the call
@@ -782,7 +783,7 @@ mod tests {
                 let put = spread_with(spot1, spot2, strike, OptionStyle::Put, 90.0, q1, q2);
                 let call_price = spread_black_scholes(&call).unwrap();
                 let put_price = spread_black_scholes(&put).unwrap();
-                let t = Decimal::from(call.expiration_date.get_years().unwrap());
+                let t = Decimal::from(years_to_expiration(&call.expiration_date).unwrap());
                 let s1_pv = Decimal::from_f64_retain(spot1).unwrap() * (-q1.to_dec() * t).exp();
                 let s2_pv = Decimal::from_f64_retain(spot2).unwrap() * (-q2.to_dec() * t).exp();
                 let exchange_gap = (call_price - put_price - (s1_pv - s2_pv)).abs();
@@ -913,7 +914,7 @@ mod tests {
         let s2 = dec!(100.0);
         let k = dec!(5.0);
         let r = call.risk_free_rate;
-        let t = Decimal::from(call.expiration_date.get_years().unwrap());
+        let t = Decimal::from(years_to_expiration(&call.expiration_date).unwrap());
 
         let forward_spread = s1 - s2;
         let k_pv = k * (-r * t).exp();

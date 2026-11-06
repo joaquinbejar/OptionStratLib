@@ -80,13 +80,28 @@ where
 
 #[test]
 fn test_find_optimal_empty_chain_verticals_no_valid_candidate() {
-    assert_no_valid_candidate(BullCallSpread::default(), StrategyType::BullCallSpread);
-    assert_no_valid_candidate(BearCallSpread::default(), StrategyType::BearCallSpread);
-    assert_no_valid_candidate(BullPutSpread::default(), StrategyType::BullPutSpread);
-    assert_no_valid_candidate(BearPutSpread::default(), StrategyType::BearPutSpread);
-    assert_no_valid_candidate(BullCallLadder::default(), StrategyType::BullCallLadder);
     assert_no_valid_candidate(
-        PoorMansCoveredCall::default(),
+        BullCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::BullCallSpread,
+    );
+    assert_no_valid_candidate(
+        BearCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::BearCallSpread,
+    );
+    assert_no_valid_candidate(
+        BullPutSpread::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::BullPutSpread,
+    );
+    assert_no_valid_candidate(
+        BearPutSpread::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::BearPutSpread,
+    );
+    assert_no_valid_candidate(
+        BullCallLadder::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::BullCallLadder,
+    );
+    assert_no_valid_candidate(
+        PoorMansCoveredCall::blank_at(chrono::DateTime::UNIX_EPOCH),
         StrategyType::PoorMansCoveredCall,
     );
 }
@@ -94,25 +109,43 @@ fn test_find_optimal_empty_chain_verticals_no_valid_candidate() {
 #[test]
 fn test_find_optimal_empty_chain_butterflies_and_condors_no_valid_candidate() {
     assert_no_valid_candidate(
-        LongButterflySpread::default(),
+        LongButterflySpread::blank_at(chrono::DateTime::UNIX_EPOCH),
         StrategyType::LongButterflySpread,
     );
     assert_no_valid_candidate(
-        ShortButterflySpread::default(),
+        ShortButterflySpread::blank_at(chrono::DateTime::UNIX_EPOCH),
         StrategyType::ShortButterflySpread,
     );
-    assert_no_valid_candidate(IronCondor::default(), StrategyType::IronCondor);
-    assert_no_valid_candidate(IronButterfly::default(), StrategyType::IronButterfly);
+    assert_no_valid_candidate(
+        IronCondor::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::IronCondor,
+    );
+    assert_no_valid_candidate(
+        IronButterfly::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::IronButterfly,
+    );
 }
 
 #[test]
 fn test_find_optimal_empty_chain_straddles_and_strangles_no_valid_candidate() {
-    assert_no_valid_candidate(LongStraddle::default(), StrategyType::LongStraddle);
-    assert_no_valid_candidate(ShortStraddle::default(), StrategyType::ShortStraddle);
-    assert_no_valid_candidate(LongStrangle::default(), StrategyType::LongStrangle);
+    assert_no_valid_candidate(
+        LongStraddle::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::LongStraddle,
+    );
+    assert_no_valid_candidate(
+        ShortStraddle::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::ShortStraddle,
+    );
+    assert_no_valid_candidate(
+        LongStrangle::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::LongStrangle,
+    );
     // The short strangle applies the chain's expiration before searching:
     // the failed search restores the seed's.
-    assert_no_valid_candidate(ShortStrangle::default(), StrategyType::ShortStrangle);
+    assert_no_valid_candidate(
+        ShortStrangle::blank_at(chrono::DateTime::UNIX_EPOCH),
+        StrategyType::ShortStrangle,
+    );
 }
 
 #[test]
@@ -156,12 +189,12 @@ fn test_find_optimal_empty_chain_custom_no_valid_candidate() {
 
 #[test]
 fn test_find_optimal_without_search_not_supported() {
-    assert_not_supported(LongCall::default());
-    assert_not_supported(LongPut::default());
-    assert_not_supported(ShortCall::default());
-    assert_not_supported(ShortPut::default());
+    assert_not_supported(LongCall::blank_at(chrono::DateTime::UNIX_EPOCH));
+    assert_not_supported(LongPut::blank_at(chrono::DateTime::UNIX_EPOCH));
+    assert_not_supported(ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH));
+    assert_not_supported(ShortPut::blank_at(chrono::DateTime::UNIX_EPOCH));
     // `ProtectivePut` keeps the trait's default implementation.
-    let protective_put = ProtectivePut::new(
+    let protective_put = ProtectivePut::new_at(
         "AAPL".to_string(),
         pos_or_panic!(150.0),
         pos_or_panic!(145.0),
@@ -175,6 +208,7 @@ fn test_find_optimal_without_search_not_supported() {
         Positive::ONE,
         pos_or_panic!(0.65),
         pos_or_panic!(0.65),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert_not_supported(protective_put);

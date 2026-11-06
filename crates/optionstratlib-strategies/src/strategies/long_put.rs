@@ -17,7 +17,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -32,6 +32,7 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::utils::time::now;
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_pricing::error::GreeksError;
@@ -133,7 +134,43 @@ impl LongPut {
         open_fee_long_put: Positive,
         close_fee_long_put: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = LongPut::default();
+        Self::new_at(
+            underlying_symbol,
+            long_put_strike,
+            long_put_expiration,
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate,
+            dividend_yield,
+            premium_long_put,
+            open_fee_long_put,
+            close_fee_long_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with the leg opened at `date`.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments, dead_code)]
+    fn new_at(
+        underlying_symbol: String,
+        long_put_strike: Positive,
+        long_put_expiration: ExpirationDate,
+        implied_volatility: Positive,
+        quantity: Positive,
+        underlying_price: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        premium_long_put: Positive,
+        open_fee_long_put: Positive,
+        close_fee_long_put: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
+        let mut strategy = LongPut::blank_at(date);
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -152,7 +189,7 @@ impl LongPut {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee_long_put,
             close_fee_long_put,
             None,
@@ -471,7 +508,7 @@ impl StrategyConstructor for LongPut {
             Side::Long,
             "LongPut",
         )?;
-        let mut strategy = LongPut::default();
+        let mut strategy = LongPut::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -596,7 +633,7 @@ impl PnLCalculator for LongPut {
 
 impl Strategable for LongPut {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(LongPut, test_long_put_implementations);
 
 #[cfg(test)]
@@ -610,7 +647,7 @@ mod tests_break_even {
     /// per-contract cost moved it the other way and reported 105.
     #[test]
     fn test_long_put_lower_break_even_sits_below_the_strike() {
-        let mut long_put = LongPut::new(
+        let mut long_put = LongPut::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -622,6 +659,7 @@ mod tests_break_even {
             pos_or_panic!(5.0),
             Positive::ZERO,
             Positive::ZERO,
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         long_put.update_break_even_points().unwrap();
@@ -635,7 +673,7 @@ mod tests_break_even {
     /// matches the same leg added to a `Default` one, break-evens included.
     #[test]
     fn test_long_put_new_matches_leg_added_to_default() {
-        let built = LongPut::new(
+        let built = LongPut::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -647,10 +685,11 @@ mod tests_break_even {
             pos_or_panic!(4.1),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(built.get_break_even_points().unwrap().len(), 1);
-        let mut added = LongPut::default();
+        let mut added = LongPut::blank_at(chrono::DateTime::UNIX_EPOCH);
         added.add_position(&built.long_put).unwrap();
         assert_eq!(
             serde_json::to_value(&added).unwrap(),

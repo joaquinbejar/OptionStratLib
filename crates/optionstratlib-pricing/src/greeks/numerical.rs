@@ -14,6 +14,7 @@ use crate::pricing::{ClosedFormEngine, price_option_with};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::{ExpirationDate, Options};
+use optionstratlib_core::utils::time::days_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -226,7 +227,7 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// `PricingError` returned by the unified-pricing evaluator on the
 /// perturbed option clones (wrapped as [`GreeksError::Pricing`]).
 pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
-    let days = option.expiration_date.get_days()?.to_dec();
+    let days = days_to_expiration(&option.expiration_date)?.to_dec();
     if days.is_zero() {
         return Ok(Decimal::ZERO);
     }

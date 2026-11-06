@@ -3,7 +3,6 @@
 //! the quantity, so a butterfly's doubled body, or any strategy sized above
 //! one lot, summed to the wrong unrealized P&L.
 
-use chrono::Utc;
 use optionstratlib_analytics::pnl::PnLCalculator;
 use optionstratlib_analytics::pnl::utils::PnL;
 use optionstratlib_core::model::Positive;
@@ -35,7 +34,7 @@ fn leg(side: Side, strike: f64, quantity: Positive, premium: f64) -> Position {
             None,
         ),
         pos_or_panic!(premium),
-        Utc::now(),
+        chrono::DateTime::UNIX_EPOCH,
         pos_or_panic!(0.1),
         pos_or_panic!(0.1),
         None,
@@ -117,7 +116,7 @@ fn test_butterfly_calculate_pnl_scales_with_lots() {
 
 #[test]
 fn test_bull_call_spread_calculate_pnl_scales_with_quantity() {
-    let spread = |quantity: Positive| match BullCallSpread::new(
+    let spread = |quantity: Positive| match BullCallSpread::new_at(
         "SPX".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -133,6 +132,7 @@ fn test_bull_call_spread_calculate_pnl_scales_with_quantity() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     ) {
         Ok(spread) => spread,
         Err(e) => panic!("spread builds: {e}"),

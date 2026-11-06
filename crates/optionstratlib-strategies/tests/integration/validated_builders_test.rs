@@ -12,6 +12,8 @@
 //! validation. The put verticals are covered next to their code, in
 //! `bull_put_spread.rs` and `bear_put_spread.rs`.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib_core::model::types::{OptionStyle, Side};
 use optionstratlib_core::model::utils::create_sample_position;
 use optionstratlib_core::model::{ExpirationDate, Position, Positive};
@@ -77,7 +79,7 @@ fn bull_call_spread(
     long_strike: Positive,
     short_strike: Positive,
 ) -> Result<BullCallSpread, StrategyError> {
-    BullCallSpread::new(
+    BullCallSpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         long_strike,
@@ -93,6 +95,7 @@ fn bull_call_spread(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -113,7 +116,7 @@ fn bear_call_spread(
     short_strike: Positive,
     long_strike: Positive,
 ) -> Result<BearCallSpread, StrategyError> {
-    BearCallSpread::new(
+    BearCallSpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         short_strike,
@@ -129,6 +132,7 @@ fn bear_call_spread(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -150,7 +154,7 @@ fn long_butterfly(
     middle: Positive,
     high: Positive,
 ) -> Result<LongButterflySpread, StrategyError> {
-    LongButterflySpread::new(
+    LongButterflySpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         low,
@@ -170,6 +174,7 @@ fn long_butterfly(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -195,7 +200,7 @@ fn short_butterfly(
     middle: Positive,
     high: Positive,
 ) -> Result<ShortButterflySpread, StrategyError> {
-    ShortButterflySpread::new(
+    ShortButterflySpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         low,
@@ -215,6 +220,7 @@ fn short_butterfly(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -236,7 +242,7 @@ fn test_short_butterfly_spread_new_unordered_strikes_rejected() {
 }
 
 fn collar(put_strike: Positive, call_strike: Positive) -> Result<Collar, StrategyError> {
-    Collar::new(
+    Collar::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         put_strike,
@@ -254,6 +260,7 @@ fn collar(put_strike: Positive, call_strike: Positive) -> Result<Collar, Strateg
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -271,7 +278,7 @@ fn test_collar_new_put_above_call_rejected() {
 }
 
 fn protective_put(symbol: &str) -> Result<ProtectivePut, StrategyError> {
-    ProtectivePut::new(
+    ProtectivePut::new_at(
         symbol.to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -285,6 +292,7 @@ fn protective_put(symbol: &str) -> Result<ProtectivePut, StrategyError> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -304,7 +312,7 @@ fn test_protective_put_new_invalid_put_rejected() {
 /// input reaches its `InvalidStrategy` branch; only the valid case is shown.
 #[test]
 fn test_covered_call_new_valid() {
-    assert_valid(CoveredCall::new(
+    assert_valid(CoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -318,6 +326,7 @@ fn test_covered_call_new_valid() {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     ));
 }
 
@@ -327,7 +336,7 @@ fn iron_condor(
     long_call: Positive,
     long_put: Positive,
 ) -> Result<IronCondor, StrategyError> {
-    IronCondor::new(
+    IronCondor::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         short_call,
@@ -345,6 +354,7 @@ fn iron_condor(
         pos_or_panic!(0.6),
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -372,7 +382,7 @@ fn test_iron_condor_new_short_put_above_short_call_rejected() {
 }
 
 fn iron_butterfly(long_call: Positive, long_put: Positive) -> Result<IronButterfly, StrategyError> {
-    IronButterfly::new(
+    IronButterfly::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         Positive::HUNDRED,
@@ -389,6 +399,7 @@ fn iron_butterfly(long_call: Positive, long_put: Positive) -> Result<IronButterf
         pos_or_panic!(1.1),
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -406,7 +417,7 @@ fn test_iron_butterfly_new_inverted_wings_rejected() {
 }
 
 fn long_straddle(symbol: &str) -> Result<LongStraddle, StrategyError> {
-    LongStraddle::new(
+    LongStraddle::new_at(
         symbol.to_string(),
         Positive::HUNDRED,
         Positive::HUNDRED,
@@ -421,6 +432,7 @@ fn long_straddle(symbol: &str) -> Result<LongStraddle, StrategyError> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -435,7 +447,7 @@ fn test_long_straddle_new_empty_symbol_rejected() {
 }
 
 fn short_straddle(premium_short_call: Positive) -> Result<ShortStraddle, StrategyError> {
-    ShortStraddle::new(
+    ShortStraddle::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         Positive::HUNDRED,
@@ -450,6 +462,7 @@ fn short_straddle(premium_short_call: Positive) -> Result<ShortStraddle, Strateg
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -467,7 +480,7 @@ fn long_strangle(
     call_strike: Positive,
     put_strike: Positive,
 ) -> Result<LongStrangle, StrategyError> {
-    LongStrangle::new(
+    LongStrangle::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         call_strike,
@@ -483,6 +496,7 @@ fn long_strangle(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -503,7 +517,7 @@ fn short_strangle(
     call_strike: Positive,
     put_strike: Positive,
 ) -> Result<ShortStrangle, StrategyError> {
-    ShortStrangle::new(
+    ShortStrangle::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         call_strike,
@@ -520,6 +534,7 @@ fn short_strangle(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -539,7 +554,7 @@ fn test_short_strangle_new_call_below_put_rejected() {
 fn poor_mans_covered_call(
     premium_short_call: Positive,
 ) -> Result<PoorMansCoveredCall, StrategyError> {
-    PoorMansCoveredCall::new(
+    PoorMansCoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(90.0),
@@ -556,6 +571,7 @@ fn poor_mans_covered_call(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -573,7 +589,7 @@ fn test_poor_mans_covered_call_new_short_leg_without_premium_rejected() {
 }
 
 fn long_call(symbol: &str) -> Result<LongCall, StrategyError> {
-    LongCall::new(
+    LongCall::new_at(
         symbol.to_string(),
         Positive::HUNDRED,
         days(30.0),
@@ -585,6 +601,7 @@ fn long_call(symbol: &str) -> Result<LongCall, StrategyError> {
         pos_or_panic!(4.5),
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -599,7 +616,7 @@ fn test_long_call_new_empty_symbol_rejected() {
 }
 
 fn short_put(premium: Positive) -> Result<ShortPut, StrategyError> {
-    ShortPut::new(
+    ShortPut::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         days(30.0),
@@ -611,6 +628,7 @@ fn short_put(premium: Positive) -> Result<ShortPut, StrategyError> {
         premium,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 
@@ -938,7 +956,7 @@ fn bull_call_ladder(
     short_low: Positive,
     short_high: Positive,
 ) -> Result<BullCallLadder, StrategyError> {
-    BullCallLadder::new(
+    BullCallLadder::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         long,
@@ -958,6 +976,7 @@ fn bull_call_ladder(
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )
 }
 

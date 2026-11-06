@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
     optionstratlib_core::model::ExpirationDate, optionstratlib_core::model::Side,
@@ -9,12 +10,13 @@ use {
     std::error::Error,
 };
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongButterflySpread strategy
     let underlying_price = pos_or_panic!(5795.88);
 
-    let mut strategy = LongButterflySpread::new(
+    let mut strategy = LongButterflySpread::new_at(
         "SP500".to_string(),
         underlying_price,
         pos_or_panic!(5710.0),
@@ -34,6 +36,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
+        chrono::DateTime::UNIX_EPOCH,
     )?;
 
     let option_chain = OptionChain::load_from_json(concat!(

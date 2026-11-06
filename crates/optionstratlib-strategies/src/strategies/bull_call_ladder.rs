@@ -14,7 +14,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -32,6 +32,7 @@ use optionstratlib_core::model::{
 };
 #[cfg(test)]
 use optionstratlib_core::spos;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -186,14 +187,70 @@ impl BullCallLadder {
         open_fee_short_high: Positive,
         close_fee_short_high: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            long_call_strike,
+            short_call_low_strike,
+            short_call_high_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_short_call_low,
+            premium_short_call_high,
+            open_fee_long,
+            close_fee_long,
+            open_fee_short_low,
+            close_fee_short_low,
+            open_fee_short_high,
+            close_fee_short_high,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        long_call_strike: Positive,
+        short_call_low_strike: Positive,
+        short_call_high_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_short_call_low: Positive,
+        premium_short_call_high: Positive,
+        open_fee_long: Positive,
+        close_fee_long: Positive,
+        open_fee_short_low: Positive,
+        close_fee_short_low: Positive,
+        open_fee_short_high: Positive,
+        close_fee_short_high: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = BullCallLadder {
             name: underlying_symbol.to_string(),
             kind: StrategyType::BullCallLadder,
             description: BULL_CALL_LADDER_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            short_call_low: Position::default(),
-            short_call_high: Position::default(),
+            long_call: Position::blank_at(date),
+            short_call_low: Position::blank_at(date),
+            short_call_high: Position::blank_at(date),
         };
         let long_call_option = Options::new(
             OptionType::European,
@@ -212,7 +269,7 @@ impl BullCallLadder {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long,
             close_fee_long,
             None,
@@ -238,7 +295,7 @@ impl BullCallLadder {
         let short_call_low = Position::new(
             short_call_low_option,
             premium_short_call_low,
-            Utc::now(),
+            date,
             open_fee_short_low,
             close_fee_short_low,
             None,
@@ -264,7 +321,7 @@ impl BullCallLadder {
         let short_call_high = Position::new(
             short_call_high_option,
             premium_short_call_high,
-            Utc::now(),
+            date,
             open_fee_short_high,
             close_fee_short_high,
             None,
@@ -363,7 +420,7 @@ impl StrategyConstructor for BullCallLadder {
         let long_call = Position::new(
             long_call_position.option.clone(),
             long_call_position.premium,
-            Utc::now(),
+            now_or(long_call_position.date),
             long_call_position.open_fee,
             long_call_position.close_fee,
             long_call_position.epic.clone(),
@@ -373,7 +430,7 @@ impl StrategyConstructor for BullCallLadder {
         let short_call_low = Position::new(
             low_short_call_position.option.clone(),
             low_short_call_position.premium,
-            Utc::now(),
+            now_or(low_short_call_position.date),
             low_short_call_position.open_fee,
             low_short_call_position.close_fee,
             low_short_call_position.epic.clone(),
@@ -383,7 +440,7 @@ impl StrategyConstructor for BullCallLadder {
         let short_call_high = Position::new(
             high_short_call_position.option.clone(),
             high_short_call_position.premium,
-            Utc::now(),
+            now_or(high_short_call_position.date),
             high_short_call_position.open_fee,
             high_short_call_position.close_fee,
             high_short_call_position.epic.clone(),
@@ -1050,7 +1107,7 @@ impl Optimizable for BullCallLadder {
                 "missing call_bid for short_call_high leg",
             )
         })?;
-        let mut strategy = BullCallLadder::new(
+        let mut strategy = BullCallLadder::new_at(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_call.strike_price,
@@ -1070,6 +1127,7 @@ impl Optimizable for BullCallLadder {
             self.short_call_low.close_fee,
             self.short_call_high.open_fee,
             self.short_call_high.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1258,7 +1316,7 @@ impl PnLCalculator for BullCallLadder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(BullCallLadder, test_short_call_implementations);
 
 #[cfg(test)]
@@ -1270,7 +1328,7 @@ mod tests_bull_call_ladder {
     use rust_decimal_macros::dec;
 
     fn setup() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
@@ -1290,6 +1348,7 @@ mod tests_bull_call_ladder {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1354,7 +1413,7 @@ mod tests_bull_call_ladder_validation {
     use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -1374,6 +1433,7 @@ mod tests_bull_call_ladder_validation {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1394,20 +1454,31 @@ mod tests_bull_call_ladder_validation {
 
 #[cfg(test)]
 mod tests_bull_call_ladder_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_call_ladder::BullCallLadder;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
@@ -1427,10 +1498,12 @@ mod tests_bull_call_ladder_delta {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5901.88));
@@ -1479,6 +1552,7 @@ mod tests_bull_call_ladder_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5781.88));
@@ -1557,6 +1631,7 @@ mod tests_bull_call_ladder_delta {
         assert_decimal_eq!(delta, Decimal::ZERO, DELTA_THRESHOLD);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5794.4));
@@ -1574,20 +1649,31 @@ mod tests_bull_call_ladder_delta {
 
 #[cfg(test)]
 mod tests_bull_call_ladder_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::bull_call_ladder::BullCallLadder;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
@@ -1607,10 +1693,12 @@ mod tests_bull_call_ladder_delta_size {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5881.88));
@@ -1659,6 +1747,7 @@ mod tests_bull_call_ladder_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5781.88));
@@ -1738,6 +1827,7 @@ mod tests_bull_call_ladder_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5794.4));
@@ -1820,7 +1910,7 @@ mod tests_bull_call_ladder_optimizable {
     }
 
     fn setup_test_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1840,6 +1930,7 @@ mod tests_bull_call_ladder_optimizable {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1973,7 +2064,7 @@ mod tests_bull_call_ladder_probability {
 
     /// Creates a test Bull Call Ladder with standard parameters based on SP500
     fn create_test_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -1993,6 +2084,7 @@ mod tests_bull_call_ladder_probability {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2222,7 +2314,7 @@ mod tests_bull_call_ladder_position_management {
     use rust_decimal_macros::dec;
 
     fn create_test_bull_call_ladder() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2242,6 +2334,7 @@ mod tests_bull_call_ladder_position_management {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2403,7 +2496,7 @@ mod tests_adjust_option_position {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2423,6 +2516,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2517,7 +2611,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_strategy_constructor {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2656,7 +2750,7 @@ mod tests_strategy_constructor {
             [Positive::HUNDRED, pos_or_panic!(105.0)],
             [pos_or_panic!(105.0), Positive::HUNDRED],
         ] {
-            let mut ladder = BullCallLadder::default();
+            let mut ladder = BullCallLadder::blank_at(chrono::DateTime::UNIX_EPOCH);
             ladder
                 .add_position(&call(Side::Long, pos_or_panic!(95.0)))
                 .unwrap();
@@ -2691,7 +2785,7 @@ mod tests_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_bull_call_ladder_pnl {
     use super::*;
     use optionstratlib_core::pos_or_panic;
@@ -2701,7 +2795,7 @@ mod tests_bull_call_ladder_pnl {
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> BullCallLadder {
-        BullCallLadder::new(
+        BullCallLadder::new_at(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -2721,6 +2815,7 @@ mod tests_bull_call_ladder_pnl {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }

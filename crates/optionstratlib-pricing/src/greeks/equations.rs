@@ -12,6 +12,7 @@ use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType};
 use optionstratlib_core::model::{Options, Side};
+use optionstratlib_core::utils::time::years_to_expiration;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -754,7 +755,7 @@ fn kernels_for(option: &Options) -> Result<Option<BlackScholesKernels>, GreeksEr
     if !matches!(option.option_type, OptionType::European) {
         return Ok(None);
     }
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     if t == Decimal::ZERO || option.implied_volatility == ZERO {
         return Ok(None);
     }
@@ -905,7 +906,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
             "greeks::delta::numerical_position_weighted",
         )?);
     }
-    let expiration_date = option.expiration_date.get_years()?;
+    let expiration_date = years_to_expiration(&option.expiration_date)?;
 
     // For an option when the time to expiration is zero (i.e., at the moment of expiration),
     // the delta takes discrete values based solely on whether the option is In-The-Money (ITM) or
@@ -1124,7 +1125,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
     }
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration, gamma is 0 for all cases
         return Ok(Decimal::ZERO);
@@ -1292,7 +1293,7 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// by `quantity × contract_size`. A short position therefore reports a positive theta when it
 /// collects decay.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     if t == Decimal::ZERO {
         return Ok(Decimal::ZERO);
     }
@@ -1486,7 +1487,7 @@ fn theta_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
 /// by `quantity × contract_size`. A short position reports the negative of the equivalent long.
 pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration, volatility has no impact on option price
         return Ok(Decimal::ZERO);
@@ -1643,7 +1644,7 @@ fn vega_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
 /// by `quantity × contract_size`. A short position reports the negative of the equivalent long.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     // Get time to expiration first and validate
-    let t = option.expiration_date.get_years()?;
+    let t = years_to_expiration(&option.expiration_date)?;
     if t == Decimal::ZERO {
         return Ok(Decimal::ZERO);
     }
@@ -1788,7 +1789,7 @@ fn rho_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal, 
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
 /// by `quantity × contract_size`. A short position reports the negative of the equivalent long.
 pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration the dividend yield can no longer move the value.
         return Ok(Decimal::ZERO);
@@ -2146,7 +2147,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
         return Ok(Decimal::ZERO);
     }
 
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration delta is a step function and no longer responds to
         // volatility, so vanna is zero.
@@ -2283,7 +2284,7 @@ fn vanna_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// inherited from [`vega`], which this is a derivative of, so neither is
 /// applied a second time here.
 pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration, volatility has no impact on option price
         return Ok(Decimal::ZERO);
@@ -2406,7 +2407,7 @@ fn vomma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// inherited from [`vega`], which this is a derivative of, so neither is
 /// applied a second time here.
 pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let expiration_date: Positive = years_to_expiration(&option.expiration_date)?;
     if expiration_date == Decimal::ZERO {
         // At expiration, volatility has no impact on option price
         return Ok(Decimal::ZERO);
@@ -2581,7 +2582,7 @@ fn veta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
 /// by `quantity × contract_size`. A short position reports the negative of the equivalent long.
 pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
-    let tau = option.expiration_date.get_years()?;
+    let tau = years_to_expiration(&option.expiration_date)?;
     // if DTE is zero we can assume Charm is also zero
     if tau == Decimal::ZERO {
         return Ok(Decimal::ZERO);
@@ -2750,7 +2751,7 @@ fn charm_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
 /// by `quantity × contract_size`. A short position reports the negative of the equivalent long.
 pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
-    let tau = option.expiration_date.get_years()?;
+    let tau = years_to_expiration(&option.expiration_date)?;
     // if DTE is zero we can assume Color is also zero
     if tau == Decimal::ZERO {
         return Ok(Decimal::ZERO);
@@ -5633,7 +5634,7 @@ mod tests_shared_kernel_equivalence {
             Side::Long,
             Positive::ONE,
         );
-        let Ok(t) = option.expiration_date.get_years() else {
+        let Ok(t) = years_to_expiration(&option.expiration_date) else {
             panic!("expiration should resolve");
         };
         let Ok(kernels) = BlackScholesKernels::new(&option, t) else {

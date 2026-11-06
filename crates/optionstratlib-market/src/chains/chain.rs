@@ -12,7 +12,7 @@ use crate::chains::utils::{
 };
 use crate::chains::{OptionData, OptionsInStrike};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
@@ -25,6 +25,9 @@ use optionstratlib_core::model::{
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_core::utils::Len;
 use optionstratlib_core::utils::rng::get_random_element;
+use optionstratlib_core::utils::time::{
+    ReferenceCarrier, days_to_expiration, expiration_date_string, now, years_to_expiration,
+};
 use optionstratlib_math::curves::{Curve, Point2D};
 use optionstratlib_math::geometrics::LinearInterpolation;
 use optionstratlib_pricing::error::GreeksError;
@@ -304,6 +307,26 @@ impl<'de> Deserialize<'de> for OptionChain {
 /// prices 9 and above in parallel.
 pub(crate) const PARALLEL_STRIKE_THRESHOLD: usize = 8;
 
+/// One strike's Greek in an aggregate exposure.
+///
+/// Without a clock an empty Greek is an error: it may be a strike whose time to
+/// expiry could not be measured, and adding it as zero would report a total for a
+/// chain with no Greeks at all. A build with a clock keeps adding it as zero.
+fn exposure_term(
+    greek: Option<Decimal>,
+    strike: Positive,
+    name: &str,
+) -> Result<Decimal, ChainError> {
+    match greek {
+        Some(value) => Ok(value),
+        None if now().is_ok() => Ok(Decimal::ZERO),
+        None => Err(ChainError::invalid_parameters(
+            name,
+            &format!("strike {strike} has none: call try_update_greeks first"),
+        )),
+    }
+}
+
 /// Whether `strikes` strikes are priced on the rayon pool.
 ///
 /// A call already running on a rayon worker stays serial:
@@ -525,11 +548,16 @@ impl OptionChain {
             )
         })?;
         reject_unrepresentable_expiration(&expiration_date)?;
+        // Pricing a strike only logs a failure, and the walk stops at a step that
+        // priced nothing: with no time to measure from, that would be a short chain
+        // reported as a success. Ask on this thread first.
+        years_to_expiration(&expiration_date)?;
+        let carrier = ReferenceCarrier::capture();
 
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
         } else {
-            let days = expiration_date.get_days().map_err(|e| {
+            let days = days_to_expiration(&expiration_date).map_err(|e| {
                 ChainError::invalid_parameters(
                     "expiration_date",
                     &format!("failed to get days: {e}"),
@@ -562,7 +590,7 @@ impl OptionChain {
             )?
         };
 
-        let date_string = expiration_date.get_date_string().map_err(|e| {
+        let date_string = expiration_date_string(&expiration_date).map_err(|e| {
             ChainError::invalid_parameters(
                 "expiration_date",
                 &format!("failed to get date string: {e}"),
@@ -757,7 +785,10 @@ impl OptionChain {
                 })
             };
             let priced: Vec<_> = if batch_steps > 1 {
-                planned.into_par_iter().map(price).collect()
+                planned
+                    .into_par_iter()
+                    .map(|step| carrier.run(|| price(step)))
+                    .collect()
             } else {
                 planned.into_iter().map(price).collect()
             };
@@ -1460,11 +1491,59 @@ impl OptionChain {
     /// of delta with respect to the underlying asset's price.
     ///
     /// The original options in the chain are replaced with the ones containing the updated Greeks.
+    ///
+    /// Needs the `clock` feature: without it, a `DateTime` expiration with no time to measure
+    /// from would leave the Greeks empty and report nothing. Use
+    /// [`Self::try_update_greeks`], which says so.
+    #[cfg(feature = "clock")]
     pub fn update_greeks(&mut self) {
+        self.refresh_greeks();
+    }
+
+    /// Calculates and updates the delta and gamma Greeks, as `update_greeks` does,
+    /// and reports a chain whose time to expiry cannot be measured.
+    ///
+    /// A strike whose Greeks fail for any other reason keeps them empty, as in
+    /// `update_greeks`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ExpirationDate`] when the time to expiry of a strike cannot be
+    /// measured: a `DateTime` expiration in a build with neither the `clock` feature nor a
+    /// reference datetime on this thread. The chain is left as it was.
+    pub fn try_update_greeks(&mut self) -> Result<(), ChainError> {
+        self.require_time_to_expiry()?;
+        self.refresh_greeks();
+        Ok(())
+    }
+
+    /// Refreshes delta and gamma of every strike.
+    fn refresh_greeks(&mut self) {
         self.refresh_each_strike(|option| {
             option.calculate_delta();
             option.calculate_gamma();
         });
+    }
+
+    /// Fails if the time to expiry of a strike cannot be measured on this thread.
+    ///
+    /// The Greeks of a strike only log a failure, and the projections skip a strike they
+    /// cannot compute, so this is where a missing clock becomes an error. It cannot fail
+    /// for lack of a time in a build with a clock.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ExpirationDate`] for a `DateTime` expiration in a build with
+    /// neither the `clock` feature nor a reference datetime on this thread.
+    pub fn require_time_to_expiry(&self) -> Result<(), ChainError> {
+        for expiration_date in self
+            .options
+            .iter()
+            .filter_map(|option| option.expiration_date.as_ref())
+        {
+            years_to_expiration(expiration_date)?;
+        }
+        Ok(())
     }
 
     /// Applies `refresh` to a copy of every strike and stores the copies.
@@ -1476,7 +1555,10 @@ impl OptionChain {
     fn refresh_each_strike(&mut self, refresh: impl Fn(&mut OptionData) + Sync) {
         let mut options: Vec<OptionData> = self.options.iter().cloned().collect();
         if price_in_parallel(options.len()) {
-            options.par_iter_mut().for_each(&refresh);
+            let carrier = ReferenceCarrier::capture();
+            options
+                .par_iter_mut()
+                .for_each(|option| carrier.run(|| refresh(option)));
         } else {
             options.iter_mut().for_each(&refresh);
         }
@@ -1486,7 +1568,7 @@ impl OptionChain {
     /// Recomputes the full twelve-greek snapshot for every strike, for both
     /// option styles.
     ///
-    /// This is the opt-in counterpart to [`Self::update_greeks`], which only
+    /// This is the opt-in counterpart to `update_greeks`, which only
     /// refreshes delta and gamma. The full set costs roughly seven times a
     /// whole chain build, because each greek re-derives `d1` and `d2` from
     /// scratch, so it is a separate entry point rather than a widening of
@@ -1494,8 +1576,24 @@ impl OptionChain {
     ///
     /// A strike whose greeks cannot be computed keeps a `None` snapshot and
     /// logs at `debug` level; see [`OptionData::calculate_greeks`].
+    ///
+    /// Needs the `clock` feature: without it, use [`Self::try_update_greek_snapshots`],
+    /// for the reason given at `update_greeks`.
+    #[cfg(feature = "clock")]
     pub fn update_greek_snapshots(&mut self) {
         self.refresh_each_strike(OptionData::calculate_greeks);
+    }
+
+    /// Recomputes the full twelve-greek snapshots, as `update_greek_snapshots` does,
+    /// and reports a chain whose time to expiry cannot be measured.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::try_update_greeks`]. The chain is left as it was.
+    pub fn try_update_greek_snapshots(&mut self) -> Result<(), ChainError> {
+        self.require_time_to_expiry()?;
+        self.refresh_each_strike(OptionData::calculate_greeks);
+        Ok(())
     }
 
     /// Saves the option chain data to a CSV file.
@@ -1752,7 +1850,8 @@ impl OptionChain {
     #[cfg(feature = "async")]
     pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
-        tokio::task::spawn_blocking(move || Self::load_from_csv(&path))
+        let carrier = ReferenceCarrier::capture();
+        tokio::task::spawn_blocking(move || carrier.run(|| Self::load_from_csv(&path)))
             .await
             .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
@@ -1800,7 +1899,7 @@ impl OptionChain {
         });
 
         option_chain.update_mid_prices();
-        option_chain.update_greeks();
+        option_chain.try_update_greeks()?;
         // if implied volatility is in percentage, convert it to decimal
         option_chain.check_and_convert_implied_volatility();
         Ok(option_chain)
@@ -1820,7 +1919,8 @@ impl OptionChain {
     #[cfg(feature = "async")]
     pub async fn load_from_json_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
-        tokio::task::spawn_blocking(move || Self::load_from_json(&path))
+        let carrier = ReferenceCarrier::capture();
+        tokio::task::spawn_blocking(move || carrier.run(|| Self::load_from_json(&path)))
             .await
             .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
@@ -1910,10 +2010,26 @@ impl OptionChain {
     /// selected strikes into [`Position`] instances. Returns
     /// [`ChainError::ChainBuildError`] naming `total_positions` when the
     /// quantities sum to zero, sum past `usize::MAX`, or ask for more
-    /// positions than can be allocated.
+    /// positions than can be allocated. Returns [`ChainError::Clock`] in a build without
+    /// the `clock` feature: use [`Self::get_random_positions_at`].
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
+    ) -> Result<Vec<Position>, ChainError> {
+        self.get_random_positions_at(params, now()?)
+    }
+
+    /// Creates random positions, as [`Self::get_random_positions`] does, all opened at `date`.
+    ///
+    /// Reads no clock, so it exists and works with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::get_random_positions`], except that it cannot fail for a missing clock.
+    pub fn get_random_positions_at(
+        &self,
+        params: RandomPositionsParams,
+        date: DateTime<Utc>,
     ) -> Result<Vec<Position>, ChainError> {
         let total_positions = params.total_positions()?;
         if total_positions == 0 {
@@ -1954,7 +2070,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_ask.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        date,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -1985,7 +2101,7 @@ impl OptionChain {
                             None,
                         ),
                         option.put_bid.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        date,
                         params.open_put_fee,
                         params.close_put_fee,
                         params.epic.clone(),
@@ -2016,7 +2132,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_ask.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        date,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -2047,7 +2163,7 @@ impl OptionChain {
                             None,
                         ),
                         option.call_bid.unwrap_or(Positive::ZERO),
-                        Utc::now(),
+                        date,
                         params.open_call_fee,
                         params.close_call_fee,
                         params.epic.clone(),
@@ -2422,7 +2538,7 @@ impl OptionChain {
     }
 
     /// Sums one greek over every strike, call and put, reading each
-    /// strike's stored [`GreeksSnapshot`] when [`Self::update_greek_snapshots`]
+    /// strike's stored [`GreeksSnapshot`] when `update_greek_snapshots`
     /// has computed it and pricing the long option otherwise (#861).
     ///
     /// A snapshot is the long option's full greek set from the same inputs,
@@ -2466,7 +2582,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's gamma calculation fails
-    /// - Options greeks are not initialized
+    /// - Options greeks are not initialized; a build with the `clock` feature adds a
+    ///   strike with no gamma as zero
     ///
     /// # Note
     ///
@@ -2476,7 +2593,7 @@ impl OptionChain {
         for option in &self.options {
             gamma_exposure = d_add(
                 gamma_exposure,
-                option.gamma.unwrap_or(Decimal::ZERO),
+                exposure_term(option.gamma, option.strike_price, "gamma")?,
                 "chains::gamma_exposure",
             )?;
         }
@@ -2497,7 +2614,8 @@ impl OptionChain {
     ///
     /// Returns a `ChainError` if:
     /// - Any option's delta calculation fails
-    /// - Options greeks are not initialized
+    /// - Options greeks are not initialized; a build with the `clock` feature adds a
+    ///   strike with no delta as zero
     ///
     /// # Note
     ///
@@ -2507,12 +2625,12 @@ impl OptionChain {
         for option in &self.options {
             delta_exposure = d_add(
                 delta_exposure,
-                option.delta_call.unwrap_or(Decimal::ZERO),
+                exposure_term(option.delta_call, option.strike_price, "call delta")?,
                 "chains::delta_exposure::call",
             )?;
             delta_exposure = d_add(
                 delta_exposure,
-                option.delta_put.unwrap_or(Decimal::ZERO),
+                exposure_term(option.delta_put, option.strike_price, "put delta")?,
                 "chains::delta_exposure::put",
             )?;
         }
@@ -2696,7 +2814,7 @@ impl OptionChain {
     /// * Calls `update_greeks()` to recalculate delta and gamma for all options
     ///   in the chain based on the new expiration date.
     /// * Drops any stored twelve-greek snapshots, which were computed against
-    ///   the old expiry. Call [`Self::update_greek_snapshots`] afterwards to
+    ///   the old expiry. Call `update_greek_snapshots` afterwards to
     ///   repopulate them.
     ///
     /// # Example
@@ -2729,7 +2847,7 @@ impl OptionChain {
         // Replace the old options with the updated ones
         self.options = updated_options;
 
-        self.update_greeks();
+        self.refresh_greeks();
     }
 
     /// Retrieves the expiration date of the option chain.
@@ -3251,11 +3369,13 @@ mod tests_chain_base {
         tempfile::tempdir().expect("a temporary directory is available")
     }
 
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
     use optionstratlib_core::spos;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
     #[test]
@@ -3280,6 +3400,7 @@ mod tests_chain_base {
     /// were "priceless", so the SAME request returned fewer strikes the closer
     /// the expiry got. Measured before the fix at a spot of 5100 with
     /// `chain_size` 20: 41 strikes at one day, 11 at 0.05 days, 5 at 0.01 days.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_build_chain_returns_the_requested_width_at_every_tenor() {
         for days in [30.0, 1.0, 0.3125, 0.05, 0.01] {
@@ -3323,6 +3444,7 @@ mod tests_chain_base {
     /// worth nothing, and reading that as "no price" removed the contract from
     /// the chain. It is a contract that nobody would pay for, which is a price,
     /// so it is quoted: this is issue #439's decision applied one layer up.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_a_worthless_wing_is_quoted_rather_than_dropped() {
         let params = OptionChainBuildParams::new(
@@ -3372,6 +3494,7 @@ mod tests_chain_base {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_new_option_chain_build_chain() {
         let params = OptionChainBuildParams::new(
@@ -3418,6 +3541,7 @@ mod tests_chain_base {
         assert_eq!(last.put_bid.unwrap(), 9.75);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_new_option_chain_build_chain_long() {
         let params = OptionChainBuildParams::new(
@@ -3672,6 +3796,7 @@ mod tests_chain_base {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_load_from_json() {
         let mut chain = OptionChain::new(
@@ -3712,6 +3837,7 @@ mod tests_chain_base {
     /// one wrote, the pretty serialization of the chain, and the buffered
     /// reader must load them back to the same chain.
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_save_to_json_buffered_writes_the_pretty_serialization() {
         let mut chain = OptionChain::new(
@@ -4068,7 +4194,7 @@ mod tests_get_random_positions {
             None,
             None,
         );
-        let result = chain.get_random_positions(params);
+        let result = chain.get_random_positions_at(params, chrono::DateTime::UNIX_EPOCH);
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
@@ -4083,6 +4209,7 @@ mod tests_get_random_positions {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_long_puts_only() {
         let chain = create_test_chain();
@@ -4116,6 +4243,7 @@ mod tests_get_random_positions {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_short_puts_only() {
         let chain = create_test_chain();
@@ -4149,6 +4277,7 @@ mod tests_get_random_positions {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_long_calls_only() {
         let chain = create_test_chain();
@@ -4182,6 +4311,7 @@ mod tests_get_random_positions {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_short_calls_only() {
         let chain = create_test_chain();
@@ -4215,6 +4345,7 @@ mod tests_get_random_positions {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_mixed_positions() {
         let chain = create_test_chain();
@@ -4287,7 +4418,7 @@ mod tests_get_random_positions {
             None,
             None,
         );
-        let result = chain.get_random_positions(params);
+        let result = chain.get_random_positions_at(params, chrono::DateTime::UNIX_EPOCH);
 
         assert!(result.is_ok());
         let positions = result.unwrap();
@@ -4889,6 +5020,7 @@ mod tests_filter_options_in_strike {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -5010,6 +5142,7 @@ mod tests_filter_options_in_strike {
         assert!(filtered_options.is_empty());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
@@ -6572,15 +6705,19 @@ mod tests_gamma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::utils::time::get_x_days_formatted;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -6596,6 +6733,7 @@ mod tests_gamma_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_gamma_exposure_basic() {
         let mut chain = create_test_chain_with_gamma();
@@ -6623,6 +6761,7 @@ mod tests_gamma_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_gamma_exposure_missing_gamma() {
         let mut chain = create_test_chain_with_gamma();
@@ -6655,10 +6794,12 @@ mod tests_delta_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json(concat!(
@@ -6669,6 +6810,7 @@ mod tests_delta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_exposure_basic() {
         let mut chain = create_test_chain_with_delta();
@@ -6698,6 +6840,7 @@ mod tests_delta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_delta();
@@ -6710,6 +6853,7 @@ mod tests_delta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_delta_exposure_updates() {
         let mut chain = create_test_chain_with_delta();
@@ -6731,10 +6875,12 @@ mod tests_vega_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json(concat!(
@@ -6745,6 +6891,7 @@ mod tests_vega_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_exposure_basic() {
         let mut chain = create_test_chain_with_vega();
@@ -6774,6 +6921,7 @@ mod tests_vega_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_vega();
@@ -6786,6 +6934,7 @@ mod tests_vega_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vega_exposure_updates() {
         let mut chain = create_test_chain_with_vega();
@@ -6807,10 +6956,12 @@ mod tests_theta_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json(concat!(
@@ -6821,6 +6972,7 @@ mod tests_theta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_exposure_basic() {
         let mut chain = create_test_chain_with_theta();
@@ -6850,6 +7002,7 @@ mod tests_theta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_theta();
@@ -6862,6 +7015,7 @@ mod tests_theta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_theta_exposure_updates() {
         let mut chain = create_test_chain_with_theta();
@@ -6883,10 +7037,12 @@ mod tests_vanna_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vanna calculations
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -6901,6 +7057,7 @@ mod tests_vanna_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vanna_exposure_basic() {
         let mut chain = create_test_chain_with_vanna();
@@ -6940,10 +7097,12 @@ mod tests_vomma_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vomma calculation
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_vomma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -6958,6 +7117,7 @@ mod tests_vomma_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_vomma_exposure_basic() {
         let mut chain = create_test_chain_with_vomma();
@@ -6993,10 +7153,12 @@ mod tests_veta_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for veta calculations
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -7011,6 +7173,7 @@ mod tests_veta_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_veta_exposure_basic() {
         let mut chain = create_test_chain_with_veta();
@@ -7046,10 +7209,12 @@ mod tests_charm_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -7064,6 +7229,7 @@ mod tests_charm_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_charm_exposure_basic() {
         let mut chain = create_test_chain_with_charm();
@@ -7099,10 +7265,12 @@ mod tests_color_calculations {
     use super::*;
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
@@ -7117,6 +7285,7 @@ mod tests_color_calculations {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_color_exposure_basic() {
         let mut chain = create_test_chain_with_color();
@@ -7150,13 +7319,18 @@ mod tests_color_calculations {
 mod tests_atm_strike {
     #![allow(clippy::indexing_slicing)]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn create_standard_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -7180,6 +7354,7 @@ mod tests_atm_strike {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_exact_match() {
         let chain = create_standard_chain();
@@ -7196,6 +7371,7 @@ mod tests_atm_strike {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_approximate_match() {
         let mut chain = create_standard_chain();
@@ -7248,6 +7424,7 @@ mod tests_atm_strike {
         assert!(error.contains("EMPTY"), "Error should include the symbol");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_extreme_underlying() {
         let mut chain = create_standard_chain();
@@ -7288,6 +7465,7 @@ mod tests_atm_strike {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_equidistant() {
         let mut chain = create_standard_chain();
@@ -7358,13 +7536,18 @@ mod tests_atm_strike {
 mod tests_atm_strike_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn create_standard_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -7388,6 +7571,7 @@ mod tests_atm_strike_bis {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_approximate_match() {
         let mut chain = create_standard_chain();
@@ -7440,6 +7624,7 @@ mod tests_atm_strike_bis {
         assert!(error.contains("EMPTY"), "Error should include the symbol");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_extreme_underlying() {
         let mut chain = create_standard_chain();
@@ -7480,6 +7665,7 @@ mod tests_atm_strike_bis {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_atm_strike_equidistant() {
         let mut chain = create_standard_chain();
@@ -7707,13 +7893,17 @@ mod tests_option_chain_utils_bis {
     use super::*;
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "clock")]
     use crate::chains::utils::OptionChainBuildParams;
+    #[cfg(feature = "clock")]
     use crate::chains::utils::OptionDataPriceParams;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard option chain for testing
+    #[cfg(feature = "clock")]
     fn create_standard_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -7774,6 +7964,7 @@ mod tests_option_chain_utils_bis {
         chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_strike_interval_standard_chain() {
         let chain = create_standard_chain();
@@ -7898,7 +8089,7 @@ mod tests_option_chain_utils_bis {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_to_build_params_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
@@ -8164,6 +8355,7 @@ mod chain_coverage_tests {
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
+    #[cfg(feature = "clock")]
     fn create_test_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -8187,6 +8379,7 @@ mod chain_coverage_tests {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_option_chain_display() {
         let chain = create_test_chain();
@@ -8216,6 +8409,7 @@ mod chain_coverage_tests {
         assert_eq!(title, "SP500-Index-18-Oct-2024-5781.88");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_expiration_date() {
         let mut chain = create_test_chain();
@@ -8270,6 +8464,7 @@ mod chain_coverage_tests {
         assert_eq!(result.unwrap().strike_price, Positive::HUNDRED);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_mid_prices_and_greeks() {
         let mut chain = create_test_chain();
@@ -8300,6 +8495,7 @@ mod chain_coverage_tests {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strike_price_range_vec() {
         let chain = create_test_chain();
@@ -8328,6 +8524,7 @@ mod chain_coverage_tests {
         assert!(range.is_none());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_params_and_atm_strike() {
         let chain = create_test_chain();
@@ -8346,6 +8543,7 @@ mod chain_coverage_tests {
         assert!(invalid_params_result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_calculate_delta_exposure() {
         let mut chain = create_test_chain();
@@ -8358,6 +8556,7 @@ mod chain_coverage_tests {
         assert!(delta_exposure.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_all_exposures() {
         let mut chain = create_test_chain();
@@ -8400,6 +8599,7 @@ mod chain_coverage_tests_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[cfg(feature = "io")]
     /// A directory of this test run's own, outside the working tree.
     ///
@@ -8426,6 +8626,7 @@ mod chain_coverage_tests_bis {
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
+    #[cfg(feature = "clock")]
     fn create_test_chain() -> OptionChain {
         let params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -8450,6 +8651,7 @@ mod chain_coverage_tests_bis {
     }
 
     #[cfg(feature = "io")]
+    #[cfg(feature = "clock")]
     #[test]
     fn test_deserializer_field_handling() {
         let chain = create_test_chain();
@@ -8470,6 +8672,7 @@ mod chain_coverage_tests_bis {
     }
 
     // Test for many display-related lines
+    #[cfg(feature = "clock")]
     #[test]
     fn test_option_chain_display() {
         let chain = create_test_chain();
@@ -8500,6 +8703,7 @@ mod chain_coverage_tests_bis {
     }
 
     // Test for line 345
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_expiration_date() {
         let mut chain = create_test_chain();
@@ -8554,6 +8758,7 @@ mod chain_coverage_tests_bis {
         assert_eq!(result.unwrap().strike_price, Positive::HUNDRED);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_update_mid_prices_and_greeks() {
         let mut chain = create_test_chain();
@@ -8584,6 +8789,7 @@ mod chain_coverage_tests_bis {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_strike_price_range_vec() {
         let chain = create_test_chain();
@@ -8612,6 +8818,7 @@ mod chain_coverage_tests_bis {
         assert!(range.is_none());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_params_and_atm_strike() {
         let chain = create_test_chain();
@@ -8630,6 +8837,7 @@ mod chain_coverage_tests_bis {
         assert!(invalid_params_result.is_err());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_calculate_delta_exposure() {
         let mut chain = create_test_chain();
@@ -8642,6 +8850,7 @@ mod chain_coverage_tests_bis {
         assert!(delta_exposure.is_ok());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_all_exposures() {
         let mut chain = create_test_chain();
@@ -8787,6 +8996,7 @@ mod tests_get_position_with_delta {
         chain
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_long_call() {
         let chain = create_test_chain_with_deltas();
@@ -8807,6 +9017,7 @@ mod tests_get_position_with_delta {
         assert_eq!(position.option.option_style, OptionStyle::Call);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_short_put() {
         let chain = create_test_chain_with_deltas();
@@ -8828,6 +9039,7 @@ mod tests_get_position_with_delta {
         assert_eq!(position.option.option_style, OptionStyle::Put);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_exact_match() {
         let chain = create_test_chain_with_deltas();
@@ -8847,6 +9059,7 @@ mod tests_get_position_with_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_high_target() {
         let chain = create_test_chain_with_deltas();
@@ -8876,6 +9089,7 @@ mod tests_get_position_with_delta {
         assert!(result.is_err(), "Shouldn't find the lowest available delta");
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_put_high_target() {
         let chain = create_test_chain_with_deltas();
@@ -8982,6 +9196,7 @@ mod tests_get_position_with_delta {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_multiple_candidates() {
         let mut chain = OptionChain::new(
@@ -9039,6 +9254,7 @@ mod tests_get_position_with_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_get_position_with_delta_side_combinations() {
         let chain = create_test_chain_with_deltas();
@@ -10721,7 +10937,7 @@ mod tests_title_metadata {
 /// The rayon-pool build and refresh (#861) produce exactly the chain the
 /// serial walk produces: same strikes, same values at the same scale, same
 /// stops and the same errors.
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_parallel_pricing {
     use super::*;
     use optionstratlib_core::pos_or_panic;

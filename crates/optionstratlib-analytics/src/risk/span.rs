@@ -390,15 +390,23 @@ impl SPANMargin {
 
 #[cfg(test)]
 mod tests_span {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::{OptionStyle, Side};
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::utils::create_sample_option;
 
+    #[cfg(feature = "clock")]
     use chrono::Utc;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
+    #[cfg(feature = "clock")]
     use tracing::info;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_span_margin() -> Result<(), PricingError> {
         let option = create_sample_option(
@@ -432,6 +440,7 @@ mod tests_span {
         Ok(())
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_span_margin_contract_size_scales_like_quantity() -> Result<(), PricingError> {
         let position = |quantity: Positive, contract_size: Positive| Position {

@@ -10,6 +10,8 @@
 //! regression that makes a core method depend on a trait import, or that
 //! drops a trait from its owning module, fails here first.
 
+#![cfg(feature = "clock")]
+
 use optionstratlib::model::Position;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::{Positive, pos_or_panic};

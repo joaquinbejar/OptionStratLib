@@ -68,7 +68,7 @@ where
 }
 
 fn bull_call_spread(long_strike: f64, premium_long: Positive) -> BullCallSpread {
-    BullCallSpread::new(
+    BullCallSpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(long_strike),
@@ -84,6 +84,7 @@ fn bull_call_spread(long_strike: f64, premium_long: Positive) -> BullCallSpread 
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -124,7 +125,7 @@ fn test_bull_call_spread_assembled_from_default_matches_new() {
     // Leg by leg from `Default`: no break-evens while a leg is still a
     // placeholder, those of `new` once both legs are set.
     let built = bull_call_spread(95.0, pos_or_panic!(6.0));
-    let mut strategy = BullCallSpread::default();
+    let mut strategy = BullCallSpread::blank_at(chrono::DateTime::UNIX_EPOCH);
     strategy
         .add_position(&built.short_call)
         .unwrap_or_else(|e| panic!("{e}"));
@@ -151,7 +152,7 @@ fn test_bull_call_spread_invalid_edit_clears_break_evens() {
 }
 
 fn iron_condor(premium_short_call: Positive) -> IronCondor {
-    IronCondor::new(
+    IronCondor::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -169,6 +170,7 @@ fn iron_condor(premium_short_call: Positive) -> IronCondor {
         pos_or_panic!(0.5),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -192,7 +194,7 @@ fn test_iron_condor_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn long_butterfly(premium_middle: Positive) -> LongButterflySpread {
-    LongButterflySpread::new(
+    LongButterflySpread::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(90.0),
@@ -212,6 +214,7 @@ fn long_butterfly(premium_middle: Positive) -> LongButterflySpread {
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -235,7 +238,7 @@ fn test_long_butterfly_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn bull_call_ladder(premium_long: Positive) -> BullCallLadder {
-    BullCallLadder::new(
+    BullCallLadder::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(95.0),
@@ -255,6 +258,7 @@ fn bull_call_ladder(premium_long: Positive) -> BullCallLadder {
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -278,7 +282,7 @@ fn test_bull_call_ladder_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn long_straddle(premium_put: Positive) -> LongStraddle {
-    LongStraddle::new(
+    LongStraddle::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         Positive::HUNDRED,
@@ -293,6 +297,7 @@ fn long_straddle(premium_put: Positive) -> LongStraddle {
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -316,7 +321,7 @@ fn test_long_straddle_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn short_strangle(put_strike: f64, premium_put: Positive) -> ShortStrangle {
-    ShortStrangle::new(
+    ShortStrangle::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(110.0),
@@ -333,6 +338,7 @@ fn short_strangle(put_strike: f64, premium_put: Positive) -> ShortStrangle {
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -358,7 +364,7 @@ fn test_short_strangle_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn poor_mans_covered_call(premium_short: Positive) -> PoorMansCoveredCall {
-    PoorMansCoveredCall::new(
+    PoorMansCoveredCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         pos_or_panic!(80.0),
@@ -375,6 +381,7 @@ fn poor_mans_covered_call(premium_short: Positive) -> PoorMansCoveredCall {
         fee(),
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -398,7 +405,7 @@ fn test_poor_mans_covered_call_failed_edit_leaves_strategy_unchanged() {
 }
 
 fn long_call(premium: Positive) -> LongCall {
-    LongCall::new(
+    LongCall::new_at(
         "TEST".to_string(),
         Positive::HUNDRED,
         expiry(),
@@ -410,6 +417,7 @@ fn long_call(premium: Positive) -> LongCall {
         premium,
         fee(),
         fee(),
+        chrono::DateTime::UNIX_EPOCH,
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -438,7 +446,7 @@ fn test_long_call_added_to_default_matches_new() {
     // premium and fees per contract, 100 + 4.5 + 0.1.
     let built = long_call(pos_or_panic!(4.5));
     assert_eq!(break_evens(&built), vec![pos_or_panic!(104.6)]);
-    let mut strategy = LongCall::default();
+    let mut strategy = LongCall::blank_at(chrono::DateTime::UNIX_EPOCH);
     strategy
         .add_position(&leg(&built, Side::Long))
         .unwrap_or_else(|e| panic!("{e}"));

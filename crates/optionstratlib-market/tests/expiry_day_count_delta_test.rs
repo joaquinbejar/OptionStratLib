@@ -1,3 +1,4 @@
+#![cfg(feature = "clock")]
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -59,6 +60,7 @@ fn assert_close(label: &str, got: Decimal, expected: Decimal) {
     );
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn test_day_count_expiry_gives_clock_independent_deltas() {
     let chain = sample_chain_one_day();

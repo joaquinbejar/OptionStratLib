@@ -19,6 +19,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
 use optionstratlib_core::model::types::Side;
 use optionstratlib_core::model::{ExpirationDate, Options, Position, resolve_expiration_date};
+use optionstratlib_core::utils::time::resolution_base;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
@@ -207,8 +208,12 @@ impl PnLCalculator for Position {
         let initial_income = self.premium_received()?;
         // `ExpirationDate::get_date` resolves a relative expiration with the
         // `+` operator on `DateTime<Utc>`, which aborts past the calendar
-        // range instead of reporting it.
-        let date_time = resolve_expiration_date(&self.option.expiration_date)?;
+        // range instead of reporting it. Only stamps the record: with no time
+        // to count from, a relative expiration counts from the leg's open date.
+        let date_time = match resolution_base() {
+            Ok(_) => resolve_expiration_date(&self.option.expiration_date)?,
+            Err(_) => self.option.expiration_date.get_date_at(self.date)?,
+        };
 
         // A cost or an income at the top of the `Positive` range overflows the
         // raw `Decimal` operators, so the running total is taken through
@@ -444,7 +449,7 @@ mod tests_options_pnl_calculator {
 #[cfg(test)]
 mod tests_transaction_able_default {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::TradeStatus;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
     use optionstratlib_core::model::utils::create_sample_option_simplest;
@@ -455,7 +460,7 @@ mod tests_transaction_able_default {
         Position::new(
             option,
             pos_or_panic!(5.25),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
             None,
@@ -509,7 +514,7 @@ mod tests_transaction_able_default {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::pos_or_panic;
     use optionstratlib_core::{assert_decimal_eq, model::OptionType};
@@ -534,7 +539,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -747,7 +752,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             Some(epic.to_string()),
@@ -924,7 +929,7 @@ mod tests_pnl_calculator {
         Position::new(
             option,
             premium,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             Some(epic.to_string()),
@@ -1036,7 +1041,7 @@ mod tests_pnl_calculator {
 #[cfg(test)]
 mod tests_pnl_quantity {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::OptionType;
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::pos_or_panic;
@@ -1067,7 +1072,7 @@ mod tests_pnl_quantity {
         Position::new(
             option(side, style, strike, quantity),
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1206,6 +1211,7 @@ mod tests_pnl_quantity {
         assert_ne!(sum, book_change - body_once);
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_calculate_pnl_n_lots_is_n_times_one_lot() {
         for side in SIDES {
@@ -1234,6 +1240,7 @@ mod tests_pnl_quantity {
 
     /// A short option's expiry P&L used to fail: the income was the already
     /// negative short price times the quantity, which no `Positive` holds.
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_calculate_pnl_at_expiration_short_reports_positive_income() {
         for style in STYLES {
@@ -1256,7 +1263,7 @@ mod tests_pnl_quantity {
 #[cfg(test)]
 mod tests_pnl_contract_size {
     use super::*;
-    use chrono::Utc;
+
     use optionstratlib_core::model::types::OptionStyle;
     use optionstratlib_core::model::utils::create_sample_option_simplest;
     use optionstratlib_core::pos_or_panic;
@@ -1270,7 +1277,7 @@ mod tests_pnl_contract_size {
         Position::new(
             option(side, contract_size),
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -1282,6 +1289,7 @@ mod tests_pnl_contract_size {
         (a - b).abs() <= dec!(1e-12)
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_pnl_contract_size_scales_premium_and_change() {
         for side in [Side::Long, Side::Short] {
@@ -1314,6 +1322,7 @@ mod tests_pnl_contract_size {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_options_pnl_at_expiration_contract_size_scales_payoff() {
         let sized = option(Side::Long, Positive::HUNDRED);

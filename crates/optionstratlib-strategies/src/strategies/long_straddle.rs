@@ -26,7 +26,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
@@ -44,6 +44,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -176,7 +177,7 @@ impl LongStraddle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
-        mut strike: Positive,
+        strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: Positive,
         risk_free_rate: Decimal,
@@ -189,6 +190,52 @@ impl LongStraddle {
         open_fee_long_put: Positive,
         close_fee_long_put: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_long_put,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_long_put,
+            close_fee_long_put,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        mut strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_long_call: Positive,
+        premium_long_put: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_long_put: Positive,
+        close_fee_long_put: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         if strike == Positive::ZERO {
             strike = underlying_price;
         }
@@ -198,8 +245,8 @@ impl LongStraddle {
             kind: StrategyType::LongStraddle,
             description: LONG_STRADDLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call: Position::default(),
-            long_put: Position::default(),
+            long_call: Position::blank_at(date),
+            long_put: Position::blank_at(date),
         };
 
         let long_call_option = Options::new(
@@ -219,7 +266,7 @@ impl LongStraddle {
         let long_call = Position::new(
             long_call_option,
             premium_long_call,
-            Utc::now(),
+            date,
             open_fee_long_call,
             close_fee_long_call,
             None,
@@ -244,7 +291,7 @@ impl LongStraddle {
         let long_put = Position::new(
             long_put_option,
             premium_long_put,
-            Utc::now(),
+            date,
             open_fee_long_put,
             close_fee_long_put,
             None,
@@ -333,7 +380,7 @@ impl StrategyConstructor for LongStraddle {
         let long_call = Position::new(
             call_position.option.clone(),
             call_position.premium,
-            Utc::now(),
+            now_or(call_position.date),
             call_position.open_fee,
             call_position.close_fee,
             call_position.epic.clone(),
@@ -343,7 +390,7 @@ impl StrategyConstructor for LongStraddle {
         let long_put = Position::new(
             put_position.option.clone(),
             put_position.premium,
-            Utc::now(),
+            now_or(put_position.date),
             put_position.open_fee,
             put_position.close_fee,
             put_position.epic.clone(),
@@ -876,7 +923,7 @@ impl Optimizable for LongStraddle {
                 "missing put_ask for long put leg",
             )
         })?;
-        let mut strategy = LongStraddle::new(
+        let mut strategy = LongStraddle::new_at(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -891,6 +938,7 @@ impl Optimizable for LongStraddle {
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
+            now_or(self.long_call.date),
         )?;
         // The rebuilt legs keep the contract size of the strategy they
         // are rebuilt from.
@@ -1071,7 +1119,7 @@ impl PnLCalculator for LongStraddle {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(LongStraddle, test_short_call_implementations);
 
 #[cfg(test)]
@@ -1094,7 +1142,7 @@ mod tests_long_straddle_probability {
     }
 
     fn create_test_long_straddle() -> LongStraddle {
-        LongStraddle::new(
+        LongStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
@@ -1109,6 +1157,7 @@ mod tests_long_straddle_probability {
             Positive::ZERO,                            // close_fee_long_call
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1231,21 +1280,33 @@ mod tests_long_straddle_probability {
 
 #[cfg(test)]
 mod tests_long_straddle_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_straddle::{LongStraddle, Positive};
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos_or_panic!(7138.5);
-        LongStraddle::new(
+        LongStraddle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
@@ -1260,10 +1321,12 @@ mod tests_long_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_long_call
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strike = pos_or_panic!(7450.0);
@@ -1313,6 +1376,7 @@ mod tests_long_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7150.0));
@@ -1361,6 +1425,7 @@ mod tests_long_straddle_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7245.0));
@@ -1378,24 +1443,39 @@ mod tests_long_straddle_delta {
 
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_straddle::{LongStraddle, Positive};
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::ExpirationDate;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::Side;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::pos_or_panic;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::Greeks;
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
+    #[cfg(feature = "clock")]
     use std::str::FromStr;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos_or_panic!(7138.5);
-        LongStraddle::new(
+        LongStraddle::new_at(
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
@@ -1410,10 +1490,12 @@ mod tests_long_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_long_call
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
         let strike = pos_or_panic!(7450.0);
@@ -1462,6 +1544,7 @@ mod tests_long_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7150.0));
@@ -1511,6 +1594,7 @@ mod tests_long_straddle_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(7245.0));
@@ -1537,7 +1621,7 @@ mod tests_straddle_position_management {
     use tracing::error;
 
     fn create_test_long_straddle() -> LongStraddle {
-        LongStraddle::new(
+        LongStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
@@ -1552,6 +1636,7 @@ mod tests_straddle_position_management {
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1647,7 +1732,7 @@ mod tests_adjust_option_position {
     use rust_decimal_macros::dec;
 
     fn create_test_long_straddle() -> LongStraddle {
-        LongStraddle::new(
+        LongStraddle::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
@@ -1662,6 +1747,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1758,7 +1844,7 @@ mod tests_adjust_option_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_strategy_constructor {
     use super::*;
     use optionstratlib_core::model::utils::create_sample_position;
@@ -1931,7 +2017,7 @@ mod tests_long_strategy_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_straddle_pnl {
     use super::*;
     use optionstratlib_core::assert_decimal_eq;

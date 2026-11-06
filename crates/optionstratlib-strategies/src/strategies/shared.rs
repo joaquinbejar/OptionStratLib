@@ -888,7 +888,7 @@ mod tests_shared {
             open_fee: Positive::MAX,
             close_fee: Positive::ONE,
             premium: Positive::MAX,
-            ..Position::default()
+            ..Position::blank_at(chrono::DateTime::UNIX_EPOCH)
         };
         assert!(aggregate_fees(&[&position]).is_err());
         assert!(aggregate_premiums(&[&position, &position]).is_err());

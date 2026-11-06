@@ -12,6 +12,9 @@ use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionStyle, Side};
 use crate::model::{ExpirationDate, Options};
 use crate::model::{Trade, TradeAble, TradeStatus};
+#[cfg(feature = "clock")]
+use crate::utils::time::wall_clock;
+use crate::utils::time::{evaluation_time, now};
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -44,6 +47,7 @@ use tracing::debug;
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "clock")] {
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use optionstratlib_core::model::{Options, Side, OptionStyle};
 /// use positive::pos_or_panic;
@@ -66,6 +70,7 @@ use tracing::debug;
 /// let total_cost = position.total_cost()?;
 /// info!("Total position cost: {}", total_cost);
 /// # Ok(())
+/// # }
 /// # }
 /// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -147,6 +152,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use optionstratlib_core::model::{Options, Side, OptionStyle};
     /// use positive::pos_or_panic;
     /// use chrono::Utc;
@@ -163,6 +169,7 @@ impl Position {
     ///    None,                  // epic (optional)
     ///   None,                  // extra fields (optional)
     /// );
+    /// # }
     /// ```
     #[must_use]
     pub fn new(
@@ -239,6 +246,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use optionstratlib_core::model::{Side, OptionStyle};
     /// use positive::pos_or_panic;
@@ -263,6 +271,7 @@ impl Position {
     /// let received = position.premium_received()?;
     /// info!("Premium received: {}", received);
     /// # Ok(())
+    /// # }
     /// # }
     /// ```
     ///
@@ -347,6 +356,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
@@ -373,6 +383,7 @@ impl Position {
     /// // Calculate PnL at expiration using the option's current underlying price
     /// let pnl_current = position.pnl_at_expiration(&None)?;
     /// # Ok(())
+    /// # }
     /// # }
     /// ```
     ///
@@ -428,6 +439,7 @@ impl Position {
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use chrono::Utc;
     /// use tracing::info;
@@ -449,6 +461,7 @@ impl Position {
     /// let unrealized_pnl = position.unrealized_pnl(current_price)?;
     /// info!("Current unrealized PnL: {}", unrealized_pnl);
     /// # Ok(())
+    /// # }
     /// # }
     /// ```
     ///
@@ -534,11 +547,27 @@ impl Position {
     /// Returns [`PositionError`] wrapping a
     /// `PositionValidationErrorKind::InvalidPositionSize` if the elapsed
     /// day-count is negative (future-dated open date) or cannot be
-    /// represented as a `Positive`.
+    /// represented as a `Positive`, and [`PositionError::Clock`] in a build with
+    /// neither the `clock` feature nor a reference datetime on this thread: see
+    /// [`Position::days_held_at`].
     pub fn days_held(&self) -> Result<Positive, PositionError> {
+        self.days_held_at(evaluation_time()?)
+    }
+
+    /// Calculates the whole days the position has been held at the instant `at`.
+    ///
+    /// The pure form of [`Position::days_held`]: it reads no clock.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping a
+    /// `PositionValidationErrorKind::InvalidPosition` if the elapsed day-count
+    /// is negative (`at` is before the open date) or cannot be represented as a
+    /// `Positive`.
+    pub fn days_held_at(&self, at: DateTime<Utc>) -> Result<Positive, PositionError> {
         // `signed_duration_since` is total: any two `DateTime<Utc>` are
         // within the `TimeDelta` range.
-        let days = Utc::now().signed_duration_since(self.date).num_days() as f64;
+        let days = at.signed_duration_since(self.date).num_days() as f64;
         Positive::new(days).map_err(|e| {
             PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
                 reason: format!("failed to calculate days held: {}", e),
@@ -565,18 +594,116 @@ impl Position {
     /// Returns [`PositionError`] wrapping the underlying
     /// [`expiration_date::error::ExpirationDateError`] when the expiration
     /// cannot be converted (e.g. a past datetime that would produce a
-    /// negative day count).
+    /// negative day count). In a build with neither the `clock` feature nor a
+    /// reference datetime on this thread a `DateTime` expiration returns
+    /// [`PositionError::Clock`]: see [`Position::days_to_expiration_at`]. A `Days`
+    /// needs no clock.
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
+            ExpirationDate::DateTime(_) => self.days_to_expiration_at(evaluation_time()?),
+        }
+    }
+
+    /// Calculates the whole days remaining until the option expires, at the
+    /// instant `at`.
+    ///
+    /// The pure form of [`Position::days_to_expiration`]: it reads no clock.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the day count cannot be represented as a
+    /// `Positive`.
+    pub fn days_to_expiration_at(&self, at: DateTime<Utc>) -> Result<Positive, PositionError> {
+        match self.option.expiration_date {
+            ExpirationDate::Days(days) => Ok(days),
             ExpirationDate::DateTime(datetime) => {
-                let days = datetime.signed_duration_since(Utc::now()).num_days() as f64;
+                let days = datetime.signed_duration_since(at).num_days() as f64;
                 Positive::new(days.max(0.0)).map_err(|e| {
                     PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
                         reason: format!("failed to calculate days to expiration: {}", e),
                     })
                 })
             }
+        }
+    }
+
+    /// The default position opened at `date`: no premium or fees, and the
+    /// default option.
+    ///
+    /// What [`Default`] gives with the `clock` feature, without reading a clock.
+    #[must_use]
+    pub fn blank_at(date: DateTime<Utc>) -> Self {
+        Position {
+            option: Options::default(),
+            premium: Positive::ZERO,
+            date,
+            open_fee: Positive::ZERO,
+            close_fee: Positive::ZERO,
+            epic: None,
+            extra_fields: None,
+        }
+    }
+
+    /// Records this position as a trade stamped with `at`, as
+    /// [`TradeAble::trade`] does at the current time.
+    ///
+    /// The pure form of it: it reads no clock, and a `Days` expiration counts
+    /// from `at`, ignoring the thread's reference datetime.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the fees or the per-contract
+    /// premium overflow, or when the expiration or `at` cannot be represented.
+    pub fn trade_at(&self, at: DateTime<Utc>) -> Result<Trade, TradeError> {
+        self.build_trade(self.option.expiration_date.get_date_at(at).ok(), at)
+    }
+
+    /// Assembles the trade, `expiry` being `None` if it could not be resolved.
+    fn build_trade(
+        &self,
+        expiry: Option<DateTime<Utc>>,
+        at: DateTime<Utc>,
+    ) -> Result<Trade, TradeError> {
+        let fee = self
+            .open_fee
+            .checked_add(&self.close_fee)
+            .map_err(|error| {
+                TradeError::invalid_trade(&format!(
+                    "open and close fees overflow the Positive range: {error}"
+                ))
+            })?;
+        // The trade records the per-unit premium and its own contract size, so
+        // it stays self-contained once the position is gone; `Trade::fee` is
+        // per contract already. The per-contract premium the trade derives
+        // must be representable.
+        self.premium_per_contract().map_err(|error| {
+            TradeError::invalid_trade(&format!(
+                "premium times contract size overflows the Positive range: {error}"
+            ))
+        })?;
+        if let (Some(expiry), Some(timestamp)) = (expiry, at.timestamp_nanos_opt()) {
+            Ok(Trade {
+                id: uuid::Uuid::new_v4(),
+                action: Action::Buy,
+                side: self.option.side,
+                option_style: self.option.option_style,
+                fee,
+                symbol: None,
+                strike: self.option.strike_price,
+                expiry,
+                timestamp,
+                quantity: self.option.quantity,
+                premium: self.premium,
+                contract_size: self.option.contract_size,
+                underlying_price: self.option.underlying_price,
+                notes: None,
+                status: TradeStatus::Other("Not yet initialized".to_string()),
+            })
+        } else {
+            Err(TradeError::invalid_trade(
+                "Could not create trade from position",
+            ))
         }
     }
 
@@ -792,6 +919,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "clock")] {
     /// use optionstratlib_core::model::{Position, Options};
     /// use optionstratlib_core::model::{Side, OptionStyle};
     /// use positive::pos_or_panic;
@@ -811,6 +939,7 @@ impl Position {
     /// );
     ///
     /// assert!(position.validate());
+    /// # }
     /// ```
     pub fn validate(&self) -> bool {
         if self.option.side == Side::Short && self.premium == Positive::ZERO {
@@ -825,65 +954,22 @@ impl Position {
     }
 }
 
+#[cfg(feature = "clock")]
 impl Default for Position {
     fn default() -> Self {
-        Position {
-            option: Options::default(),
-            premium: Positive::ZERO,
-            date: Utc::now(),
-            open_fee: Positive::ZERO,
-            close_fee: Positive::ZERO,
-            epic: None,
-            extra_fields: None,
-        }
+        Self::blank_at(wall_clock())
     }
 }
 
 impl TradeAble for Position {
     fn trade(&self) -> Result<Trade, TradeError> {
-        let fee = self
-            .open_fee
-            .checked_add(&self.close_fee)
-            .map_err(|error| {
-                TradeError::invalid_trade(&format!(
-                    "open and close fees overflow the Positive range: {error}"
-                ))
-            })?;
-        // The trade records the per-unit premium and its own contract size, so
-        // it stays self-contained once the position is gone; `Trade::fee` is
-        // per contract already. The per-contract premium the trade derives
-        // must be representable.
-        self.premium_per_contract().map_err(|error| {
-            TradeError::invalid_trade(&format!(
-                "premium times contract size overflows the Positive range: {error}"
-            ))
-        })?;
-        if let (Ok(expiry), Some(timestamp)) = (
-            resolve_expiration_date(&self.option.expiration_date),
-            Utc::now().timestamp_nanos_opt(),
-        ) {
-            Ok(Trade {
-                id: uuid::Uuid::new_v4(),
-                action: Action::Buy,
-                side: self.option.side,
-                option_style: self.option.option_style,
-                fee,
-                symbol: None,
-                strike: self.option.strike_price,
-                expiry,
-                timestamp,
-                quantity: self.option.quantity,
-                premium: self.premium,
-                contract_size: self.option.contract_size,
-                underlying_price: self.option.underlying_price,
-                notes: None,
-                status: TradeStatus::Other("Not yet initialized".to_string()),
-            })
-        } else {
-            Err(TradeError::invalid_trade(
-                "Could not create trade from position",
-            ))
-        }
+        // The expiration resolves as `ExpirationDate::get_date` does, from the
+        // reference datetime when one is set; `trade_at` takes its base as an
+        // argument instead.
+        self.build_trade(
+            resolve_expiration_date(&self.option.expiration_date).ok(),
+            now()?,
+        )
     }
 
     fn trade_ref(&self) -> Result<&Trade, TradeError> {
@@ -952,16 +1038,24 @@ impl TradeStatusAble for Position {
 
 #[cfg(test)]
 mod tests_position {
+    #[cfg(feature = "clock")]
     use super::*;
 
+    #[cfg(feature = "clock")]
     use crate::constants::ZERO;
+    #[cfg(feature = "clock")]
     use crate::model::types::{OptionStyle, OptionType, Side};
 
+    #[cfg(feature = "clock")]
     use chrono::Duration;
+    #[cfg(feature = "clock")]
     use num_traits::ToPrimitive;
+    #[cfg(feature = "clock")]
     use positive::pos_or_panic;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn setup_option(
         side: Side,
         option_style: OptionStyle,
@@ -987,6 +1081,7 @@ mod tests_position {
         }
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost() {
         let option = setup_option(
@@ -1013,6 +1108,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_size() {
         let option = setup_option(
@@ -1039,6 +1135,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_short() {
         let option = setup_option(
@@ -1065,6 +1162,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_total_cost_short_size() {
         let option = setup_option(
@@ -1091,6 +1189,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_check_negative_premium() {
         let option = setup_option(
@@ -1117,6 +1216,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_call_itm() {
         let option = setup_option(
@@ -1143,6 +1243,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_call_itm_quantity() {
         let option = setup_option(
@@ -1169,6 +1270,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_call_itm() {
         let option = setup_option(
@@ -1195,6 +1297,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_call_itm_quantity() {
         let option = setup_option(
@@ -1221,6 +1324,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_put_itm() {
         let option = setup_option(
@@ -1247,6 +1351,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_long_put_itm_quantity() {
         let option = setup_option(
@@ -1273,6 +1378,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm() {
         let option = setup_option(
@@ -1299,6 +1405,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_quantity() {
         let option = setup_option(
@@ -1325,6 +1432,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_winning() {
         let option = setup_option(
@@ -1351,6 +1459,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_pnl_at_expiration_short_put_itm_quantity_winning() {
         let option = setup_option(
@@ -1377,6 +1486,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
@@ -1405,6 +1515,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_long_call_quantity() {
         let option = setup_option(
@@ -1435,6 +1546,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
@@ -1465,6 +1577,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_unrealized_pnl_short_call_bis() {
         let option = setup_option(
@@ -1495,6 +1608,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_days_held() {
         let option = setup_option(
@@ -1522,6 +1636,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_days_to_expiration() {
         let option = setup_option(
@@ -1548,6 +1663,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_long_position() {
         let option = setup_option(
@@ -1577,6 +1693,7 @@ mod tests_position {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_is_short_position() {
         let option = setup_option(
@@ -1607,7 +1724,7 @@ mod tests_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_valid_position {
     use super::*;
 
@@ -1733,7 +1850,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1755,7 +1872,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1777,7 +1894,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1799,7 +1916,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1821,7 +1938,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1843,7 +1960,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1865,7 +1982,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1887,7 +2004,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1909,7 +2026,7 @@ mod tests_position_break_even {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1967,7 +2084,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -1990,7 +2107,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2013,7 +2130,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2040,7 +2157,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2067,7 +2184,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2090,7 +2207,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2113,7 +2230,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2140,7 +2257,7 @@ mod tests_position_max_loss_profit {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2170,7 +2287,7 @@ mod tests_premium {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2214,7 +2331,7 @@ mod tests_premium {
         let position = Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ONE,
             Positive::ONE,
             None,
@@ -2224,7 +2341,7 @@ mod tests_premium {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_position_serde {
     use super::*;
 
@@ -2374,7 +2491,7 @@ mod tests_position_serde {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_position_tradeable_trait {
     use super::*;
 
@@ -2412,7 +2529,7 @@ mod tests_position_tradeable_trait {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_position_tradestatusable_trait {
     use super::*;
 
@@ -2492,7 +2609,7 @@ mod tests_position_tradestatusable_trait {
             Position::new(
                 create_sample_option_simplest(OptionStyle::Call, Side::Long),
                 premium,
-                Utc::now(),
+                chrono::DateTime::UNIX_EPOCH,
                 pos_or_panic!(0.01),
                 pos_or_panic!(0.01),
                 None,
@@ -2540,7 +2657,7 @@ mod tests_position_contract_size {
         Position::new(
             option,
             pos_or_panic!(5.0),
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             None,
@@ -2652,6 +2769,7 @@ mod tests_position_contract_size {
         assert_eq!(default.total_cost().ok(), Some(pos_or_panic!(12.0)));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_carries_contract_size() {
         let long = sized_call(Side::Long, Positive::HUNDRED);
@@ -2677,6 +2795,7 @@ mod tests_position_contract_size {
         assert_eq!(sold.cost().unwrap(), pos_or_panic!(1002.0));
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_matches_unit_lots() {
         // One trade of 2 contracts × 100 units derives the same totals as a
@@ -2692,6 +2811,7 @@ mod tests_position_contract_size {
         assert_eq!(sized.net().unwrap(), lots.net().unwrap());
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn test_position_contract_size_trade_serde_round_trip() {
         let Ok(trade) = sized_call(Side::Long, Positive::HUNDRED).trade() else {

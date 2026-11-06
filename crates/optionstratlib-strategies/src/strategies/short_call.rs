@@ -16,7 +16,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -31,6 +31,7 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::utils::time::now;
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_pricing::error::GreeksError;
@@ -136,7 +137,43 @@ impl ShortCall {
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = ShortCall::default();
+        Self::new_at(
+            underlying_symbol,
+            short_call_strike,
+            short_call_expiration,
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate,
+            dividend_yield,
+            premium_short_call,
+            open_fee_short_call,
+            close_fee_short_call,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with the leg opened at `date`.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments, dead_code)]
+    fn new_at(
+        underlying_symbol: String,
+        short_call_strike: Positive,
+        short_call_expiration: ExpirationDate,
+        implied_volatility: Positive,
+        quantity: Positive,
+        underlying_price: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        premium_short_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
+        let mut strategy = ShortCall::blank_at(date);
 
         let short_call_option = Options::new(
             OptionType::European,
@@ -155,7 +192,7 @@ impl ShortCall {
         let short_call = Position::new(
             short_call_option,
             premium_short_call,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -476,7 +513,7 @@ impl StrategyConstructor for ShortCall {
             Side::Short,
             "ShortCall",
         )?;
-        let mut strategy = ShortCall::default();
+        let mut strategy = ShortCall::blank_at(position.date);
         strategy.place_leg(position)?;
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -602,7 +639,7 @@ impl PnLCalculator for ShortCall {
 
 impl Strategable for ShortCall {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(ShortCall, test_short_call_implementations);
 
 #[cfg(test)]
@@ -615,7 +652,7 @@ mod tests_break_even {
     /// matches the same leg added to a `Default` one, break-evens included.
     #[test]
     fn test_short_call_new_matches_leg_added_to_default() {
-        let built = ShortCall::new(
+        let built = ShortCall::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -627,10 +664,11 @@ mod tests_break_even {
             pos_or_panic!(4.1),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(built.get_break_even_points().unwrap().len(), 1);
-        let mut added = ShortCall::default();
+        let mut added = ShortCall::blank_at(chrono::DateTime::UNIX_EPOCH);
         added.add_position(&built.short_call).unwrap();
         assert_eq!(
             serde_json::to_value(&added).unwrap(),

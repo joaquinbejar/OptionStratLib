@@ -30,7 +30,22 @@ include = [
 # crate it names and the facade paths over it; none replaces a type. The
 # default enables every capability that exists today, so the default surface
 # is the whole library.
-default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io", "schema"]
+default = ["clock", "pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io", "schema"]
+# The wall clock (`Utc::now`), through every component that reads it; the
+# visualization crate has no item of its own behind it, and only the features
+# of its own table reach that crate. Without it no
+# package in the build enables `chrono/clock`: `ExpirationDate::Days` still
+# prices, a `DateTime` needs the thread's reference datetime, and the `*_at`
+# constructors take the time as an argument (#944).
+clock = [
+    "optionstratlib-core/clock",
+    "optionstratlib-pricing?/clock",
+    "optionstratlib-simulation?/clock",
+    "optionstratlib-market?/clock",
+    "optionstratlib-analytics?/clock",
+    "optionstratlib-strategies?/clock",
+    "optionstratlib-backtest?/clock",
+]
 # `curves`, `surfaces`, `geometrics` and the math errors.
 math = ["dep:optionstratlib-math"]
 # `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
@@ -156,7 +171,7 @@ required-features = ["backtest"]
 name = "benches"
 path = "benches/mod.rs"
 harness = false
-required-features = ["backtest"]
+required-features = ["backtest", "clock"]
 
 [lib]
 name = "optionstratlib"
@@ -238,17 +253,19 @@ homepage = "https://github.com/joaquinbejar/OptionStratLib"
 
 [workspace.dependencies]
 # Inter-crate dependencies: path for the workspace, version for crates.io
-# (ADR-0001 D1, caret requirement on the lockstep version).
+# (ADR-0001 D1, caret requirement on the lockstep version). The components
+# name each other without default features, so `clock` reaches a crate only
+# through an explicit forward (#944).
 optionstratlib = { path = ".", version = "0.23.0" }
-optionstratlib-core = { path = "crates/optionstratlib-core", version = "0.23.0" }
-optionstratlib-math = { path = "crates/optionstratlib-math", version = "0.23.0" }
-optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.23.0" }
-optionstratlib-simulation = { path = "crates/optionstratlib-simulation", version = "0.23.0" }
-optionstratlib-market = { path = "crates/optionstratlib-market", version = "0.23.0" }
-optionstratlib-analytics = { path = "crates/optionstratlib-analytics", version = "0.23.0" }
-optionstratlib-strategies = { path = "crates/optionstratlib-strategies", version = "0.23.0" }
-optionstratlib-backtest = { path = "crates/optionstratlib-backtest", version = "0.23.0" }
-optionstratlib-visualization = { path = "crates/optionstratlib-visualization", version = "0.23.0" }
+optionstratlib-core = { path = "crates/optionstratlib-core", version = "0.23.0", default-features = false }
+optionstratlib-math = { path = "crates/optionstratlib-math", version = "0.23.0", default-features = false }
+optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.23.0", default-features = false }
+optionstratlib-simulation = { path = "crates/optionstratlib-simulation", version = "0.23.0", default-features = false }
+optionstratlib-market = { path = "crates/optionstratlib-market", version = "0.23.0", default-features = false }
+optionstratlib-analytics = { path = "crates/optionstratlib-analytics", version = "0.23.0", default-features = false }
+optionstratlib-strategies = { path = "crates/optionstratlib-strategies", version = "0.23.0", default-features = false }
+optionstratlib-backtest = { path = "crates/optionstratlib-backtest", version = "0.23.0", default-features = false }
+optionstratlib-visualization = { path = "crates/optionstratlib-visualization", version = "0.23.0", default-features = false }
 tracing = "0.1"
 rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
@@ -272,7 +289,9 @@ plotters = { version = "0.3.7", default-features = false, features = [
 plotters-backend = "0.3.7"
 skrifa = { version = "0.48", default-features = false, features = ["std"] }
 ab_glyph_rasterizer = "0.1.10"
-chrono = { version = "0.4", features = ["serde"] }
+# No `clock` here: `optionstratlib-core/clock` turns it on, so a build without
+# that feature cannot name `Utc::now` (#944).
+chrono = { version = "0.4", default-features = false, features = ["serde", "std"] }
 rand = { version = "0.10" }
 statrs = "0.19"
 tracing-subscriber = { version = "0.3"}
@@ -293,9 +312,9 @@ prettytable-rs = { version = "0.10", default-features = false }
 utoipa = { version = "6.0", features = ["chrono", "decimal"] }
 thiserror = "2.0"
 positive = { version = "0.8" }
-expiration_date = { version = "0.5" }
+expiration_date = { version = "0.6", default-features = false }
 financial_types = { version = "0.3" }
-option_type = { version = "0.5" }
+option_type = { version = "0.6", default-features = false }
 tokio = { version = "1.53", features = ["full"] }
 proptest = "1.11"
 mockall = "0.15"

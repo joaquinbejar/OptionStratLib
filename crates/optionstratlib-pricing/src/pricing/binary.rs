@@ -37,6 +37,7 @@ use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{BinaryType, OptionStyle, OptionType};
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -95,9 +96,7 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
@@ -169,9 +168,7 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let t = option
-        .expiration_date
-        .get_years()
+    let t = years_to_expiration(&option.expiration_date)
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
@@ -421,7 +418,7 @@ mod tests {
         let put_price = binary_black_scholes(&put).unwrap();
 
         // Call + Put = Q * e^(-rT)
-        let t = call.expiration_date.get_years().unwrap();
+        let t = years_to_expiration(&call.expiration_date).unwrap();
         let r = call.risk_free_rate;
         let discounted_payout = DEFAULT_CASH_PAYOUT * (-r * t).exp();
 
@@ -463,7 +460,7 @@ mod tests {
         option.underlying_price = pos_or_panic!(150.0); // Deep ITM
         let price = binary_black_scholes(&option).unwrap();
         // Deep ITM should be close to discounted payout
-        let t = option.expiration_date.get_years().unwrap();
+        let t = years_to_expiration(&option.expiration_date).unwrap();
         let r = option.risk_free_rate;
         let discounted = DEFAULT_CASH_PAYOUT * (-r * t).exp();
         assert!(

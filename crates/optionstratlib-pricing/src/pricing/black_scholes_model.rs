@@ -11,6 +11,8 @@ use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+#[cfg(test)]
+use optionstratlib_core::utils::time::years_to_expiration;
 use rust_decimal::Decimal;
 use tracing::{instrument, trace};
 
@@ -588,7 +590,7 @@ mod tests_black_scholes {
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
         assert_pos_relative_eq!(
-            option.expiration_date.get_years().unwrap(),
+            years_to_expiration(&option.expiration_date).unwrap(),
             Positive::ONE,
             pos_or_panic!(0.00001)
         );
@@ -596,7 +598,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years().unwrap(),
+            years_to_expiration(&option.expiration_date).unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -605,7 +607,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years().unwrap(),
+            years_to_expiration(&option.expiration_date).unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -1274,8 +1276,9 @@ mod tests_black_scholes_bis {
         let call_price = black_scholes(&call).unwrap();
         let put_price = black_scholes(&put).unwrap();
 
-        let risk_free_discount =
-            (-call.risk_free_rate * call.expiration_date.get_years().unwrap().to_dec()).exp();
+        let risk_free_discount = (-call.risk_free_rate
+            * years_to_expiration(&call.expiration_date).unwrap().to_dec())
+        .exp();
 
         // Put-Call Parity formula: C - P = S - K * e^(-rT)
         let left_side = call_price - put_price;

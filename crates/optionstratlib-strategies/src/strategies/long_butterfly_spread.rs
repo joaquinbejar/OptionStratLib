@@ -15,7 +15,7 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -33,6 +33,7 @@ use optionstratlib_core::model::{
 };
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::time::{now, now_or};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -161,14 +162,70 @@ impl LongButterflySpread {
         open_fee_long_call_high: Positive,
         close_fee_long_call_high: Positive,
     ) -> Result<Self, StrategyError> {
+        Self::new_at(
+            underlying_symbol,
+            underlying_price,
+            low_strike,
+            middle_strike,
+            high_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_low,
+            premium_middle,
+            premium_high,
+            open_fee_short_call,
+            close_fee_short_call,
+            open_fee_long_call_low,
+            close_fee_long_call_low,
+            open_fee_long_call_high,
+            close_fee_long_call_high,
+            now()?,
+        )
+    }
+
+    /// Builds the strategy as [`Self::new`] does, with every leg opened at `date`.
+    ///
+    /// Reads no clock, so the same arguments build the same strategy in every
+    /// build, with or without the `clock` feature.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::new`], except that it cannot fail for a missing clock.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
+    pub fn new_at(
+        underlying_symbol: String,
+        underlying_price: Positive,
+        low_strike: Positive,
+        middle_strike: Positive,
+        high_strike: Positive,
+        expiration: ExpirationDate,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
+        quantity: Positive,
+        premium_low: Positive,
+        premium_middle: Positive,
+        premium_high: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_long_call_low: Positive,
+        close_fee_long_call_low: Positive,
+        open_fee_long_call_high: Positive,
+        close_fee_long_call_high: Positive,
+        date: DateTime<Utc>,
+    ) -> Result<Self, StrategyError> {
         let mut strategy = LongButterflySpread {
             name: "Long Butterfly".to_string(),
             kind: StrategyType::LongButterflySpread,
             description: LONG_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
-            long_call_low: Position::default(),
-            short_call: Position::default(),
-            long_call_high: Position::default(),
+            long_call_low: Position::blank_at(date),
+            short_call: Position::blank_at(date),
+            long_call_high: Position::blank_at(date),
         };
 
         // Create two short calls at middle strike
@@ -189,7 +246,7 @@ impl LongButterflySpread {
         strategy.short_call = Position::new(
             long_calls,
             premium_middle,
-            Utc::now(),
+            date,
             open_fee_short_call,
             close_fee_short_call,
             None,
@@ -214,7 +271,7 @@ impl LongButterflySpread {
         strategy.long_call_low = Position::new(
             long_call_low,
             premium_low,
-            Utc::now(),
+            date,
             open_fee_long_call_low,
             close_fee_long_call_low,
             None,
@@ -239,7 +296,7 @@ impl LongButterflySpread {
         strategy.long_call_high = Position::new(
             long_call_high,
             premium_high,
-            Utc::now(),
+            date,
             open_fee_long_call_high,
             close_fee_long_call_high,
             None,
@@ -356,7 +413,7 @@ impl StrategyConstructor for LongButterflySpread {
             short_call: Position::new(
                 middle_strike_position.option.clone(),
                 middle_strike_position.premium,
-                Utc::now(),
+                now_or(middle_strike_position.date),
                 middle_strike_position.open_fee,
                 middle_strike_position.close_fee,
                 middle_strike_position.epic.clone(),
@@ -365,7 +422,7 @@ impl StrategyConstructor for LongButterflySpread {
             long_call_low: Position::new(
                 lower_strike_position.option.clone(),
                 lower_strike_position.premium,
-                Utc::now(),
+                now_or(lower_strike_position.date),
                 lower_strike_position.open_fee,
                 lower_strike_position.close_fee,
                 lower_strike_position.epic.clone(),
@@ -374,7 +431,7 @@ impl StrategyConstructor for LongButterflySpread {
             long_call_high: Position::new(
                 higher_strike_position.option.clone(),
                 higher_strike_position.premium,
-                Utc::now(),
+                now_or(higher_strike_position.date),
                 higher_strike_position.open_fee,
                 higher_strike_position.close_fee,
                 higher_strike_position.epic.clone(),
@@ -1072,7 +1129,7 @@ impl Optimizable for LongButterflySpread {
                     )
                 })?;
 
-                let mut strategy = LongButterflySpread::new(
+                let mut strategy = LongButterflySpread::new_at(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     low_strike.strike_price,
@@ -1092,6 +1149,7 @@ impl Optimizable for LongButterflySpread {
                     self.long_call_low.close_fee,
                     self.long_call_high.open_fee,
                     self.long_call_high.close_fee,
+                    now_or(self.long_call_low.date),
                 )?;
                 // The rebuilt legs keep the contract size of the strategy they
                 // are rebuilt from.
@@ -1314,7 +1372,7 @@ impl PnLCalculator for LongButterflySpread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 crate::strategies::macros::test_strategy_traits!(
     LongButterflySpread,
     test_short_call_implementations
@@ -1329,7 +1387,7 @@ mod tests_long_butterfly_spread {
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(90.0),                       // low_strike
@@ -1349,6 +1407,7 @@ mod tests_long_butterfly_spread {
             pos_or_panic!(0.05),                       // close_fee_long_call_low
             pos_or_panic!(0.05),                       // open_fee_long_call_high
             pos_or_panic!(0.05),                       // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1432,7 +1491,7 @@ mod tests_long_butterfly_spread {
 
     #[test]
     fn test_butterfly_fees_distribution() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1452,6 +1511,7 @@ mod tests_long_butterfly_spread {
             pos_or_panic!(0.05), // close_fee_long_call_low
             Positive::ONE,       // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1474,7 +1534,7 @@ mod tests_long_butterfly_spread {
 
     #[test]
     fn test_butterfly_with_different_quantities() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1494,6 +1554,7 @@ mod tests_long_butterfly_spread {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1530,7 +1591,7 @@ mod tests_long_butterfly_spread {
 
     #[test]
     fn test_butterfly_with_invalid_premiums() {
-        let check_profit = LongButterflySpread::new(
+        let check_profit = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1550,6 +1611,7 @@ mod tests_long_butterfly_spread {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(1.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert!(check_profit.get_max_profit().is_err());
@@ -1579,7 +1641,7 @@ mod tests_long_butterfly_validation {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -1589,7 +1651,7 @@ mod tests_long_butterfly_validation {
 
     #[test]
     fn test_valid_long_butterfly() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1609,6 +1671,7 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert!(butterfly.validate());
@@ -1616,7 +1679,7 @@ mod tests_long_butterfly_validation {
 
     #[test]
     fn test_invalid_long_call_low() {
-        let mut butterfly = LongButterflySpread::new(
+        let mut butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1636,6 +1699,7 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         butterfly.long_call_low =
@@ -1645,7 +1709,7 @@ mod tests_long_butterfly_validation {
 
     #[test]
     fn test_invalid_strike_order_low() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             Positive::HUNDRED,
@@ -1665,6 +1729,7 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         );
         // `new` rejects the legs since #696 instead of returning them unvalidated.
         assert!(matches!(
@@ -1678,7 +1743,7 @@ mod tests_long_butterfly_validation {
 
     #[test]
     fn test_invalid_quantities() {
-        let mut butterfly = LongButterflySpread::new(
+        let mut butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1698,6 +1763,7 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         butterfly.short_call = create_valid_position(Side::Short, Positive::HUNDRED, Positive::ONE);
@@ -1706,7 +1772,7 @@ mod tests_long_butterfly_validation {
 
     #[test]
     fn test_unequal_wing_quantities() {
-        let mut butterfly = LongButterflySpread::new(
+        let mut butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -1726,6 +1792,7 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         butterfly.long_call_high =
@@ -1748,7 +1815,7 @@ mod tests_long_butterfly_profit {
     use std::str::FromStr;
 
     fn create_test() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(90.0),  // low_strike
@@ -1768,6 +1835,7 @@ mod tests_long_butterfly_profit {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -1825,7 +1893,7 @@ mod tests_long_butterfly_profit {
 
     #[test]
     fn test_profit_with_different_quantities() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(90.0),  // low_strike
@@ -1845,6 +1913,7 @@ mod tests_long_butterfly_profit {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -1859,20 +1928,30 @@ mod tests_long_butterfly_profit {
 
 #[cfg(test)]
 mod tests_long_butterfly_delta {
+    #[cfg(feature = "clock")]
     use super::*;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
 
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5710.0), // long_strike_itm
@@ -1892,10 +1971,12 @@ mod tests_long_butterfly_delta {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(0.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5881.88));
@@ -1970,6 +2051,7 @@ mod tests_long_butterfly_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5710.81));
@@ -2018,6 +2100,7 @@ mod tests_long_butterfly_delta {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5420.0));
@@ -2035,21 +2118,33 @@ mod tests_long_butterfly_delta {
 
 #[cfg(test)]
 mod tests_long_butterfly_delta_size {
+    #[cfg(feature = "clock")]
     use super::*;
 
+    #[cfg(feature = "clock")]
     use crate::strategies::delta_neutral::DeltaNeutrality;
+    #[cfg(feature = "clock")]
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
+    #[cfg(feature = "clock")]
     use optionstratlib_analytics::pnl::DeltaAdjustment;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::assert_pos_relative_eq;
+    #[cfg(feature = "clock")]
     use optionstratlib_core::model::types::OptionStyle;
+    #[cfg(feature = "clock")]
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+    #[cfg(feature = "clock")]
     use rust_decimal::Decimal;
+    #[cfg(feature = "clock")]
     use rust_decimal_macros::dec;
+    #[cfg(feature = "clock")]
     use std::str::FromStr;
 
+    #[cfg(feature = "clock")]
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5710.0), // long_strike_itm
@@ -2069,10 +2164,12 @@ mod tests_long_butterfly_delta_size {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(0.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5881.85));
@@ -2147,6 +2244,7 @@ mod tests_long_butterfly_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5710.88));
@@ -2196,6 +2294,7 @@ mod tests_long_butterfly_delta_size {
         );
     }
 
+    #[cfg(feature = "clock")]
     #[test]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos_or_panic!(5410.0));
@@ -2222,7 +2321,7 @@ mod tests_long_butterfly_position_management {
     use tracing::error;
 
     fn create_test_butterfly() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5795.88), // underlying_price
             pos_or_panic!(5710.0),  // long_strike_itm
@@ -2242,6 +2341,7 @@ mod tests_long_butterfly_position_management {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(0.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2402,7 +2502,7 @@ mod tests_adjust_option_position_long {
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "SP500".to_string(),
             pos_or_panic!(5795.88), // underlying_price
             pos_or_panic!(5710.0),  // long_strike_itm
@@ -2422,6 +2522,7 @@ mod tests_adjust_option_position_long {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(0.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -2516,7 +2617,7 @@ mod tests_adjust_option_position_long {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_spread_constructor {
     use super::*;
 
@@ -2814,7 +2915,7 @@ mod tests_long_butterfly_spread_constructor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "clock"))]
 mod tests_long_butterfly_spread_pnl {
     use super::*;
 
@@ -3081,7 +3182,7 @@ mod tests_butterfly_strategies {
     use rust_decimal_macros::dec;
 
     fn create_test_long() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,    // underlying_price
             pos_or_panic!(90.0),  // low_strike
@@ -3101,6 +3202,7 @@ mod tests_butterfly_strategies {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3124,7 +3226,7 @@ mod tests_butterfly_strategies {
                 None,
             ),
             Positive::ONE,
-            Utc::now(),
+            chrono::DateTime::UNIX_EPOCH,
             Positive::ZERO,
             Positive::ZERO,
             None,
@@ -3175,7 +3277,7 @@ mod tests_butterfly_strategies {
 
     #[test]
     fn test_fees() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -3195,6 +3297,7 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_long_call_low
             Positive::ONE, // open_fee_long_call_high
             Positive::ONE, // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
         assert_eq!(butterfly.get_fees().unwrap().to_f64(), 8.0);
@@ -3202,7 +3305,7 @@ mod tests_butterfly_strategies {
 
     #[test]
     fn test_fees_bis() {
-        let butterfly = LongButterflySpread::new(
+        let butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -3222,6 +3325,7 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_long_call_low
             Positive::ONE, // open_fee_long_call_high
             Positive::ONE, // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -3249,7 +3353,7 @@ mod tests_butterfly_strategies {
 
     #[test]
     fn test_profits_with_quantities() {
-        let long_butterfly = LongButterflySpread::new(
+        let long_butterfly = LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -3269,6 +3373,7 @@ mod tests_butterfly_strategies {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
@@ -3318,7 +3423,7 @@ mod tests_butterfly_optimizable {
     }
 
     fn create_test_long() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -3338,6 +3443,7 @@ mod tests_butterfly_optimizable {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3427,7 +3533,7 @@ mod tests_butterfly_probability {
     }
 
     fn create_test_long() -> LongButterflySpread {
-        LongButterflySpread::new(
+        LongButterflySpread::new_at(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(90.0),
@@ -3447,6 +3553,7 @@ mod tests_butterfly_probability {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap()
     }
@@ -3545,7 +3652,7 @@ mod tests_butterfly_probability {
         // Recreate the exact user case
         let underlying_price = pos_or_panic!(23750.0);
 
-        let strategy = LongButterflySpread::new(
+        let strategy = LongButterflySpread::new_at(
             "DAX".to_string(),
             underlying_price,       // underlying_price
             pos_or_panic!(23600.0), // long_strike_itm
@@ -3565,6 +3672,7 @@ mod tests_butterfly_probability {
             pos_or_panic!(0.05),  // close_fee_long_call_low
             pos_or_panic!(0.05),  // open_fee_long_call_high
             pos_or_panic!(0.05),  // close_fee_long_call_high
+            chrono::DateTime::UNIX_EPOCH,
         )
         .unwrap();
 
