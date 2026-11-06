@@ -17,6 +17,7 @@ use {
     crate::visualization::{make_scatter, make_surface, pick_color},
     plotly::layout::Axis,
     plotly::{Layout, Plot, common},
+    std::sync::atomic::{AtomicU64, Ordering},
 };
 
 #[cfg(feature = "static_export")]
@@ -292,20 +293,44 @@ pub trait Graph {
 #[cfg(feature = "plotly")]
 #[inline(never)]
 fn show_in_browser(plot: &Plot) -> Result<(), GraphError> {
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    // Process id and a per-process sequence number keep two pages shown at once
-    // from overwriting each other; the sequence only names files, so it is free
-    // to wrap. The name reads no clock: a later run with the same process id
-    // reuses a page nothing is showing any more.
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-    let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!(
-        "plotly_optionstratlib_{}_{sequence}.html",
-        std::process::id()
-    ));
-    std::fs::write(&path, plot.to_html())?;
+    let path = write_new_page(&std::env::temp_dir(), &plot.to_html(), &SEQUENCE)?;
     open_in_default_app(&path)
+}
+
+/// Writes `html` to a file that did not exist, in `directory`, and returns its path.
+///
+/// The name is the process id and the next `sequence`, so two pages shown at once do not
+/// overwrite each other, and it reads no clock. It is predictable, and the directory may
+/// be shared, so the file is only ever created new: an existing file, or a symlink planted
+/// to redirect the write, is left alone and the next number tried.
+#[cfg(feature = "plotly")]
+fn write_new_page(
+    directory: &std::path::Path,
+    html: &str,
+    sequence: &AtomicU64,
+) -> std::io::Result<std::path::PathBuf> {
+    use std::io::Write;
+
+    loop {
+        let number = sequence.fetch_add(1, Ordering::Relaxed);
+        let path = directory.join(format!(
+            "plotly_optionstratlib_{}_{number}.html",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(mut file) => {
+                file.write_all(html.as_bytes())?;
+                return Ok(path);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(error),
+        }
+    }
 }
 
 /// Opens `path` with the platform's default application, the way `plotly`
@@ -339,6 +364,54 @@ fn static_export_disabled() -> GraphError {
         "png and svg export need the `static_export` feature of optionstratlib-visualization"
             .to_string(),
     )
+}
+
+#[cfg(all(test, feature = "plotly"))]
+mod tests_write_new_page {
+    use super::*;
+
+    #[test]
+    fn test_write_new_page_skips_what_exists_and_leaves_it_alone() {
+        let directory = tempfile::tempdir().unwrap();
+        let taken = directory.path().join(format!(
+            "plotly_optionstratlib_{}_0.html",
+            std::process::id()
+        ));
+        std::fs::write(&taken, "theirs").unwrap();
+        let sequence = AtomicU64::new(0);
+        let path = write_new_page(directory.path(), "ours", &sequence).unwrap();
+        assert_ne!(path, taken);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "ours");
+        assert_eq!(std::fs::read_to_string(&taken).unwrap(), "theirs");
+    }
+
+    /// A symlink planted at the next name must not redirect the write.
+    #[cfg(unix)]
+    #[test]
+    fn test_write_new_page_does_not_follow_a_planted_symlink() {
+        let directory = tempfile::tempdir().unwrap();
+        let target = directory.path().join("target.txt");
+        std::fs::write(&target, "theirs").unwrap();
+        let planted = directory.path().join(format!(
+            "plotly_optionstratlib_{}_0.html",
+            std::process::id()
+        ));
+        std::os::unix::fs::symlink(&target, &planted).unwrap();
+        let sequence = AtomicU64::new(0);
+        let path = write_new_page(directory.path(), "ours", &sequence).unwrap();
+        assert_ne!(path, planted);
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "theirs");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "ours");
+    }
+
+    #[test]
+    fn test_write_new_page_gives_each_page_its_own_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let sequence = AtomicU64::new(0);
+        let first = write_new_page(directory.path(), "a", &sequence).unwrap();
+        let second = write_new_page(directory.path(), "b", &sequence).unwrap();
+        assert_ne!(first, second);
+    }
 }
 
 #[cfg(test)]
