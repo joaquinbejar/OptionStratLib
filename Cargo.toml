@@ -20,6 +20,7 @@ include = [
     "/docs/*.md",
     "/docs/release/0.22/RELEASE-NOTES.md",
     "/docs/release/0.23/RELEASE-NOTES.md",
+    "/docs/release/0.24/RELEASE-NOTES.md",
     "/Cargo.toml",
     "/README.md",
     "/LICENSE",

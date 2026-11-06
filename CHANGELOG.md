@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-06
+
 ### Added
 
 - **A build without the wall clock** (#944), for simulators, replay engines and
@@ -6529,7 +6531,8 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.1...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.1...v0.24.0
 [0.23.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.1...v0.22.2

@@ -291,7 +291,7 @@ test-direct-component-examples:
 	done
 
 # Builds and runs every manifest example of the release notes being prepared
-# (`docs/release/0.23/RELEASE-NOTES.md`, #562, #938) as
+# (`docs/release/0.24/RELEASE-NOTES.md`, #562, #938) as
 # a standalone crate with exactly the `[dependencies]` shown, patched to this
 # checkout; the facade's doctests compile the same programs with every feature.
 # The self-test first proves that a facade-only manifest using the prelude's
@@ -510,7 +510,7 @@ check-api-report:
 # script) are informational and are classified in the release's
 # api-classification.md.
 .PHONY: release-gates release-gates-render
-RELEASE ?= 0.23.0
+RELEASE ?= 0.24.0
 RELEASE_GATES_ARGS = --release $(RELEASE) $(if $(CRATES),--crates $(CRATES))
 
 release-gates:

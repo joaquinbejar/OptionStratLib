@@ -1582,7 +1582,9 @@ checks and settlement obligations. A build that sets
 `default-features = false` must add the `clock` feature to keep reading the time.
 The [0.24 migration
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.24.md)
-lists what to change.
+lists what to change, and the [0.24 release
+notes](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.24/RELEASE-NOTES.md)
+summarise the release.
 
 ## Upgrading from 0.22
 
