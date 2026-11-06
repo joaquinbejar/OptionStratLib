@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.24.0: Financial Options Library
+## OptionStratLib v0.24.1: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -456,7 +456,7 @@ layer, enable only its facade feature:
 ```toml
 [dependencies]
 # pricing, greeks and volatility, without market data, I/O or charts
-optionstratlib = { version = "0.24.0", default-features = false, features = ["pricing"] }
+optionstratlib = { version = "0.24.1", default-features = false, features = ["pricing"] }
 rust_decimal = "1.43" # for `dec!`
 ```
 
@@ -465,7 +465,7 @@ or depend on the component itself:
 ```toml
 [dependencies]
 optionstratlib-core = "0.24.0"
-optionstratlib-pricing = "0.24.0"
+optionstratlib-pricing = "0.24.1"
 ```
 
 ### Canonical paths
@@ -993,7 +993,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.24.0"
+optionstratlib = "0.24.1"
 rust_decimal = "1.43"
 ```
 
@@ -1013,7 +1013,7 @@ The library includes optional features for enhanced functionality:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.24.0", features = ["plotly"] }
+optionstratlib = { version = "0.24.1", features = ["plotly"] }
 rust_decimal = "1.43"
 ```
 
@@ -1103,7 +1103,7 @@ capability, of each capability alone and of the default.
 feature flag: `pricing`, `market`, `analytics`, `strategies`,
 `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`,
 plus `clock`, which those capabilities always had before it was a feature, so a
-plain `optionstratlib = "0.24.0"` keeps the whole library and resolves no
+plain `optionstratlib = "0.24.1"` keeps the whole library and resolves no
 Plotly, image-export, async-runtime or HTTP package. The default is a
 compatibility contract since the 0.22 line, not a statement that a consumer
 needs all of it: opt out with `default-features = false` and name only the

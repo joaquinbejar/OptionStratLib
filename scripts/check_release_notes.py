@@ -8,7 +8,7 @@ the repository, whose manifest carries that block exactly as shown plus a
 checkout, with the following `rust` block as `src/main.rs`, and runs it.
 The notes show the version they were written for; a patch applies only to
 a requirement the checkout's version satisfies, so the requirement of every
-`optionstratlib` crate is rewritten to this checkout's version, and after
+`optionstratlib` crate is rewritten to that crate's version in this checkout, and after
 each build the resolved graph must take every `optionstratlib` crate from
 the checkout, never from the registry (#927). A `toml` block not followed by a `rust` block,
 or a notes file without any, fails, so an example cannot silently lose its
@@ -64,13 +64,14 @@ DECLARES_RUST_DECIMAL = re.compile(r"^\s*rust_decimal\s*=", re.MULTILINE)
 # `optionstratlib = "0.22.0"` or `optionstratlib-core = { version = "0.22.0", ... }`:
 # the requirement of one of this repository's crates in a manifest example.
 OWN_REQUIREMENT = re.compile(
-    r'^(?P<head>optionstratlib(?:-[a-z]+)?\s*=\s*(?:\{[^}\n]*?\bversion\s*=\s*)?)"[^"]*"',
+    r'^(?P<head>(?P<name>optionstratlib(?:-[a-z]+)?)\s*=\s*(?:\{[^}\n]*?\bversion\s*=\s*)?)"[^"]*"',
     re.MULTILINE,
 )
 
 
-def checkout_version():
-    """The version of this checkout's facade, as cargo resolves it."""
+def checkout_versions():
+    """The version of each of this checkout's crates, as cargo resolves it: a patch release
+    leaves them on different patches (docs/versioning-policy.md)."""
     metadata = json.loads(
         subprocess.run(
             ["cargo", "metadata", "--no-deps", "--format-version", "1", "--manifest-path", str(ROOT / "Cargo.toml")],
@@ -79,15 +80,21 @@ def checkout_version():
             text=True,
         ).stdout
     )
-    for package in metadata["packages"]:
-        if package["name"] == "optionstratlib":
-            return package["version"]
-    raise SystemExit("cargo metadata lists no optionstratlib package")
+    versions = {
+        package["name"]: package["version"]
+        for package in metadata["packages"]
+        if package["name"] == "optionstratlib" or package["name"].startswith("optionstratlib-")
+    }
+    if "optionstratlib" not in versions:
+        raise SystemExit("cargo metadata lists no optionstratlib package")
+    return versions
 
 
-def local_requirements(dependencies, version):
-    """`dependencies` with every requirement on this repository's crates set to `version`."""
-    return with_clock(OWN_REQUIREMENT.sub(lambda match: f'{match.group("head")}"{version}"', dependencies))
+def local_requirements(dependencies, versions):
+    """`dependencies` with every requirement on this repository's crates set to that crate's version."""
+    return with_clock(
+        OWN_REQUIREMENT.sub(lambda match: f'{match.group("head")}"{versions[match.group("name")]}"', dependencies)
+    )
 
 
 def with_clock(dependencies):
@@ -224,13 +231,13 @@ def check(notes):
                 "`rust_decimal` dependency, which `dec!` expands to (#777)"
             )
     environment = cargo_environment()
-    version = checkout_version()
+    versions = checkout_versions()
     with tempfile.TemporaryDirectory(prefix="osl-release-notes-") as work:
         for number, (line, dependencies, program) in enumerate(pairs, start=1):
             manifest = write_crate(
                 work,
                 f"osl-release-notes-{number}",
-                local_requirements(dependency_lines(dependencies.rstrip("\n")), version),
+                local_requirements(dependency_lines(dependencies.rstrip("\n")), versions),
                 program,
             )
             print(f"=== example {number} (line {line})", flush=True)
@@ -245,17 +252,17 @@ def check(notes):
 
 def self_test():
     """Proves the requirement rewrite and the `dec!` rule against the compiler (#777)."""
-    version = checkout_version()
+    versions = checkout_versions()
     rewritten = local_requirements(
         'optionstratlib = "0.22.0"\n'
         'optionstratlib-core = { version = "0.22.1", default-features = false }\n'
         'rust_decimal = "1.43"\n'
         'optionstratlib_other = "0.1"\n',
-        version,
+        versions,
     )
     expected = (
-        f'optionstratlib = "{version}"\n'
-        f'optionstratlib-core = {{ version = "{version}", default-features = false }}\n'
+        f'optionstratlib = "{versions["optionstratlib"]}"\n'
+        f'optionstratlib-core = {{ version = "{versions["optionstratlib-core"]}", default-features = false }}\n'
         'rust_decimal = "1.43"\n'
         'optionstratlib_other = "0.1"\n'
     )
@@ -265,7 +272,7 @@ def self_test():
         raise SystemExit("self-test: a narrowed requirement must gain `clock`")
     if rewritten != expected:
         raise SystemExit(f"self-test: the requirement rewrite gave {rewritten!r}")
-    without = local_requirements(SELF_TEST_FACADE, version)
+    without = local_requirements(SELF_TEST_FACADE, versions)
     with_rust_decimal = without + SELF_TEST_RUST_DECIMAL
     if not missing_rust_decimal(without, SELF_TEST_PROGRAM):
         raise SystemExit("self-test: the rule accepted `dec!` without `rust_decimal`")
@@ -298,7 +305,7 @@ def self_test():
         # Without the rewrite the patch does not apply and the published
         # facade is resolved: the guard must see it.
         stale = write_crate(work, "osl-stale-requirement", SELF_TEST_FACADE, SELF_TEST_PROGRAM)
-        if version != "0.22.0" and not registry_crates(stale):
+        if versions["optionstratlib"] != "0.22.0" and not registry_crates(stale):
             raise SystemExit("self-test: a requirement the checkout does not satisfy was not reported")
     print(
         "OK: self-test: requirements are rewritten to the checkout and resolve to it, "

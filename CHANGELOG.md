@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-11-06
+
+Only `optionstratlib-pricing` and `optionstratlib` are released at 0.24.1; the other eight
+crates stay at 0.24.0 (`docs/versioning-policy.md`). The facade requires
+`optionstratlib-pricing` `^0.24.1`. A direct consumer of the pricing crate picks it up with
+`cargo update -p optionstratlib-pricing`.
+
 ### Added
 
 - **The derivatives of total variance at a point of a calibrated surface** (#964).
@@ -6555,7 +6562,8 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.1...v0.24.0
 [0.23.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.2...v0.23.0
