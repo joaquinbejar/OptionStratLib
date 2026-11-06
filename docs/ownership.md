@@ -48,7 +48,7 @@ the tables with the code; the check names the row that drifted.
 | Geometry: construction, interpolation, intersection | `optionstratlib_math::geometrics` | `optionstratlib::geometrics` | `ConstructionParams` | math | public |
 | Pricing models (Black-Scholes, binomial, Monte Carlo, telegraph, exotics) | `optionstratlib_pricing::pricing` | `optionstratlib::pricing` | `BinomialPricingParams` | pricing | public |
 | Greeks | `optionstratlib_pricing::greeks` | `optionstratlib::greeks` | `GreeksSnapshot` | pricing | public |
-| Volatility: implied-volatility solvers, estimators, smiles, SVI slices, static arbitrage checks on a grid | `optionstratlib_pricing::volatility` | `optionstratlib::volatility` | `VolatilitySmile` | pricing | public |
+| Volatility: implied-volatility solvers, estimators, smiles, SVI slices, static arbitrage checks on a grid, surfaces calibrated from quotes | `optionstratlib_pricing::volatility` | `optionstratlib::volatility` | `VolatilitySmile` | pricing | public |
 | Simulation: random walks, stochastic processes, simulators, exit policies | `optionstratlib_simulation::simulation` | `optionstratlib::simulation` | `ExitPolicy` | simulation | public |
 | Market data: option chains | `optionstratlib_market::chains` | `optionstratlib::chains` | `OptionChain` | market | public |
 | Market data: option series | `optionstratlib_market::series` | `optionstratlib::series` | `OptionSeries` | market | public |
@@ -107,6 +107,7 @@ and `optionstratlib::error::OperationErrorKind`.
 | `VolatilityError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::VolatilityError` | `optionstratlib::error::VolatilityError` | pricing | — |
 | `SviError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::SviError` | `optionstratlib::error::SviError` | pricing | — |
 | `StaticArbitrageError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::StaticArbitrageError` | `optionstratlib::error::StaticArbitrageError` | pricing | — |
+| `ImpliedVolatilitySurfaceError` | `optionstratlib-pricing` | `optionstratlib_pricing::error::ImpliedVolatilitySurfaceError` | `optionstratlib::error::ImpliedVolatilitySurfaceError` | pricing | — |
 | `SimulationError` | `optionstratlib-simulation` | `optionstratlib_simulation::error::SimulationError` | `optionstratlib::error::SimulationError` | simulation | — |
 | `ChainError` | `optionstratlib-market` | `optionstratlib_market::error::ChainError` | `optionstratlib::error::ChainError` | market | `chains` |
 | `OhlcvError` | `optionstratlib-market` | `optionstratlib_market::error::OhlcvError` | `optionstratlib::error::OhlcvError` | market | — |
@@ -120,10 +121,9 @@ and `optionstratlib::error::OperationErrorKind`.
 | `GraphError` | `optionstratlib-visualization` | `optionstratlib_visualization::error::GraphError` | `optionstratlib::error::GraphError` | visualization | — |
 | `Error` (aggregate over the errors above) | `optionstratlib` (facade) | `optionstratlib::error::Error` | `optionstratlib::error::Error` | visualization | — |
 
-The aggregate `Error` has no variant for `SviError`, `SettlementError` or
-`StaticArbitrageError` yet: `Error` is an exhaustive enum, so adding one is
-breaking, and #944 adds them with the 0.24.0 bump.
-with the 0.24.0 bump.
+The aggregate `Error` has no variant for `SviError`, `SettlementError`,
+`StaticArbitrageError` or `ImpliedVolatilitySurfaceError` yet: `Error` is an
+exhaustive enum, so adding one is breaking, and it comes with the 0.24.0 bump.
 
 The `...Result<T>` aliases sit next to their error, flat: `DecimalResult`,
 `OptionsResult`, `CurvesResult`, `PricingResult`, `GreeksResult`,

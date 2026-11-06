@@ -27,6 +27,7 @@ schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-math/schem
 features = ["schema"]
 
 [dependencies]
+chrono = { workspace = true }
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true }
 num-traits = { workspace = true }
@@ -42,7 +43,6 @@ tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
-chrono = { workspace = true }
 approx = { workspace = true }
 proptest = { workspace = true }
 criterion = { workspace = true }

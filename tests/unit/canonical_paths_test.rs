@@ -223,6 +223,10 @@ fn test_canonical_error_paths_are_component_errors() {
         optionstratlib_pricing::error::StaticArbitrageError
     );
     same!(
+        facade::ImpliedVolatilitySurfaceError,
+        optionstratlib_pricing::error::ImpliedVolatilitySurfaceError
+    );
+    same!(
         facade::GreeksResult<()>,
         optionstratlib_pricing::error::GreeksResult<()>
     );

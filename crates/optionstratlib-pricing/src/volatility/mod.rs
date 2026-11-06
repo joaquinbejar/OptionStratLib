@@ -23,6 +23,9 @@
 //! - Raw SVI slices and their weighted calibration (`SviSlice`, `calibrate_svi`)
 //! - Butterfly and calendar checks on a grid (`check_static_arbitrage`), which
 //!   test only those two conditions at the points supplied
+//! - A calibrated implied volatility surface built from bid and ask quotes
+//!   (`ImpliedVolatilitySurface`), which keeps its rejected quotes and unfitted
+//!   expiries and is not claimed free of arbitrage
 //! - Uncertain Volatility Bounds
 //! - Volatility Surface Interpolation
 //!
@@ -175,6 +178,7 @@
 //! - GARCH by Bollerslev (1986)
 
 mod arbitrage;
+mod surface;
 mod svi;
 mod traits;
 mod utils;
@@ -182,6 +186,16 @@ mod utils;
 pub use arbitrage::{
     StaticArbitrageReport, StaticArbitrageUnevaluatedPoint, StaticArbitrageViolation,
     TotalVarianceSlice, check_butterfly, check_calendar, check_static_arbitrage,
+};
+
+pub use surface::{
+    BaselineComparison, ExtrapolationPolicy, ImpliedVolatilitySurface,
+    ImpliedVolatilitySurfaceConfig, SurfaceExpiry, SurfaceExpiryRegion, SurfaceExport,
+    SurfacePoint, SurfaceResidual, SurfaceShock,
+};
+
+pub use crate::error::surface::{
+    OptionQuote, QuoteRejection, QuoteRejectionReason, UnfittedExpiry, UnfittedReason,
 };
 
 pub use svi::{

@@ -120,7 +120,7 @@ use std::num::NonZeroU64;
 use tracing::{debug, instrument, warn};
 
 /// Observations needed to fix the five raw SVI parameters.
-const MIN_OBSERVATIONS: usize = 5;
+pub(super) const MIN_OBSERVATIONS: usize = 5;
 
 /// Negative total variance forgiven as rounding, relative to the size of the
 /// terms summed: `Decimal` carries 28 significant digits, so a slice whose
@@ -678,7 +678,7 @@ impl SviSlice {
 }
 
 /// `ln(strike / forward)`, with both checked to be non-zero.
-fn log_moneyness(strike: Positive, forward: Positive) -> Result<Decimal, SviError> {
+pub(super) fn log_moneyness(strike: Positive, forward: Positive) -> Result<Decimal, SviError> {
     if strike.is_zero() {
         return Err(SviError::ZeroStrike { strike });
     }

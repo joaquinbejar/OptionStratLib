@@ -43,6 +43,7 @@ pub use optionstratlib::error::DecimalResult
 pub use optionstratlib::error::GraphError
 pub use optionstratlib::error::GreeksError
 pub use optionstratlib::error::GreeksResult
+pub use optionstratlib::error::ImpliedVolatilitySurfaceError
 pub use optionstratlib::error::InterpolationError
 pub use optionstratlib::error::MetricsError
 pub use optionstratlib::error::OhlcvError

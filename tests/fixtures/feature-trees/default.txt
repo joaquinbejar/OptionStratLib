@@ -210,6 +210,7 @@ optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
 optionstratlib-math -> utoipa
+optionstratlib-pricing -> chrono
 optionstratlib-pricing -> num-traits
 optionstratlib-pricing -> optionstratlib-core
 optionstratlib-pricing -> optionstratlib-math

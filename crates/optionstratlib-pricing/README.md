@@ -10,8 +10,8 @@ engine, strategy, plotting, I/O or async runtime.
 |--------------|--------------------------------------------------------------------------|
 | `pricing`    | Black-Scholes, Black-76, Garman-Kohlhagen, binomial, Monte Carlo over supplied paths, telegraph, American and exotic kernels; `OptionPricing`; `price_option_with`; `Profit`; solver defaults |
 | `greeks`     | First and higher-order Greeks, `Greeks`, model-specific and numerical Greeks, Greeks of the leg types |
-| `volatility` | Implied-volatility solvers, volatility models and traits, raw SVI slices and their calibration, butterfly and calendar checks on a grid |
-| `error`      | `PricingError`, `GreeksError`, `VolatilityError`, `SviError`, `StaticArbitrageError` |
+| `volatility` | Implied-volatility solvers, volatility models and traits, raw SVI slices and their calibration, butterfly and calendar checks on a grid, a surface calibrated from quotes |
+| `error`      | `PricingError`, `GreeksError`, `VolatilityError`, `SviError`, `StaticArbitrageError`, `ImpliedVolatilitySurfaceError` |
 
 Prices, premia and Greeks cross the public boundary as `rust_decimal::Decimal`
 or `Positive`; `f64` stays inside the numerical kernels.
