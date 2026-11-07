@@ -31,7 +31,10 @@ const ALPHA_LOWER_BOUND: Decimal = dec!(0.5);
 const MIN_PATHS: usize = 2;
 
 /// An empty buffer able to hold `len` entries without growing.
-fn reserve<T>(len: usize, buffer: &'static str) -> Result<Vec<T>, QuadraticRoughHestonError> {
+pub(super) fn reserve<T>(
+    len: usize,
+    buffer: &'static str,
+) -> Result<Vec<T>, QuadraticRoughHestonError> {
     let mut reserved = Vec::new();
     reserved
         .try_reserve_exact(len)
@@ -41,7 +44,7 @@ fn reserve<T>(len: usize, buffer: &'static str) -> Result<Vec<T>, QuadraticRough
 
 #[cold]
 #[inline(never)]
-fn invalid_parameter(
+pub(super) fn invalid_parameter(
     parameter: &'static str,
     value: Decimal,
     reason: &'static str,
@@ -85,8 +88,8 @@ pub struct QuadraticRoughHestonKernel {
     ratio: Decimal,
     weights: Vec<Decimal>,
     discounts: Vec<Decimal>,
-    raw_weights: Vec<f64>,
-    raw_discounts: Vec<f64>,
+    pub(super) raw_weights: Vec<f64>,
+    pub(super) raw_discounts: Vec<f64>,
 }
 
 impl QuadraticRoughHestonKernel {
@@ -329,18 +332,18 @@ pub struct QuadraticRoughHestonParams {
     spot: Positive,
     initial_z: Decimal,
     initial_variance: Decimal,
-    raw: RawParams,
-    raw_initial: State,
+    pub(super) raw: RawParams,
+    pub(super) raw_initial: State,
 }
 
 /// The parameters in the `f64` of the kernel.
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct RawParams {
-    a: f64,
-    b: f64,
-    c: f64,
-    lambda: f64,
-    eta: f64,
+pub(super) struct RawParams {
+    pub(super) a: f64,
+    pub(super) b: f64,
+    pub(super) c: f64,
+    pub(super) lambda: f64,
+    pub(super) eta: f64,
 }
 
 impl QuadraticRoughHestonParams {
@@ -651,7 +654,7 @@ impl QuadraticRoughHestonEstimate {
 
 /// `Z = sum c_i Z^i` and `V = a (Z - b)^2 + c`.
 #[inline]
-fn read(weights: &[f64], raw: &RawParams, factors: &[f64]) -> (f64, f64) {
+pub(super) fn read(weights: &[f64], raw: &RawParams, factors: &[f64]) -> (f64, f64) {
     let z: f64 = weights
         .iter()
         .zip(factors)
@@ -663,17 +666,17 @@ fn read(weights: &[f64], raw: &RawParams, factors: &[f64]) -> (f64, f64) {
 
 /// The state of the scheme at one step, with its `Z` and `V`.
 #[derive(Debug, Clone, PartialEq)]
-struct State {
-    spot: f64,
-    z: f64,
-    variance: f64,
-    factors: Vec<f64>,
+pub(super) struct State {
+    pub(super) spot: f64,
+    pub(super) z: f64,
+    pub(super) variance: f64,
+    pub(super) factors: Vec<f64>,
 }
 
 /// A value of the state that stopped being finite: the kernel's small form of
 /// [`QuadraticRoughHestonError::NonFinite`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct NonFiniteValue {
+pub(super) struct NonFiniteValue {
     quantity: &'static str,
     step: usize,
 }
@@ -681,7 +684,7 @@ struct NonFiniteValue {
 impl NonFiniteValue {
     #[cold]
     #[inline(never)]
-    fn into_error(self) -> QuadraticRoughHestonError {
+    pub(super) fn into_error(self) -> QuadraticRoughHestonError {
         QuadraticRoughHestonError::NonFinite {
             quantity: self.quantity,
             step: self.step,
@@ -726,46 +729,78 @@ fn step(params: &QuadraticRoughHestonParams, state: &State, dw: f64, dt: f64, ne
     (next.z, next.variance) = read(&params.kernel.raw_weights, raw, &next.factors);
 }
 
-/// The increments of one path, and the `next` scratch of its steps.
-struct Walk<'a> {
-    params: &'a QuadraticRoughHestonParams,
+/// A run of uniform steps, observed at its end: the grid steps `first_step..=last_step`, each
+/// of `dt` years.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct Segment {
     dt: f64,
     sqrt_dt: f64,
+    first_step: usize,
+    last_step: usize,
+}
+
+/// The time grid of a Monte Carlo run: segments laid end to end, each observed at its last
+/// step. A [`QuadraticRoughHestonGrid`] is one segment; a calibration lays one per maturity.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct Schedule {
+    segments: Vec<Segment>,
+}
+
+impl Schedule {
+    /// One segment: the whole `grid`, observed at its horizon.
+    pub(super) fn from_grid(
+        grid: &QuadraticRoughHestonGrid,
+    ) -> Result<Self, QuadraticRoughHestonError> {
+        let (dt, sqrt_dt) = raw_step(grid)?;
+        Ok(Self {
+            segments: vec![Segment {
+                dt,
+                sqrt_dt,
+                first_step: 1,
+                last_step: grid.steps,
+            }],
+        })
+    }
+}
+
+/// The state of one path, and the `next` scratch of its steps.
+pub(super) struct Walk<'a> {
+    params: &'a QuadraticRoughHestonParams,
     rng: StdRng,
-    state: State,
+    pub(super) state: State,
     scratch: State,
 }
 
 impl<'a> Walk<'a> {
-    fn new(params: &'a QuadraticRoughHestonParams, (dt, sqrt_dt): (f64, f64), seed: u64) -> Self {
+    pub(super) fn new(params: &'a QuadraticRoughHestonParams, seed: u64) -> Self {
         Self {
             params,
-            dt,
-            sqrt_dt,
             rng: deterministic_rng(seed),
             state: params.raw_initial.clone(),
             scratch: params.raw_initial.clone(),
         }
     }
 
-    /// Moves to grid step `to`, drawing its normal increment.
+    /// Moves to grid step `to` by one step of `segment`, drawing its normal increment.
     #[inline]
-    fn advance(&mut self, to: usize) -> Result<(), NonFiniteValue> {
+    fn advance(&mut self, segment: &Segment, to: usize) -> Result<(), NonFiniteValue> {
         let normal: f64 = StandardNormal.sample(&mut self.rng);
-        self.apply(self.sqrt_dt * normal, to)
+        self.apply(segment.sqrt_dt * normal, segment.dt, to)
     }
 
-    /// Moves to grid step `to` on the increment `dw`.
+    /// Moves to grid step `to` on the increment `dw` over `dt`.
     #[inline]
-    fn apply(&mut self, dw: f64, to: usize) -> Result<(), NonFiniteValue> {
-        step(self.params, &self.state, dw, self.dt, &mut self.scratch);
+    pub(super) fn apply(&mut self, dw: f64, dt: f64, to: usize) -> Result<(), NonFiniteValue> {
+        step(self.params, &self.state, dw, dt, &mut self.scratch);
         std::mem::swap(&mut self.state, &mut self.scratch);
         self.state.ensure_finite(to)
     }
 }
 
 /// `dt` and its square root, in `f64`.
-fn raw_step(grid: &QuadraticRoughHestonGrid) -> Result<(f64, f64), QuadraticRoughHestonError> {
+pub(super) fn raw_step(
+    grid: &QuadraticRoughHestonGrid,
+) -> Result<(f64, f64), QuadraticRoughHestonError> {
     let dt = decimal_to_f64(grid.dt)?;
     Ok((dt, dt.sqrt())) // scan-banned: allow -- f64 `sqrt` of a positive finite value: finite, and it does not abort
 }
@@ -810,10 +845,19 @@ pub fn simulate_quadratic_rough_heston_path(
         factor_count,
     };
 
-    let mut walk = Walk::new(params, raw_step(grid)?, seed);
+    let schedule = Schedule::from_grid(grid)?;
+    let segment = schedule
+        .segments
+        .first()
+        .ok_or(QuadraticRoughHestonError::NonPositiveStep {
+            horizon: grid.horizon,
+            steps: grid.steps,
+        })?;
+    let mut walk = Walk::new(params, seed);
     record(&mut path, &walk.state)?;
     for to in 1..=grid.steps {
-        walk.advance(to).map_err(NonFiniteValue::into_error)?;
+        walk.advance(segment, to)
+            .map_err(NonFiniteValue::into_error)?;
         record(&mut path, &walk.state)?;
     }
     Ok(path)
@@ -833,35 +877,95 @@ fn record(
     Ok(())
 }
 
-/// What the price keeps of one path.
+/// What a Monte Carlo run keeps of one path: what its observer recorded, and whether the spot
+/// was non positive at some step.
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct PathOutcome {
-    terminal_spot: f64,
-    non_positive: bool,
+pub(super) struct PathRun<A> {
+    pub(super) observed: A,
+    pub(super) non_positive: bool,
 }
 
-/// Runs one path without recording it.
-fn run_path(
+/// Runs one path over `schedule` without recording it, calling `observe` with the index of
+/// each segment and the state at its end.
+fn run_path<A, F>(
     params: &QuadraticRoughHestonParams,
-    grid: &QuadraticRoughHestonGrid,
-    step_sizes: (f64, f64),
+    schedule: &Schedule,
     seed: u64,
-) -> Result<PathOutcome, NonFiniteValue> {
-    let mut walk = Walk::new(params, step_sizes, seed);
+    observe: &F,
+) -> Result<PathRun<A>, NonFiniteValue>
+where
+    A: Default,
+    F: Fn(usize, &State, &mut A),
+{
+    let mut walk = Walk::new(params, seed);
+    let mut observed = A::default();
     let mut non_positive = false;
-    for to in 1..=grid.steps {
-        walk.advance(to)?;
-        non_positive |= walk.state.spot <= 0.0;
+    for (index, segment) in schedule.segments.iter().enumerate() {
+        // The steps count across segments, for the error of a path that stops being finite.
+        for to in segment.first_step..=segment.last_step {
+            walk.advance(segment, to)?;
+            non_positive |= walk.state.spot <= 0.0;
+        }
+        observe(index, &walk.state, &mut observed);
     }
-    Ok(PathOutcome {
-        terminal_spot: walk.state.spot,
+    Ok(PathRun {
+        observed,
         non_positive,
     })
 }
 
+/// Runs `paths` paths over `schedule` in parallel, one per seed of a master generator seeded
+/// with `seed`, and returns what `observe` recorded on each.
+///
+/// The seeds are drawn serially and the runs come back in their order, so the result does
+/// not depend on the number of threads of the rayon pool it runs on. A path that fails makes
+/// the run fail, and the failure reported is the one of the first such path.
+///
+/// # Errors
+///
+/// - [`QuadraticRoughHestonError::InvalidParameter`] for a single path, which has no standard
+///   error.
+/// - [`QuadraticRoughHestonError::NonFinite`] when a path stops being finite, with its step.
+/// - [`QuadraticRoughHestonError::BufferTooLarge`] when `paths` cannot be allocated.
+pub(super) fn run_paths<A, F>(
+    params: &QuadraticRoughHestonParams,
+    schedule: &Schedule,
+    paths: NonZeroUsize,
+    seed: u64,
+    observe: F,
+) -> Result<Vec<PathRun<A>>, QuadraticRoughHestonError>
+where
+    A: Default + Send,
+    F: Fn(usize, &State, &mut A) + Sync,
+{
+    let path_count = paths.get();
+    if path_count < MIN_PATHS {
+        return Err(invalid_parameter(
+            "paths",
+            Decimal::from(path_count),
+            "a standard error needs at least two paths",
+        ));
+    }
+
+    let mut master = deterministic_rng(seed);
+    let mut seeds = reserve::<u64>(path_count, "path seeds")?;
+    seeds.extend((0..path_count).map(|_| master.random::<u64>()));
+
+    let mut outcomes = reserve(path_count, "path outcomes")?;
+    seeds
+        .par_iter()
+        .map(|path_seed| run_path(params, schedule, *path_seed, &observe))
+        .collect_into_vec(&mut outcomes);
+
+    outcomes
+        .into_iter()
+        .map(|outcome| outcome.map_err(NonFiniteValue::into_error))
+        .collect()
+}
+
 /// The running mean and squared deviations of Welford's algorithm.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
-struct Moments {
+pub(super) struct Moments {
     count: f64,
     mean: f64,
     squared_deviations: f64,
@@ -869,7 +973,7 @@ struct Moments {
 
 impl Moments {
     #[inline]
-    fn add(&mut self, value: f64) {
+    pub(super) fn add(&mut self, value: f64) {
         self.count += 1.0;
         let deviation = value - self.mean;
         self.mean += deviation / self.count;
@@ -877,7 +981,7 @@ impl Moments {
     }
 
     /// The mean and its standard error, as `Decimal`s. Needs two values or more.
-    fn estimate(&self) -> Result<(Decimal, Decimal), QuadraticRoughHestonError> {
+    pub(super) fn estimate(&self) -> Result<(Decimal, Decimal), QuadraticRoughHestonError> {
         let variance_of_mean = self.squared_deviations / (self.count - 1.0) / self.count;
         Ok((
             f64_to_decimal(self.mean)?,
@@ -911,40 +1015,27 @@ pub fn price_vanilla_quadratic_rough_heston(
     paths: NonZeroUsize,
     seed: u64,
 ) -> Result<QuadraticRoughHestonEstimate, QuadraticRoughHestonError> {
-    let path_count = paths.get();
-    if path_count < MIN_PATHS {
-        return Err(invalid_parameter(
-            "paths",
-            Decimal::from(path_count),
-            "a standard error needs at least two paths",
-        ));
-    }
+    let schedule = Schedule::from_grid(grid)?;
+    let runs = run_paths(
+        params,
+        &schedule,
+        paths,
+        seed,
+        |_, state: &State, spot: &mut f64| {
+            *spot = state.spot;
+        },
+    )?;
     let raw_strike = decimal_to_f64(strike.to_dec())?;
-    let step_sizes = raw_step(grid)?;
 
-    let mut master = deterministic_rng(seed);
-    let mut seeds = reserve::<u64>(path_count, "path seeds")?;
-    seeds.extend((0..path_count).map(|_| master.random::<u64>()));
-
-    let mut outcomes = reserve(path_count, "path outcomes")?;
-    seeds
-        .par_iter()
-        .map(|path_seed| run_path(params, grid, step_sizes, *path_seed))
-        .collect_into_vec(&mut outcomes);
-
-    let non_positive_paths = outcomes
-        .iter()
-        .filter(|outcome| matches!(outcome, Ok(path) if path.non_positive))
-        .count();
+    let non_positive_paths = runs.iter().filter(|run| run.non_positive).count();
     let mut payoff = Moments::default();
     let mut terminal = Moments::default();
-    for outcome in outcomes {
-        let outcome = outcome.map_err(NonFiniteValue::into_error)?;
+    for run in &runs {
         payoff.add(match style {
-            OptionStyle::Call => (outcome.terminal_spot - raw_strike).max(0.0),
-            OptionStyle::Put => (raw_strike - outcome.terminal_spot).max(0.0),
+            OptionStyle::Call => (run.observed - raw_strike).max(0.0),
+            OptionStyle::Put => (raw_strike - run.observed).max(0.0),
         });
-        terminal.add(outcome.terminal_spot);
+        terminal.add(run.observed);
     }
 
     let (price, standard_error) = payoff.estimate()?;
@@ -954,7 +1045,7 @@ pub fn price_vanilla_quadratic_rough_heston(
         standard_error,
         mean_terminal_spot,
         terminal_spot_standard_error,
-        paths: path_count,
+        paths: runs.len(),
         non_positive_paths,
     })
 }
@@ -1326,14 +1417,14 @@ mod tests {
         )
         .unwrap();
         let coarse_grid = QuadraticRoughHestonGrid::try_new(dec!(0.25), COARSE_STEPS).unwrap();
-        let coarse_step = raw_step(&coarse_grid).unwrap();
+        let (coarse_dt, _) = raw_step(&coarse_grid).unwrap();
         let fine_dt = 0.25 / (2.0 * COARSE_STEPS as f64);
         let fine_sqrt_dt = fine_dt.sqrt();
 
         let mut rng = deterministic_rng(958);
         let mut change = Moments::default();
         for _ in 0..PATHS {
-            let mut coarse = Walk::new(&params, coarse_step, 0);
+            let mut coarse = Walk::new(&params, 0);
             let mut fine = params.raw_initial.clone();
             let mut scratch = fine.clone();
             for to in 1..=COARSE_STEPS {
@@ -1342,7 +1433,7 @@ mod tests {
                 let (first, second) = (fine_sqrt_dt * first, fine_sqrt_dt * second);
                 step(&params, &fine, first, fine_dt, &mut scratch);
                 step(&params, &scratch, second, fine_dt, &mut fine);
-                coarse.apply(first + second, to).unwrap();
+                coarse.apply(first + second, coarse_dt, to).unwrap();
             }
             let payoff = |spot: f64| (spot - 100.0).max(0.0);
             change.add(payoff(coarse.state.spot) - payoff(fine.spot));

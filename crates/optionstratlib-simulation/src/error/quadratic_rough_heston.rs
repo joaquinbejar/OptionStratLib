@@ -66,12 +66,13 @@ pub enum QuadraticRoughHestonError {
         reason: &'static str,
     },
 
-    /// The number of initial factors is not the number of factors of the kernel.
-    #[error("expected {expected} initial factors, got {actual}")]
+    /// The number of factors of a state is not the number of factors of the kernel: the
+    /// initial factors of the model, or the factor state the VIX is read at.
+    #[error("expected {expected} factors, got {actual}")]
     InitialFactorCount {
         /// The factors of the kernel.
         expected: usize,
-        /// The initial factors supplied.
+        /// The factors supplied.
         actual: usize,
     },
 
@@ -83,6 +84,23 @@ pub enum QuadraticRoughHestonError {
         quantity: &'static str,
         /// The step of the grid, from 1 to its number of steps.
         step: usize,
+    },
+
+    /// The conditional moments of the variance over the VIX window are not finite: the second
+    /// moments of the factors grow beyond an `f64` within the window.
+    #[error(
+        "the conditional moments of the variance over a window of {window} years are not finite"
+    )]
+    VixMomentsNotFinite {
+        /// The window, in years.
+        window: Decimal,
+    },
+
+    /// The VIX of a factor state has no positive finite value.
+    #[error("the vix of the factor state has no positive value: {reason}")]
+    VixNotPositive {
+        /// What failed.
+        reason: &'static str,
     },
 
     /// A buffer of the requested size cannot be allocated.

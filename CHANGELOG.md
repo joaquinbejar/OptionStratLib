@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **VIX futures and options under the quadratic rough Heston model** (#968).
+  `QuadraticRoughHestonVix`, in `optionstratlib_simulation::simulation` (also
+  `optionstratlib::simulation`), is the index as a function of the factor state:
+  `VIX_t^2 = (100^2 / Delta) E[int_t^(t+Delta) V_s ds | F_t]`, read from the conditional first
+  and second moments of the factors, which the affine factors and the quadratic variance
+  close into a linear system solved once per parameter set by a matrix exponential. No nested
+  simulation is involved, and the value is the model's rather than a discretization's.
+  `try_new` takes the window in years and `thirty_days` the standard `30 / 365`
+  (`VIX_WINDOW_DAYS`); `squared_at` and `at` read a factor state in squared and plain
+  volatility points. `price_vix_quadratic_rough_heston` prices a `QuadraticRoughHestonVixPayoff`
+  (the future, or a call or put on the index) by Monte Carlo on the paths of
+  `price_vanilla_quadratic_rough_heston` at the same seed, and its
+  `QuadraticRoughHestonVixEstimate` carries the price, the future on the same paths and both
+  standard errors. New `QuadraticRoughHestonError::VixMomentsNotFinite` and `VixNotPositive`;
+  `InitialFactorCount` now also reports a factor state of the wrong length. Checked against a
+  nested Monte Carlo, an independent integration of the moment system and the closed forms at
+  `a = 0` and for one noiseless factor.
+
 ## [0.24.1] - 2026-11-06
 
 Only `optionstratlib-pricing` and `optionstratlib` are released at 0.24.1; the other eight
