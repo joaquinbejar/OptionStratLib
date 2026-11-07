@@ -8,7 +8,8 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::OptionStyle;
 use optionstratlib_simulation::simulation::{
     QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonParams,
-    price_vanilla_quadratic_rough_heston, simulate_quadratic_rough_heston_path,
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, price_vanilla_quadratic_rough_heston,
+    price_vix_quadratic_rough_heston, simulate_quadratic_rough_heston_path,
 };
 use proptest::prelude::*;
 use rust_decimal::Decimal;
@@ -95,6 +96,53 @@ proptest! {
                 NonZeroUsize::new(4).unwrap_or(NonZeroUsize::MIN),
                 seed,
             );
+        }
+    }
+
+    /// The VIX map, its evaluation and a VIX price return for every extreme parameter of the
+    /// model, window and state.
+    #[test]
+    fn test_vix_never_panics(
+        a in extreme_decimal(),
+        b in extreme_decimal(),
+        c in extreme_decimal(),
+        lambda in extreme_decimal(),
+        eta in extreme_decimal(),
+        factor in extreme_decimal(),
+        state in extreme_decimal(),
+        window in extreme_positive(),
+        strike in extreme_positive(),
+        horizon in extreme_decimal(),
+        seed in any::<u64>(),
+    ) {
+        let kernel = QuadraticRoughHestonKernel::try_new(dec!(0.75), 3, dec!(4));
+        prop_assert!(kernel.is_ok());
+        let Ok(kernel) = kernel else { return Ok(()); };
+        let params = QuadraticRoughHestonParams::try_new(
+            a, b, c, lambda, eta, kernel, vec![factor; 3], Positive::HUNDRED,
+        );
+        let Ok(params) = params else { return Ok(()); };
+        if let Ok(vix) = QuadraticRoughHestonVix::try_new(&params, window) {
+            let _ = vix.squared_at(&[state; 3]);
+            let _ = vix.at(&[state; 3]);
+            let _ = vix.at(&[state; 2]);
+        }
+        let _ = QuadraticRoughHestonVix::thirty_days(&params);
+        if let Ok(grid) = QuadraticRoughHestonGrid::try_new(horizon, 4) {
+            for payoff in [
+                QuadraticRoughHestonVixPayoff::Future,
+                QuadraticRoughHestonVixPayoff::Vanilla { style: OptionStyle::Call, strike },
+                QuadraticRoughHestonVixPayoff::Vanilla { style: OptionStyle::Put, strike },
+            ] {
+                let _ = price_vix_quadratic_rough_heston(
+                    &params,
+                    &grid,
+                    window,
+                    payoff,
+                    NonZeroUsize::new(4).unwrap_or(NonZeroUsize::MIN),
+                    seed,
+                );
+            }
         }
     }
 }

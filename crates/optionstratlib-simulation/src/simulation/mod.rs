@@ -163,6 +163,12 @@ pub use quadratic_rough_heston::{
     QuadraticRoughHestonParams, QuadraticRoughHestonPath, price_vanilla_quadratic_rough_heston,
     simulate_quadratic_rough_heston_path,
 };
+/// The VIX under the quadratic rough Heston model. See [`QuadraticRoughHestonVix`].
+mod quadratic_rough_heston_vix;
+pub use quadratic_rough_heston_vix::{
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixEstimate, QuadraticRoughHestonVixPayoff,
+    VIX_WINDOW_DAYS, price_vix_quadratic_rough_heston,
+};
 
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};
 
