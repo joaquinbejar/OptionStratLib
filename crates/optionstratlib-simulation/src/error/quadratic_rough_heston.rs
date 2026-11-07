@@ -7,6 +7,7 @@
 //! Target crate (ADR-0001 D6): **simulation**. Owns `QuadraticRoughHestonError`.
 
 use optionstratlib_core::error::DecimalError;
+use optionstratlib_pricing::error::{GreeksError, PricingError, VolatilityError};
 use rust_decimal::Decimal;
 use thiserror::Error;
 
@@ -112,7 +113,52 @@ pub enum QuadraticRoughHestonError {
         len: usize,
     },
 
+    /// A calibration or a surface was given no quote, or no quote with a positive weight.
+    #[error("no quote with a positive weight")]
+    NoQuotes,
+
+    /// A quote or a surface point is outside its domain.
+    #[error("invalid quote {index}: {reason}")]
+    InvalidQuote {
+        /// The position of the quote in the input, from zero.
+        index: usize,
+        /// The condition the quote breaks.
+        reason: &'static str,
+    },
+
+    /// A calibration was asked to move no parameter.
+    #[error("the calibration frees no parameter")]
+    NoFreeParameters,
+
+    /// The search reached its iteration limit without converging.
+    #[error("the calibration did not converge within {iterations} iterations")]
+    NoConvergence {
+        /// The iterations run.
+        iterations: u64,
+    },
+
+    /// A Black-Scholes price of a quote failed.
+    #[error(transparent)]
+    Pricing(#[from] PricingError),
+
+    /// A Black-Scholes vega of a quote failed.
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
+
+    /// The implied volatility solver failed for another reason than a price with no implied
+    /// volatility. Boxed because `VolatilityError` is the larger enum.
+    #[error(transparent)]
+    Volatility(Box<VolatilityError>),
+
     /// A value does not fit a `Decimal`, or `Decimal` arithmetic failed.
     #[error(transparent)]
     Decimal(#[from] DecimalError),
+}
+
+impl From<VolatilityError> for QuadraticRoughHestonError {
+    #[inline]
+    fn from(error: VolatilityError) -> Self {
+        // Boxed for the size of the enum, as `SimulationError` does; the cause stays typed.
+        Self::Volatility(Box::new(error))
+    }
 }

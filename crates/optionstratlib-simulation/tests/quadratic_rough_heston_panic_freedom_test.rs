@@ -7,13 +7,17 @@
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::OptionStyle;
 use optionstratlib_simulation::simulation::{
-    QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonParams,
-    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, price_vanilla_quadratic_rough_heston,
+    QuadraticRoughHestonCalibrationConfig, QuadraticRoughHestonFreeParameters,
+    QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonMonteCarloConfig,
+    QuadraticRoughHestonParams, QuadraticRoughHestonQuote, QuadraticRoughHestonSurfacePoint,
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, calibrate_quadratic_rough_heston,
+    price_surface_quadratic_rough_heston, price_vanilla_quadratic_rough_heston,
     price_vix_quadratic_rough_heston, simulate_quadratic_rough_heston_path,
 };
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 
 /// The smallest representable positive `Decimal`.
@@ -144,5 +148,63 @@ proptest! {
                 );
             }
         }
+    }
+
+    /// The surface pricer and the calibration return for every extreme parameter, quote and
+    /// configuration, including a search of two iterations.
+    #[test]
+    fn test_calibration_never_panics(
+        a in extreme_decimal(),
+        b in extreme_decimal(),
+        c in extreme_decimal(),
+        lambda in extreme_decimal(),
+        eta in extreme_decimal(),
+        factor in extreme_decimal(),
+        maturity in extreme_positive(),
+        strike in extreme_positive(),
+        volatility in extreme_positive(),
+        weight in extreme_positive(),
+        max_step in extreme_positive(),
+        tolerance in extreme_positive(),
+        seed in any::<u64>(),
+    ) {
+        let kernel = QuadraticRoughHestonKernel::try_new(dec!(0.75), 2, dec!(4));
+        prop_assert!(kernel.is_ok());
+        let Ok(kernel) = kernel else { return Ok(()); };
+        let params = QuadraticRoughHestonParams::try_new(
+            a, b, c, lambda, eta, kernel, vec![factor; 2], Positive::HUNDRED,
+        );
+        let Ok(params) = params else { return Ok(()); };
+        let monte_carlo = QuadraticRoughHestonMonteCarloConfig {
+            paths: NonZeroUsize::new(4).unwrap_or(NonZeroUsize::MIN),
+            max_step,
+            seed,
+        };
+        let points = [
+            QuadraticRoughHestonSurfacePoint { maturity, strike },
+            QuadraticRoughHestonSurfacePoint { maturity: Positive::ONE, strike: Positive::HUNDRED },
+        ];
+        let _ = price_surface_quadratic_rough_heston(&params, &points, &monte_carlo);
+        let quotes = [
+            QuadraticRoughHestonQuote { maturity, strike, implied_volatility: volatility, weight },
+            QuadraticRoughHestonQuote {
+                maturity: Positive::ONE,
+                strike: Positive::HUNDRED,
+                implied_volatility: Positive::new(0.2).unwrap_or(Positive::ONE),
+                weight: Positive::ONE,
+            },
+        ];
+        let config = QuadraticRoughHestonCalibrationConfig {
+            monte_carlo,
+            max_iterations: NonZeroU64::new(2).unwrap_or(NonZeroU64::MIN),
+            tolerance,
+            initial_step: Positive::new(0.1).unwrap_or(Positive::ONE),
+        };
+        let _ = calibrate_quadratic_rough_heston(
+            &quotes,
+            &params,
+            QuadraticRoughHestonFreeParameters::ALL,
+            &config,
+        );
     }
 }

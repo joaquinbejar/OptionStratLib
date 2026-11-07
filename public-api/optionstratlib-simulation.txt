@@ -7,6 +7,7 @@ pub optionstratlib_simulation::error::QuadraticRoughHestonError::BufferTooLarge
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::BufferTooLarge::buffer: &'static str
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::BufferTooLarge::len: usize
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InitialFactorCount
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InitialFactorCount::actual: usize
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InitialFactorCount::expected: usize
@@ -14,22 +15,33 @@ pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidParamete
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidParameter::parameter: &'static str
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidParameter::reason: &'static str
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidParameter::value: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidQuote
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidQuote::index: usize
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::InvalidQuote::reason: &'static str
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::KernelOutOfRange
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::KernelOutOfRange::index: usize
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::KernelOutOfRange::quantity: &'static str
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::NoConvergence
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::NoConvergence::iterations: u64
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NoFactors
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::NoFreeParameters
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::NoQuotes
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonFinite
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonFinite::quantity: &'static str
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonFinite::step: usize
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonPositiveStep
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonPositiveStep::horizon: rust_decimal::decimal::Decimal
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::NonPositiveStep::steps: usize
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::Pricing(optionstratlib_pricing::error::pricing::PricingError)
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::RatioNotAboveOne
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::RatioNotAboveOne::ratio: rust_decimal::decimal::Decimal
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::VixMomentsNotFinite
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::VixMomentsNotFinite::window: rust_decimal::decimal::Decimal
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::VixNotPositive
 pub optionstratlib_simulation::error::QuadraticRoughHestonError::VixNotPositive::reason: &'static str
+pub optionstratlib_simulation::error::QuadraticRoughHestonError::Volatility(alloc::boxed::Box<optionstratlib_pricing::error::volatility::VolatilityError>)
+impl core::convert::From<optionstratlib_pricing::error::volatility::VolatilityError> for optionstratlib_simulation::error::QuadraticRoughHestonError
+pub fn optionstratlib_simulation::error::QuadraticRoughHestonError::from(optionstratlib_pricing::error::volatility::VolatilityError) -> Self
 pub enum optionstratlib_simulation::error::SimulationError
 pub optionstratlib_simulation::error::SimulationError::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib_simulation::error::SimulationError::ExpirationDate(expiration_date::error::ExpirationDateError)
@@ -337,6 +349,28 @@ pub optionstratlib_simulation::simulation::PathStatistics::win_rate: rust_decima
 pub optionstratlib_simulation::simulation::PathStatistics::worst_pnl: rust_decimal::decimal::Decimal
 impl optionstratlib_simulation::simulation::PathStatistics
 pub fn optionstratlib_simulation::simulation::PathStatistics::from_outcomes(&[optionstratlib_simulation::simulation::PathOutcome]) -> core::result::Result<Self, optionstratlib_simulation::error::SimulationError>
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration
+impl optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::evaluations(&self) -> u64
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::grid(&self) -> &[optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationSegment]
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::iterations(&self) -> u64
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::objective(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::params(&self) -> &optionstratlib_simulation::simulation::QuadraticRoughHestonParams
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::paths(&self) -> usize
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::quotes(&self) -> &[optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit]
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::rmse(&self) -> positive::positive::Positive
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::seed(&self) -> u64
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig::initial_step: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig::max_iterations: core::num::nonzero::NonZeroU64
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig::monte_carlo: optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig::tolerance: positive::positive::Positive
+impl core::default::Default for optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig::default() -> Self
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationSegment
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationSegment::dt: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationSegment::maturity: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationSegment::steps: usize
 pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate
 impl optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate::mean_terminal_spot(&self) -> rust_decimal::decimal::Decimal
@@ -345,6 +379,17 @@ pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate::path
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate::price(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate::standard_error(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate::terminal_spot_standard_error(&self) -> rust_decimal::decimal::Decimal
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::a: bool
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::b: bool
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::c: bool
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::eta: bool
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::initial_factors: bool
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::lambda: bool
+impl optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters
+pub const optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::ALL: Self
+pub const optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::MODEL: Self
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters::dimension(&self, usize) -> core::option::Option<usize>
 pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonGrid
 impl optionstratlib_simulation::simulation::QuadraticRoughHestonGrid
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonGrid::dt(&self) -> rust_decimal::decimal::Decimal
@@ -360,6 +405,19 @@ pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonKernel::ratio(
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonKernel::try_new(rust_decimal::decimal::Decimal, usize, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonKernel::value_at(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonKernel::weights(&self) -> &[rust_decimal::decimal::Decimal]
+#[non_exhaustive] pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::implied_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::maturity: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::price: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::standard_error: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::strike: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote::style: financial_types::OptionStyle
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig::max_step: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig::paths: core::num::nonzero::NonZeroUsize
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig::seed: u64
+impl core::default::Default for optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig::default() -> Self
 pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonParams
 impl optionstratlib_simulation::simulation::QuadraticRoughHestonParams
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonParams::a(&self) -> rust_decimal::decimal::Decimal
@@ -379,6 +437,24 @@ pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonPath::factors_
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonPath::spot(&self) -> &[rust_decimal::decimal::Decimal]
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonPath::variance(&self) -> &[rust_decimal::decimal::Decimal]
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonPath::z(&self) -> &[rust_decimal::decimal::Decimal]
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonQuote
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuote::implied_volatility: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuote::maturity: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuote::strike: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuote::weight: positive::positive::Positive
+#[non_exhaustive] pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::implied_volatility_error: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::market_price: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::model_implied_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::model_price: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::model_standard_error: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::quote: optionstratlib_simulation::simulation::QuadraticRoughHestonQuote
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::residual: rust_decimal::decimal::Decimal
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::style: financial_types::OptionStyle
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonQuoteFit::vega: rust_decimal::decimal::Decimal
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonSurfacePoint
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonSurfacePoint::maturity: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonSurfacePoint::strike: positive::positive::Positive
 pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonVix
 impl optionstratlib_simulation::simulation::QuadraticRoughHestonVix
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonVix::at(&self, &[rust_decimal::decimal::Decimal]) -> core::result::Result<positive::positive::Positive, optionstratlib_simulation::error::QuadraticRoughHestonError>
@@ -436,6 +512,7 @@ pub trait optionstratlib_simulation::simulation::WalkTypeAbleClone<X, Y> where X
 pub fn optionstratlib_simulation::simulation::WalkTypeAbleClone::clone_box(&self) -> alloc::boxed::Box<dyn optionstratlib_simulation::simulation::WalkTypeAble<X, Y>>
 impl<T, X, Y> optionstratlib_simulation::simulation::WalkTypeAbleClone<X, Y> for T where T: 'static + optionstratlib_simulation::simulation::WalkTypeAble<X, Y> + core::clone::Clone, X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn T::clone_box(&self) -> alloc::boxed::Box<dyn optionstratlib_simulation::simulation::WalkTypeAble<X, Y>>
+pub fn optionstratlib_simulation::simulation::calibrate_quadratic_rough_heston(&[optionstratlib_simulation::simulation::QuadraticRoughHestonQuote], &optionstratlib_simulation::simulation::QuadraticRoughHestonParams, optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters, &optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::check_exit_policy(&optionstratlib_simulation::simulation::exit::ExitPolicy, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize, positive::positive::Positive, positive::positive::Positive, bool) -> core::option::Option<optionstratlib_simulation::simulation::exit::ExitPolicy>
 pub fn optionstratlib_simulation::simulation::custom_walk<X, Y>(&optionstratlib_simulation::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib_simulation::simulation::WalkPath, optionstratlib_simulation::error::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib_simulation::simulation::evaluate_paths<X, Y, E>(&E, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, &optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<alloc::vec::Vec<<E as optionstratlib_simulation::simulation::PathEvaluator>::Outcome>, <E as optionstratlib_simulation::simulation::PathEvaluator>::Error> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone, E: optionstratlib_simulation::simulation::PathEvaluator<X, Y>
@@ -444,6 +521,7 @@ pub fn optionstratlib_simulation::simulation::garch_walk<X, Y>(&optionstratlib_s
 pub fn optionstratlib_simulation::simulation::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_simulation::error::SimulationError>
 pub fn optionstratlib_simulation::simulation::generator_positive(&optionstratlib_simulation::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib_simulation::error::SimulationError>
 pub fn optionstratlib_simulation::simulation::heston_walk<X, Y>(&optionstratlib_simulation::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib_simulation::simulation::WalkPath, optionstratlib_simulation::error::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_simulation::simulation::price_surface_quadratic_rough_heston(&optionstratlib_simulation::simulation::QuadraticRoughHestonParams, &[optionstratlib_simulation::simulation::QuadraticRoughHestonSurfacePoint], &optionstratlib_simulation::simulation::QuadraticRoughHestonMonteCarloConfig) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::QuadraticRoughHestonModelQuote>, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::price_vanilla_quadratic_rough_heston(&optionstratlib_simulation::simulation::QuadraticRoughHestonParams, &optionstratlib_simulation::simulation::QuadraticRoughHestonGrid, financial_types::OptionStyle, positive::positive::Positive, core::num::nonzero::NonZeroUsize, u64) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonEstimate, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::price_vix_quadratic_rough_heston(&optionstratlib_simulation::simulation::QuadraticRoughHestonParams, &optionstratlib_simulation::simulation::QuadraticRoughHestonGrid, positive::positive::Positive, optionstratlib_simulation::simulation::QuadraticRoughHestonVixPayoff, core::num::nonzero::NonZeroUsize, u64) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonVixEstimate, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::simulate_quadratic_rough_heston_path(&optionstratlib_simulation::simulation::QuadraticRoughHestonParams, &optionstratlib_simulation::simulation::QuadraticRoughHestonGrid, u64) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonPath, optionstratlib_simulation::error::QuadraticRoughHestonError>
