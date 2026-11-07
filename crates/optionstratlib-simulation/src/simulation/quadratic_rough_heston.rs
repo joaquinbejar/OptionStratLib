@@ -747,6 +747,51 @@ pub(super) struct Schedule {
 }
 
 impl Schedule {
+    /// Segments laid end to end: each `(dt, steps)` is `steps` steps of `dt` years, observed
+    /// at its end, and the grid steps count on across them.
+    ///
+    /// # Errors
+    ///
+    /// - [`QuadraticRoughHestonError::NonPositiveStep`] when there is no segment, or one has
+    ///   a non positive `dt` or no steps.
+    /// - [`QuadraticRoughHestonError::BufferTooLarge`] when the steps cannot be counted in a
+    ///   `usize`, or the segments cannot be allocated.
+    /// - [`QuadraticRoughHestonError::Decimal`] when a `dt` has no `f64` value.
+    pub(super) fn from_segments(
+        segments: &[(Decimal, usize)],
+    ) -> Result<Self, QuadraticRoughHestonError> {
+        if segments.is_empty() {
+            return Err(QuadraticRoughHestonError::NonPositiveStep {
+                horizon: Decimal::ZERO,
+                steps: 0,
+            });
+        }
+        let mut built = reserve(segments.len(), "schedule segments")?;
+        let mut last_step = 0_usize;
+        for (dt, steps) in segments {
+            if *dt <= Decimal::ZERO || *steps == 0 {
+                return Err(QuadraticRoughHestonError::NonPositiveStep {
+                    horizon: dt.checked_mul(Decimal::from(*steps)).unwrap_or(*dt),
+                    steps: *steps,
+                });
+            }
+            let too_many = || QuadraticRoughHestonError::BufferTooLarge {
+                buffer: "schedule steps",
+                len: *steps,
+            };
+            let first_step = last_step.checked_add(1).ok_or_else(too_many)?;
+            last_step = last_step.checked_add(*steps).ok_or_else(too_many)?;
+            let raw_dt = decimal_to_f64(*dt)?;
+            built.push(Segment {
+                dt: raw_dt,
+                sqrt_dt: raw_dt.sqrt(), // scan-banned: allow -- f64 `sqrt` of a positive finite value: finite, and it does not abort
+                first_step,
+                last_step,
+            });
+        }
+        Ok(Self { segments: built })
+    }
+
     /// One segment: the whole `grid`, observed at its horizon.
     pub(super) fn from_grid(
         grid: &QuadraticRoughHestonGrid,
@@ -1439,6 +1484,64 @@ mod tests {
             change.add(payoff(coarse.state.spot) - payoff(fine.spot));
         }
         assert!(change.mean.abs() < TOLERANCE, "{change:?}");
+    }
+
+    /// Two segments of 3 and 2 steps occupy grid steps `1..=3` and `4..=5`, and a grid is one
+    /// segment with the same `dt`.
+    #[test]
+    fn test_schedule_segments_count_their_steps_across_each_other() {
+        let schedule = Schedule::from_segments(&[(dec!(0.1), 3), (dec!(0.05), 2)]).unwrap();
+        let segments = &schedule.segments;
+        assert_eq!(segments.len(), 2);
+        assert_eq!((segments[0].first_step, segments[0].last_step), (1, 3));
+        assert_eq!((segments[1].first_step, segments[1].last_step), (4, 5));
+        assert!(close(segments[0].dt, 0.1));
+        assert!(close(segments[1].sqrt_dt, 0.05_f64.sqrt()));
+
+        let grid = QuadraticRoughHestonGrid::try_new(dec!(0.5), 4).unwrap();
+        let from_grid = Schedule::from_grid(&grid).unwrap();
+        assert_eq!(
+            from_grid,
+            Schedule::from_segments(&[(dec!(0.125), 4)]).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_schedule_rejects_empty_and_non_positive_segments() {
+        assert!(matches!(
+            Schedule::from_segments(&[]),
+            Err(QuadraticRoughHestonError::NonPositiveStep { steps: 0, .. })
+        ));
+        assert!(matches!(
+            Schedule::from_segments(&[(dec!(0.1), 2), (Decimal::ZERO, 2)]),
+            Err(QuadraticRoughHestonError::NonPositiveStep { steps: 2, .. })
+        ));
+        assert!(matches!(
+            Schedule::from_segments(&[(dec!(0.1), 0)]),
+            Err(QuadraticRoughHestonError::NonPositiveStep { steps: 0, .. })
+        ));
+        assert!(matches!(
+            Schedule::from_segments(&[(dec!(0.1), usize::MAX), (dec!(0.1), 1)]),
+            Err(QuadraticRoughHestonError::BufferTooLarge { .. })
+        ));
+    }
+
+    /// A path over two segments is the path over one grid of the same steps, observed twice.
+    #[test]
+    fn test_run_paths_observes_each_segment_end_on_the_same_path() {
+        let params = small_params();
+        let two = Schedule::from_segments(&[(dec!(0.05), 2), (dec!(0.05), 3)]).unwrap();
+        let one = Schedule::from_segments(&[(dec!(0.05), 5)]).unwrap();
+        let paths = NonZeroUsize::new(3).unwrap();
+        let observe = |_: usize, state: &State, spots: &mut Vec<f64>| spots.push(state.spot);
+        let split = run_paths(&params, &two, paths, 7, observe).unwrap();
+        let whole = run_paths(&params, &one, paths, 7, observe).unwrap();
+        for (split, whole) in split.iter().zip(&whole) {
+            assert_eq!(split.observed.len(), 2);
+            assert_eq!(whole.observed.len(), 1);
+            assert_eq!(split.observed[1], whole.observed[0]);
+            assert_eq!(split.non_positive, whole.non_positive);
+        }
     }
 
     #[test]

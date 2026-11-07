@@ -109,7 +109,8 @@ and a modular architecture built on modern Rust 2024 edition.
   GARCH, Heston, telegraph, historical and custom
 - An Ornstein-Uhlenbeck path generator
 - The quadratic rough Heston model: seeded paths, Monte Carlo vanilla prices with
-  their standard error, and the VIX from the factor state with VIX futures and options
+  their standard error, the VIX from the factor state with VIX futures and options, and
+  a calibration to an implied volatility surface on a fixed grid and seed
 - Exit policies and path statistics for simulated positions
 - Parametrized simulations with adjustable inputs
 
@@ -337,7 +338,8 @@ Strategy performance analysis:
 Monte Carlo and stochastic simulations:
 - Random walk implementations, including GARCH, Heston and telegraph walks
 - The Ornstein-Uhlenbeck path generator and exit policies
-- The quadratic rough Heston model, Monte Carlo vanilla prices on it and its VIX
+- The quadratic rough Heston model, Monte Carlo vanilla prices on it, its VIX and its
+  surface calibration
 - Custom simulation frameworks
 - Parametrized simulation tools
 
@@ -439,7 +441,7 @@ compatibility with 0.21.
 | `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `clock`, `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`ClockError`, `DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `SettlementError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
 | `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
 | `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility, SVI slices, static arbitrage checks, calibrated volatility surfaces | `clock`, `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError`, `SviError`, `StaticArbitrageError`, `ImpliedVolatilitySurfaceError` and the `error::greeks` module) |
-| `optionstratlib-simulation` | random walks, stochastic processes, the quadratic rough Heston model with its Monte Carlo vanilla prices and its VIX, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError`, `SimulationResult` and `QuadraticRoughHestonError` in `error` |
+| `optionstratlib-simulation` | random walks, stochastic processes, the quadratic rough Heston model with its Monte Carlo vanilla prices, its VIX and its surface calibration, simulators, exit policies, generic path evaluation and statistics | `clock`, `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError`, `SimulationResult` and `QuadraticRoughHestonError` in `error` |
 | `optionstratlib-market` | option chains, option series, OHLCV candles | `clock`, `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
 | `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `clock`, `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `RNDError`, `TransactionError` and the `error::probability` module) |
 | `optionstratlib-strategies` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis | `clock`, `schema` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult`, `AdjustmentError` and the `error::strategies` module in `error` |
@@ -1669,7 +1671,7 @@ with its own `Cargo.toml`:
 - **`examples_volatility/`**: Implied-volatility solver walkthroughs
 - **`examples_simulation/`**: Monte-Carlo random-walk demos for
   `LongCall`, `ShortPut`, position / strategy simulators,
-  random-walk-of-chain, the quadratic rough Heston model and its VIX
+  random-walk-of-chain, the quadratic rough Heston model, its VIX and its calibration
 - **`examples_pricing/`**: Black-76, Garman-Kohlhagen, SVI calibration,
   static arbitrage checks, a calibrated surface, and settlement obligations
 - **`examples_exotics/`**: Exotic option pricing (barrier,

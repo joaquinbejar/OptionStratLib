@@ -169,6 +169,16 @@ pub use quadratic_rough_heston_vix::{
     QuadraticRoughHestonVix, QuadraticRoughHestonVixEstimate, QuadraticRoughHestonVixPayoff,
     VIX_WINDOW_DAYS, price_vix_quadratic_rough_heston,
 };
+/// The calibration of the quadratic rough Heston model to an implied volatility surface. See
+/// [`calibrate_quadratic_rough_heston`].
+mod quadratic_rough_heston_calibration;
+pub use quadratic_rough_heston_calibration::{
+    QuadraticRoughHestonCalibration, QuadraticRoughHestonCalibrationConfig,
+    QuadraticRoughHestonCalibrationSegment, QuadraticRoughHestonFreeParameters,
+    QuadraticRoughHestonModelQuote, QuadraticRoughHestonMonteCarloConfig,
+    QuadraticRoughHestonQuote, QuadraticRoughHestonQuoteFit, QuadraticRoughHestonSurfacePoint,
+    calibrate_quadratic_rough_heston, price_surface_quadratic_rough_heston,
+};
 
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};
 

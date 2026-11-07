@@ -49,12 +49,15 @@
 //!   [`simulation::randomwalk::RandomWalk`] and
 //!   [`simulation::simulator::Simulator`]; the Ornstein-Uhlenbeck process
 //!   ([`simulation::generate_ou_process`]); the multi-factor quadratic rough
-//!   Heston model, its Monte Carlo vanilla prices and its VIX
+//!   Heston model, its Monte Carlo vanilla prices, its VIX and its calibration
+//!   to an implied volatility surface
 //!   ([`simulation::QuadraticRoughHestonParams`],
 //!   [`simulation::simulate_quadratic_rough_heston_path`],
 //!   [`simulation::price_vanilla_quadratic_rough_heston`],
 //!   [`simulation::QuadraticRoughHestonVix`],
-//!   [`simulation::price_vix_quadratic_rough_heston`]); exit policies
+//!   [`simulation::price_vix_quadratic_rough_heston`],
+//!   [`simulation::calibrate_quadratic_rough_heston`],
+//!   [`simulation::price_surface_quadratic_rough_heston`]); exit policies
 //!   ([`simulation::ExitPolicy`], [`simulation::check_exit_policy`]); and the
 //!   generic path evaluation ([`simulation::PathEvaluator`],
 //!   [`simulation::PathOutcome`], [`simulation::PathStatistics`],

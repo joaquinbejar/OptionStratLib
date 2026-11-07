@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Calibration of the quadratic rough Heston model to an implied volatility surface**
+  (#967). `calibrate_quadratic_rough_heston`, in `optionstratlib_simulation::simulation`
+  (also `optionstratlib::simulation`), fits `(a, b, c, lambda, eta)` and the initial factors,
+  or the subset a `QuadraticRoughHestonFreeParameters` names, to weighted
+  `QuadraticRoughHestonQuote`s by Nelder-Mead on a fixed Monte Carlo grid and seed
+  (`QuadraticRoughHestonMonteCarloConfig`), so the objective is deterministic and the fit does
+  not chase noise. The objective is the weighted sum of squared price errors over
+  Black-Scholes vega, the implied volatility error to first order, defined where a Monte
+  Carlo price has no implied volatility; `a`, `c`, `lambda` and `eta` are searched as
+  logarithms and stay positive. The `QuadraticRoughHestonCalibration` carries the fitted
+  parameters (their `initial_variance` is the `V_0` of the fit), one
+  `QuadraticRoughHestonQuoteFit` per quote with its residual and exact implied volatility
+  error, the weighted RMSE, the iterations and evaluations, and the seed, paths and grid
+  used. `price_surface_quadratic_rough_heston` prices a set of
+  `QuadraticRoughHestonSurfacePoint`s on the same grid and seed, each as its
+  out-of-the-money vanilla with its implied volatility, so a surface can be compared with the
+  model's. New `QuadraticRoughHestonError::NoQuotes`, `InvalidQuote`, `NoFreeParameters`,
+  `NoConvergence`, `Pricing`, `Greeks` and `Volatility`. A test recovers the five model
+  parameters from a surface the model generated to `1e-3` relative (measured `1e-6`).
+
 - **VIX futures and options under the quadratic rough Heston model** (#968).
   `QuadraticRoughHestonVix`, in `optionstratlib_simulation::simulation` (also
   `optionstratlib::simulation`), is the index as a function of the factor state:
