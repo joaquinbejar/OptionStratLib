@@ -177,7 +177,9 @@ pub use quadratic_rough_heston_calibration::{
     QuadraticRoughHestonCalibrationSegment, QuadraticRoughHestonFreeParameters,
     QuadraticRoughHestonModelQuote, QuadraticRoughHestonMonteCarloConfig,
     QuadraticRoughHestonQuote, QuadraticRoughHestonQuoteFit, QuadraticRoughHestonSurfacePoint,
-    calibrate_quadratic_rough_heston, price_surface_quadratic_rough_heston,
+    QuadraticRoughHestonVixQuote, QuadraticRoughHestonVixQuoteFit,
+    calibrate_quadratic_rough_heston, calibrate_quadratic_rough_heston_joint,
+    price_surface_quadratic_rough_heston,
 };
 
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};

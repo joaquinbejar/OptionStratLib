@@ -57,6 +57,7 @@
 //!   [`simulation::QuadraticRoughHestonVix`],
 //!   [`simulation::price_vix_quadratic_rough_heston`],
 //!   [`simulation::calibrate_quadratic_rough_heston`],
+//!   [`simulation::calibrate_quadratic_rough_heston_joint`],
 //!   [`simulation::price_surface_quadratic_rough_heston`]); exit policies
 //!   ([`simulation::ExitPolicy`], [`simulation::check_exit_policy`]); and the
 //!   generic path evaluation ([`simulation::PathEvaluator`],

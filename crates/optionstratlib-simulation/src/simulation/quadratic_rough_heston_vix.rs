@@ -537,7 +537,7 @@ impl QuadraticRoughHestonVix {
 
 /// `squared` when it is finite and positive, or the typed error.
 #[inline]
-fn checked_vix_squared(squared: f64) -> Result<f64, QuadraticRoughHestonError> {
+pub(super) fn checked_vix_squared(squared: f64) -> Result<f64, QuadraticRoughHestonError> {
     if !squared.is_finite() {
         return Err(QuadraticRoughHestonError::VixNotPositive {
             reason: "the conditional variance is not finite",

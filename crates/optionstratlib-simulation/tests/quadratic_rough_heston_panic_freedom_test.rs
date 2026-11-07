@@ -10,7 +10,8 @@ use optionstratlib_simulation::simulation::{
     QuadraticRoughHestonCalibrationConfig, QuadraticRoughHestonFreeParameters,
     QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonMonteCarloConfig,
     QuadraticRoughHestonParams, QuadraticRoughHestonQuote, QuadraticRoughHestonSurfacePoint,
-    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, calibrate_quadratic_rough_heston,
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, QuadraticRoughHestonVixQuote,
+    calibrate_quadratic_rough_heston, calibrate_quadratic_rough_heston_joint,
     price_surface_quadratic_rough_heston, price_vanilla_quadratic_rough_heston,
     price_vix_quadratic_rough_heston, simulate_quadratic_rough_heston_path,
 };
@@ -204,6 +205,27 @@ proptest! {
             &quotes,
             &params,
             QuadraticRoughHestonFreeParameters::ALL,
+            &config,
+        );
+        let vix_quotes = [
+            QuadraticRoughHestonVixQuote {
+                maturity,
+                payoff: QuadraticRoughHestonVixPayoff::Future,
+                price: volatility,
+                weight,
+            },
+            QuadraticRoughHestonVixQuote {
+                maturity: Positive::ONE,
+                payoff: QuadraticRoughHestonVixPayoff::Vanilla { style: OptionStyle::Call, strike },
+                price: Positive::ONE,
+                weight: Positive::ONE,
+            },
+        ];
+        let _ = calibrate_quadratic_rough_heston_joint(
+            &quotes,
+            &vix_quotes,
+            &params,
+            QuadraticRoughHestonFreeParameters::MODEL,
             &config,
         );
     }
