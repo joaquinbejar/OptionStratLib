@@ -1025,6 +1025,12 @@ impl Moments {
         self.squared_deviations += deviation * (value - self.mean);
     }
 
+    /// The mean, in `f64`.
+    #[inline]
+    pub(super) fn mean(&self) -> f64 {
+        self.mean
+    }
+
     /// The mean and its standard error, as `Decimal`s. Needs two values or more.
     pub(super) fn estimate(&self) -> Result<(Decimal, Decimal), QuadraticRoughHestonError> {
         let variance_of_mean = self.squared_deviations / (self.count - 1.0) / self.count;

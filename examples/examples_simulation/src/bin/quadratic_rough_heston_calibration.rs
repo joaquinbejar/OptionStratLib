@@ -11,6 +11,7 @@
 //! fitted parameters, the `V_0` they imply and the error per quote. The fit runs on a fixed
 //! Monte Carlo grid and seed, so it recovers the parameters that generated the surface on that
 //! grid; a second fit at another seed shows how far Monte Carlo noise moves them.
+//! A last fit adds the model's VIX future and calls at two maturities and fits both legs.
 //!
 //! **Every parameter here is illustrative.** None of them is calibrated to any underlying,
 //! and the papers' values are for SPX and VIX.
@@ -18,9 +19,11 @@
 use optionstratlib::prelude::*;
 use optionstratlib::simulation::{
     QuadraticRoughHestonCalibrationConfig, QuadraticRoughHestonFreeParameters,
-    QuadraticRoughHestonKernel, QuadraticRoughHestonMonteCarloConfig, QuadraticRoughHestonParams,
-    QuadraticRoughHestonQuote, QuadraticRoughHestonSurfacePoint, calibrate_quadratic_rough_heston,
-    price_surface_quadratic_rough_heston,
+    QuadraticRoughHestonGrid, QuadraticRoughHestonKernel, QuadraticRoughHestonMonteCarloConfig,
+    QuadraticRoughHestonParams, QuadraticRoughHestonQuote, QuadraticRoughHestonSurfacePoint,
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, QuadraticRoughHestonVixQuote,
+    calibrate_quadratic_rough_heston, calibrate_quadratic_rough_heston_joint,
+    price_surface_quadratic_rough_heston, price_vix_quadratic_rough_heston,
 };
 use osl_example_support::setup_logger;
 use rust_decimal_macros::dec;
@@ -140,6 +143,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "quote"
             );
         }
+    }
+    // The joint fit: the VIX future and three calls at two maturities, priced by the model on
+    // single-maturity grids of the same 0.01 step, which draw the paths of the fit's grid.
+    let window = QuadraticRoughHestonVix::thirty_days(&truth)?.window();
+    let mut vix_quotes = Vec::new();
+    for (maturity, steps) in [(dec!(0.25), 25), (dec!(0.5), 50)] {
+        let grid = QuadraticRoughHestonGrid::try_new(maturity, steps)?;
+        let mut payoffs = vec![QuadraticRoughHestonVixPayoff::Future];
+        for strike in [dec!(12), dec!(16), dec!(20)] {
+            payoffs.push(QuadraticRoughHestonVixPayoff::Vanilla {
+                style: OptionStyle::Call,
+                strike: Positive::new_decimal(strike)?,
+            });
+        }
+        for payoff in payoffs {
+            let estimate = price_vix_quadratic_rough_heston(
+                &truth,
+                &grid,
+                window,
+                payoff,
+                monte_carlo.paths,
+                SEED,
+            )?;
+            vix_quotes.push(QuadraticRoughHestonVixQuote {
+                maturity: Positive::new_decimal(maturity)?,
+                payoff,
+                price: Positive::new_decimal(estimate.price())?,
+                weight: Positive::ONE,
+            });
+        }
+    }
+    let config = QuadraticRoughHestonCalibrationConfig {
+        monte_carlo,
+        ..Default::default()
+    };
+    let fit = calibrate_quadratic_rough_heston_joint(
+        &quotes,
+        &vix_quotes,
+        &start,
+        QuadraticRoughHestonFreeParameters::MODEL,
+        &config,
+    )?;
+    let params = fit.params();
+    info!(
+        a = %params.a(),
+        b = %params.b(),
+        c = %params.c(),
+        lambda = %params.lambda(),
+        eta = %params.eta(),
+        rmse = %fit.rmse(),
+        spx_rmse = ?fit.spx_rmse(),
+        vix_rmse = ?fit.vix_rmse(),
+        iterations = fit.iterations(),
+        "joint fit"
+    );
+    for quote in fit.vix_quotes() {
+        info!(
+            maturity = %quote.quote.maturity,
+            payoff = ?quote.quote.payoff,
+            market = %quote.quote.price,
+            model = %quote.model_price,
+            residual = %quote.residual,
+            "vix quote"
+        );
     }
     Ok(())
 }

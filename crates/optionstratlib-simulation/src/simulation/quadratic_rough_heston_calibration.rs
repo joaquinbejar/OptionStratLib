@@ -12,6 +12,9 @@
 use super::quadratic_rough_heston::{
     Moments, QuadraticRoughHestonParams, Schedule, State, invalid_parameter, reserve, run_paths,
 };
+use super::quadratic_rough_heston_vix::{
+    QuadraticRoughHestonVix, QuadraticRoughHestonVixPayoff, checked_vix_squared,
+};
 use crate::error::QuadraticRoughHestonError;
 use num_traits::ToPrimitive;
 use optionstratlib_core::constants::DAYS_IN_A_YEAR;
@@ -263,13 +266,50 @@ pub struct QuadraticRoughHestonCalibrationSegment {
     pub dt: Decimal,
 }
 
-/// The result of [`calibrate_quadratic_rough_heston`].
+/// One VIX quote a joint calibration fits: a future or a vanilla on the index, with its
+/// maturity and its price in volatility points.
+///
+/// The index is the 30-day VIX of the model, [`QuadraticRoughHestonVix::thirty_days`], read
+/// from the factors at the maturity on the same paths as the SPX quotes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QuadraticRoughHestonVixQuote {
+    /// The maturity, in years. Must be positive.
+    pub maturity: Positive,
+    /// What the instrument pays at its maturity.
+    pub payoff: QuadraticRoughHestonVixPayoff,
+    /// The market price, in volatility points, undiscounted.
+    pub price: Positive,
+    /// The weight of the quote's squared residual, on the same scale as the weights of the SPX
+    /// quotes. A quote of zero weight does not enter the fit and still gets its fit reported.
+    pub weight: Positive,
+}
+
+/// How the fitted model sits against one VIX quote.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct QuadraticRoughHestonVixQuoteFit {
+    /// The quote.
+    pub quote: QuadraticRoughHestonVixQuote,
+    /// The model's Monte Carlo price at the fitted parameters, in volatility points.
+    pub model_price: Decimal,
+    /// The standard error of [`model_price`](Self::model_price).
+    pub model_standard_error: Decimal,
+    /// `(model_price - price) / 100`: the price error in volatility as a fraction, the units
+    /// of the SPX residuals. The objective adds the weighted sum of its squares.
+    pub residual: Decimal,
+}
+
+/// The result of [`calibrate_quadratic_rough_heston`] and
+/// [`calibrate_quadratic_rough_heston_joint`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct QuadraticRoughHestonCalibration {
     params: QuadraticRoughHestonParams,
     quotes: Vec<QuadraticRoughHestonQuoteFit>,
+    vix_quotes: Vec<QuadraticRoughHestonVixQuoteFit>,
     objective: Decimal,
     rmse: Positive,
+    spx_rmse: Option<Positive>,
+    vix_rmse: Option<Positive>,
     iterations: u64,
     evaluations: u64,
     seed: u64,
@@ -293,6 +333,27 @@ impl QuadraticRoughHestonCalibration {
         &self.quotes
     }
 
+    /// One fit per VIX quote, in the order of the input. Empty for an SPX-only fit.
+    #[must_use]
+    #[inline]
+    pub fn vix_quotes(&self) -> &[QuadraticRoughHestonVixQuoteFit] {
+        &self.vix_quotes
+    }
+
+    /// The weighted RMSE of the SPX residuals alone, or `None` when no SPX quote has a weight.
+    #[must_use]
+    #[inline]
+    pub fn spx_rmse(&self) -> Option<Positive> {
+        self.spx_rmse
+    }
+
+    /// The weighted RMSE of the VIX residuals alone, or `None` when no VIX quote has a weight.
+    #[must_use]
+    #[inline]
+    pub fn vix_rmse(&self) -> Option<Positive> {
+        self.vix_rmse
+    }
+
     /// The objective at the fitted parameters: the weighted sum of squared residuals.
     #[must_use]
     #[inline]
@@ -300,7 +361,7 @@ impl QuadraticRoughHestonCalibration {
         self.objective
     }
 
-    /// The weighted root mean square residual, in implied volatility as a fraction per year:
+    /// The weighted root mean square residual over both legs, in volatility as a fraction:
     /// `sqrt(objective / sum of weights)`.
     #[must_use]
     #[inline]
@@ -487,20 +548,93 @@ fn payoff(style: OptionStyle, strike: f64, spot: f64) -> f64 {
     }
 }
 
-/// The spots at the end of each segment, per path.
+/// What a path shows at the end of a segment: the spot, and `VIX^2` when a VIX map is read.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Observation {
+    spot: f64,
+    /// `VIX^2` in squared points, or `NaN` when no VIX map is read.
+    vix_squared: f64,
+}
+
+/// The observations at the end of each segment, per path, with `VIX^2` read by `vix`.
 fn terminal_spots(
     params: &QuadraticRoughHestonParams,
     grid: &Grid,
     monte_carlo: &QuadraticRoughHestonMonteCarloConfig,
-) -> Result<Vec<Vec<f64>>, QuadraticRoughHestonError> {
+    vix: Option<&QuadraticRoughHestonVix>,
+) -> Result<Vec<Vec<Observation>>, QuadraticRoughHestonError> {
     let runs = run_paths(
         params,
         &grid.schedule,
         monte_carlo.paths,
         monte_carlo.seed,
-        |_, state: &State, spots: &mut Vec<f64>| spots.push(state.spot),
+        |_, state: &State, observed: &mut Vec<Observation>| {
+            observed.push(Observation {
+                spot: state.spot,
+                vix_squared: vix.map_or(f64::NAN, |map| map.raw_squared(&state.factors)),
+            });
+        },
     )?;
     Ok(runs.into_iter().map(|run| run.observed).collect())
+}
+
+/// The spot of `path` at `segment`, or `NaN` past its end.
+#[inline]
+fn spot_at(path: &[Observation], segment: usize) -> f64 {
+    path.get(segment)
+        .map_or(f64::NAN, |observation| observation.spot)
+}
+
+/// What a VIX instrument pays on the index `vix`, in points.
+#[inline]
+fn vix_payoff(instrument: Option<(OptionStyle, f64)>, vix: f64) -> f64 {
+    match instrument {
+        None => vix,
+        Some((style, strike)) => payoff(style, strike, vix),
+    }
+}
+
+/// A VIX quote as the objective reads it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct RawVixQuote {
+    segment: usize,
+    payoff: Option<(OptionStyle, f64)>,
+    market_price: f64,
+    weight: f64,
+}
+
+/// The mean VIX payoff of `quote` over `paths`, with its moments, or the error of an index
+/// with no positive finite value.
+fn vix_moments(
+    quote: &RawVixQuote,
+    paths: &[Vec<Observation>],
+) -> Result<Moments, QuadraticRoughHestonError> {
+    let mut moments = Moments::default();
+    for path in paths {
+        let squared = path
+            .get(quote.segment)
+            .map_or(f64::NAN, |observation| observation.vix_squared);
+        let index = checked_vix_squared(squared)?.sqrt(); // scan-banned: allow -- f64 `sqrt` of a positive finite value: finite, and it does not abort
+        moments.add(vix_payoff(quote.payoff, index));
+    }
+    Ok(moments)
+}
+
+/// The 30-day VIX map of `params` when `needed`. A map whose moments are not finite is
+/// `Ok(None)` outside `strict`, which the objective reads as an infinite value.
+fn vix_map(
+    params: &QuadraticRoughHestonParams,
+    needed: bool,
+    strict: bool,
+) -> Result<Option<Option<QuadraticRoughHestonVix>>, QuadraticRoughHestonError> {
+    if !needed {
+        return Ok(Some(None));
+    }
+    match QuadraticRoughHestonVix::thirty_days(params) {
+        Ok(map) => Ok(Some(Some(map))),
+        Err(QuadraticRoughHestonError::VixMomentsNotFinite { .. }) if !strict => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 /// A European option of the model's spot, with `r = q = 0`, for the Black-Scholes
@@ -597,14 +731,13 @@ pub fn price_surface_quadratic_rough_heston(
     for (index, point) in points.iter().enumerate() {
         raw_points.push(raw_point(index, point, spot, &grid)?);
     }
-    let spots = terminal_spots(params, &grid, monte_carlo)?;
+    let spots = terminal_spots(params, &grid, monte_carlo, None)?;
 
     let mut quotes = reserve(points.len(), "model quotes")?;
     for (point, raw) in points.iter().zip(&raw_points) {
         let mut moments = Moments::default();
         for path in &spots {
-            let spot = path.get(raw.segment).copied().unwrap_or(f64::NAN);
-            moments.add(payoff(raw.style, raw.strike, spot));
+            moments.add(payoff(raw.style, raw.strike, spot_at(path, raw.segment)));
         }
         let (price, standard_error) = moments.estimate()?;
         let implied_volatility = model_implied_volatility(
@@ -626,6 +759,10 @@ pub fn price_surface_quadratic_rough_heston(
     }
     Ok(quotes)
 }
+
+/// Volatility points per unit of volatility: a VIX price in points over this is in the units
+/// of an implied volatility.
+const INDEX_POINTS: f64 = 100.0;
 
 /// The implied volatility the solver starts from when a point carries none.
 const DEFAULT_IV_GUESS: Decimal = dec!(0.2);
@@ -781,11 +918,16 @@ struct Vertex {
 fn objective(
     params: &QuadraticRoughHestonParams,
     quotes: &[RawQuote],
+    vix_quotes: &[RawVixQuote],
     grid: &Grid,
     monte_carlo: &QuadraticRoughHestonMonteCarloConfig,
     strict: bool,
 ) -> Result<Option<f64>, QuadraticRoughHestonError> {
-    let spots = match terminal_spots(params, grid, monte_carlo) {
+    let needs_vix = vix_quotes.iter().any(|quote| quote.weight > 0.0);
+    let Some(vix) = vix_map(params, needs_vix, strict)? else {
+        return Ok(None);
+    };
+    let spots = match terminal_spots(params, grid, monte_carlo, vix.as_ref()) {
         Ok(spots) => spots,
         Err(QuadraticRoughHestonError::NonFinite { quantity, step }) if !strict => {
             tracing::debug!(quantity, step, "a path of a trial point is not finite");
@@ -805,12 +947,25 @@ fn objective(
                 payoff(
                     quote.point.style,
                     quote.point.strike,
-                    path.get(quote.point.segment).copied().unwrap_or(f64::NAN),
+                    spot_at(path, quote.point.segment),
                 )
             })
             .sum();
         let error = sum / count - quote.market_price;
         total += quote.coefficient * error * error;
+    }
+    for quote in vix_quotes {
+        if quote.weight == 0.0 {
+            continue;
+        }
+        let moments = match vix_moments(quote, &spots) {
+            Ok(moments) => moments,
+            Err(QuadraticRoughHestonError::VixNotPositive { .. }) if !strict => return Ok(None),
+            Err(error) => return Err(error),
+        };
+        // Points to volatility as a fraction: the units of the SPX residuals.
+        let error = (moments.mean() - quote.market_price) / INDEX_POINTS;
+        total += quote.weight * error * error;
     }
     Ok(total.is_finite().then_some(total))
 }
@@ -866,6 +1021,7 @@ fn along(base: &[f64], other: &[f64], coefficient: f64) -> Vec<f64> {
 struct Evaluator<'a> {
     search: &'a Search,
     quotes: &'a [RawQuote],
+    vix_quotes: &'a [RawVixQuote],
     grid: &'a Grid,
     monte_carlo: &'a QuadraticRoughHestonMonteCarloConfig,
     evaluations: u64,
@@ -888,7 +1044,14 @@ impl Evaluator<'_> {
                 })?;
         let point = self.search.clamp(point);
         let objective = match self.search.params_at(&point)? {
-            Some(params) => objective(&params, self.quotes, self.grid, self.monte_carlo, strict)?,
+            Some(params) => objective(
+                &params,
+                self.quotes,
+                self.vix_quotes,
+                self.grid,
+                self.monte_carlo,
+                strict,
+            )?,
             None => None,
         };
         Ok(Vertex {
@@ -974,7 +1137,65 @@ pub fn calibrate_quadratic_rough_heston(
     free: QuadraticRoughHestonFreeParameters,
     config: &QuadraticRoughHestonCalibrationConfig,
 ) -> Result<QuadraticRoughHestonCalibration, QuadraticRoughHestonError> {
-    if quotes.iter().all(|quote| quote.weight.is_zero()) {
+    calibrate_quadratic_rough_heston_joint(quotes, &[], start, free, config)
+}
+
+/// Fits the model to SPX implied volatility quotes and VIX futures and options at once.
+///
+/// # Objective
+///
+/// The SPX leg is the objective of [`calibrate_quadratic_rough_heston`]. The VIX leg prices
+/// each [`QuadraticRoughHestonVixQuote`] on the same paths: at its maturity, the 30-day index
+/// [`QuadraticRoughHestonVix::thirty_days`] is read from the factors of each path, and the
+/// instrument pays it (a future) or the vanilla on it. The fit minimizes
+///
+/// ```text
+/// sum_i w_i ((P_i(theta) - P_i^market) / vega_i)^2 + sum_j u_j ((V_j(theta) - V_j^market) / 100)^2
+/// ```
+///
+/// where `V_j` is a VIX price in points, so `(V_j - V_j^market) / 100` is the price error in
+/// volatility as a fraction: a future 0.5 points off contributes like an SPX quote 0.5 vol
+/// points off. The weights `w_i` and `u_j` share one scale; set the `u_j` to weigh the VIX leg
+/// against the SPX one. [`QuadraticRoughHestonCalibration::spx_rmse`] and
+/// [`vix_rmse`](QuadraticRoughHestonCalibration::vix_rmse) report each leg, and
+/// [`rmse`](QuadraticRoughHestonCalibration::rmse) both.
+///
+/// # Constraints, search and what the fit does not say
+///
+/// As [`calibrate_quadratic_rough_heston`]. The grid has one segment per distinct maturity of
+/// either leg. A VIX quote of zero weight builds no VIX map in the objective, so with every
+/// VIX weight zero and the VIX maturities among the SPX ones, the fit is the SPX-only fit.
+///
+/// # Cost
+///
+/// The SPX cost, plus one VIX map per evaluation, `O(n^6)` in the number of factors
+/// (milliseconds at `n = 10`), and `O(n^2)` per path and VIX maturity to read the index.
+///
+/// # Errors
+///
+/// As [`calibrate_quadratic_rough_heston`], and:
+///
+/// - [`QuadraticRoughHestonError::NoQuotes`] when no quote of either leg has a weight.
+/// - [`QuadraticRoughHestonError::InvalidQuote`] for a VIX quote with a zero maturity, with
+///   its index among the VIX quotes.
+/// - [`QuadraticRoughHestonError::VixMomentsNotFinite`] and
+///   [`QuadraticRoughHestonError::VixNotPositive`] when the index of the initial simplex or of
+///   the fit has no positive finite value.
+#[tracing::instrument(
+    level = "debug",
+    skip(quotes, vix_quotes, start, config),
+    fields(quotes = quotes.len(), vix_quotes = vix_quotes.len())
+)]
+pub fn calibrate_quadratic_rough_heston_joint(
+    quotes: &[QuadraticRoughHestonQuote],
+    vix_quotes: &[QuadraticRoughHestonVixQuote],
+    start: &QuadraticRoughHestonParams,
+    free: QuadraticRoughHestonFreeParameters,
+    config: &QuadraticRoughHestonCalibrationConfig,
+) -> Result<QuadraticRoughHestonCalibration, QuadraticRoughHestonError> {
+    if quotes.iter().all(|quote| quote.weight.is_zero())
+        && vix_quotes.iter().all(|quote| quote.weight.is_zero())
+    {
         return Err(QuadraticRoughHestonError::NoQuotes);
     }
     let dimension = free.dimension(start.kernel().factors()).ok_or(
@@ -1026,9 +1247,46 @@ pub fn calibrate_quadratic_rough_heston(
             });
         }
     }
-    let maturities: Vec<Positive> = quotes.iter().map(|quote| quote.maturity).collect();
+    for (index, quote) in vix_quotes.iter().enumerate() {
+        if quote.maturity.is_zero() {
+            return Err(QuadraticRoughHestonError::InvalidQuote {
+                index,
+                reason: "the vix maturity must be positive",
+            });
+        }
+    }
+    let maturities: Vec<Positive> = quotes
+        .iter()
+        .map(|quote| quote.maturity)
+        .chain(vix_quotes.iter().map(|quote| quote.maturity))
+        .collect();
     let grid = Grid::build(&maturities, monte_carlo.max_step)?;
     let spot = start.spot();
+
+    let mut raw_vix_quotes = reserve(vix_quotes.len(), "vix quotes")?;
+    let mut vix_weight = 0.0_f64;
+    for (index, quote) in vix_quotes.iter().enumerate() {
+        let segment =
+            grid.segment_of(quote.maturity)
+                .ok_or(QuadraticRoughHestonError::InvalidQuote {
+                    index,
+                    reason: "the vix maturity is not on the grid",
+                })?;
+        let payoff = match quote.payoff {
+            QuadraticRoughHestonVixPayoff::Future => None,
+            QuadraticRoughHestonVixPayoff::Vanilla { style, strike } => {
+                Some((style, decimal_to_f64(strike.to_dec())?))
+            }
+        };
+        let weight = decimal_to_f64(quote.weight.to_dec())?;
+        vix_weight += weight;
+        raw_vix_quotes.push(RawVixQuote {
+            segment,
+            payoff,
+            market_price: decimal_to_f64(quote.price.to_dec())?,
+            weight,
+        });
+    }
 
     // The quotes as the objective reads them, with the Black-Scholes constants of each.
     let mut raw_quotes = reserve(quotes.len(), "calibration quotes")?;
@@ -1075,6 +1333,8 @@ pub fn calibrate_quadratic_rough_heston(
         });
         market.push((market_price, vega_per_unit));
     }
+    let spx_weight = total_weight;
+    total_weight += vix_weight;
     let rmse_of = |objective: f64| (objective / total_weight).sqrt(); // scan-banned: allow -- f64 `sqrt` of a non-negative ratio, or NaN for an infinite objective, which the stopping rule reads as not converged; it does not abort
 
     // The simplex: the start, and the start moved by `initial_step` along each coordinate.
@@ -1085,6 +1345,7 @@ pub fn calibrate_quadratic_rough_heston(
     let mut evaluator = Evaluator {
         search: &search,
         quotes: &raw_quotes,
+        vix_quotes: &raw_vix_quotes,
         grid: &grid,
         monte_carlo,
         evaluations: 0,
@@ -1139,15 +1400,19 @@ pub fn calibrate_quadratic_rough_heston(
 
     // The fit per quote at the best parameters, with the standard errors and the implied
     // volatilities the objective does not need.
-    let spots = terminal_spots(&params, &grid, monte_carlo)?;
+    let vix = vix_map(&params, !vix_quotes.is_empty(), true)?.flatten();
+    let spots = terminal_spots(&params, &grid, monte_carlo, vix.as_ref())?;
     let mut fits = reserve(quotes.len(), "quote fits")?;
     let mut objective_total = 0.0_f64;
     for ((quote, raw), (market_price, vega_per_unit)) in quotes.iter().zip(&raw_quotes).zip(&market)
     {
         let mut moments = Moments::default();
         for path in &spots {
-            let spot = path.get(raw.point.segment).copied().unwrap_or(f64::NAN);
-            moments.add(payoff(raw.point.style, raw.point.strike, spot));
+            moments.add(payoff(
+                raw.point.style,
+                raw.point.strike,
+                spot_at(path, raw.point.segment),
+            ));
         }
         let (model_price, model_standard_error) = moments.estimate()?;
         let residual = d_div(
@@ -1190,16 +1455,50 @@ pub fn calibrate_quadratic_rough_heston(
             implied_volatility_error,
         });
     }
-    // The root of a non-negative finite ratio: `new_decimal` cannot reject it, and a NaN was
-    // reported by `f64_to_decimal` above.
-    let rmse =
-        Positive::new_decimal(f64_to_decimal(rmse_of(objective_total))?).unwrap_or(Positive::ZERO);
+    let spx_objective = objective_total;
+    let mut vix_fits = reserve(vix_quotes.len(), "vix quote fits")?;
+    let mut vix_objective = 0.0_f64;
+    for (quote, raw) in vix_quotes.iter().zip(&raw_vix_quotes) {
+        let (model_price, model_standard_error) = vix_moments(raw, &spots)?.estimate()?;
+        let residual = d_div(
+            d_sub(
+                model_price,
+                quote.price.to_dec(),
+                "quadratic_rough_heston::calibration::vix_error",
+            )?,
+            Decimal::ONE_HUNDRED,
+            "quadratic_rough_heston::calibration::vix_residual",
+        )?;
+        let raw_residual = decimal_to_f64(residual)?;
+        vix_objective += raw.weight * raw_residual * raw_residual;
+        vix_fits.push(QuadraticRoughHestonVixQuoteFit {
+            quote: *quote,
+            model_price,
+            model_standard_error,
+            residual,
+        });
+    }
+    objective_total += vix_objective;
+    // The roots of non-negative finite ratios: `new_decimal` cannot reject them, and a NaN is
+    // reported by `f64_to_decimal`.
+    let root =
+        |objective: f64, weight: f64| -> Result<Option<Positive>, QuadraticRoughHestonError> {
+            if weight <= 0.0 {
+                return Ok(None);
+            }
+            let value = f64_to_decimal((objective / weight).sqrt())?; // scan-banned: allow -- f64 `sqrt` of a non-negative finite ratio: finite, and it does not abort
+            Ok(Some(Positive::new_decimal(value).unwrap_or(Positive::ZERO)))
+        };
+    let rmse = root(objective_total, total_weight)?.unwrap_or(Positive::ZERO);
 
     Ok(QuadraticRoughHestonCalibration {
         params,
         quotes: fits,
+        vix_quotes: vix_fits,
         objective: f64_to_decimal(objective_total)?,
         rmse,
+        spx_rmse: root(spx_objective, spx_weight)?,
+        vix_rmse: root(vix_objective, vix_weight)?,
         iterations,
         evaluations: evaluator.evaluations,
         seed: monte_carlo.seed,
