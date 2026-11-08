@@ -924,7 +924,12 @@ fn image_rows(path: &Path) -> Result<impl Fn(usize, usize) -> Option<u8>, Box<dy
     let (width, height) = png_dimensions(path)?;
     let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path)?));
     let mut reader = decoder.read_info()?;
-    let mut buffer = vec![0; reader.output_buffer_size()];
+    let mut buffer = vec![
+        0;
+        reader
+            .output_buffer_size()
+            .ok_or("the PNG has no buffer size")?
+    ];
     let info = reader.next_frame(&mut buffer)?;
     let channels = info.color_type.samples();
     let stride = info.line_size;
@@ -1004,7 +1009,12 @@ fn test_png_title_clipped_at_the_sides_keeps_its_coverage() -> Result<(), Box<dy
         write_png(&data, &config, &path)?;
         let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(&path)?));
         let mut reader = decoder.read_info()?;
-        let mut buffer = vec![0; reader.output_buffer_size()];
+        let mut buffer = vec![
+            0;
+            reader
+                .output_buffer_size()
+                .ok_or("the PNG has no buffer size")?
+        ];
         let info = reader.next_frame(&mut buffer)?;
         Ok((buffer, info.line_size))
     };

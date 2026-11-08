@@ -81,7 +81,7 @@ static_assertions = "1.1"
 tempfile = { workspace = true }
 criterion = { workspace = true }
 # Decodes PNGs in the native export tests; already in the tree through plotters.
-png = "0.17.16"
+png = "0.18"
 
 [[bench]]
 name = "visualization"

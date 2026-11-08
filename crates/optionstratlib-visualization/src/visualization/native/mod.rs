@@ -348,7 +348,12 @@ mod tests {
             let mut reader =
                 png::Decoder::new(std::io::BufReader::new(std::fs::File::open(&path)?))
                     .read_info()?;
-            let mut buffer = vec![0; reader.output_buffer_size()];
+            let mut buffer = vec![
+                0;
+                reader
+                    .output_buffer_size()
+                    .ok_or("the PNG has no buffer size")?
+            ];
             let info = reader.next_frame(&mut buffer)?;
             Ok((buffer, info.line_size))
         };

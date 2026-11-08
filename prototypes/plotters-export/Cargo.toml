@@ -28,7 +28,7 @@ optionstratlib-visualization = { workspace = true, features = ["clock"] }
 # `ab_glyph` nor `ttf` (font-kit, fontconfig), so no ttf-parser
 # (RUSTSEC-2026-0192). The prototype measures and draws every label itself
 # (`src/text.rs`, `src/backend.rs`).
-plotters = { version = "0.3.7", default-features = false, features = [
+plotters = { version = "0.3", default-features = false, features = [
     "bitmap_backend",
     "bitmap_encoder",
     "colormaps",
@@ -39,14 +39,14 @@ plotters = { version = "0.3.7", default-features = false, features = [
 ] }
 # The backend trait and text style types the text backend implements;
 # already in the tree through plotters.
-plotters-backend = "0.3.7"
-base64 = "0.22"
+plotters-backend = "0.3"
+base64 = "0.23"
 # The bundled font's character map, advances, metrics and glyph outlines.
 # skrifa (Google Fonts' fontations) is the replacement the ttf-parser
 # advisory names.
-skrifa = { version = "0.48", default-features = false, features = ["std"] }
+skrifa = { version = "0.49", default-features = false, features = ["std"] }
 # Antialiased coverage of the glyph outlines for PNG text; no font parsing.
-ab_glyph_rasterizer = "0.1.10"
+ab_glyph_rasterizer = "0.1"
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
@@ -59,7 +59,7 @@ tracing-subscriber = { workspace = true }
 criterion = { workspace = true }
 tempfile = { workspace = true }
 # Decodes the PNGs in the tests; already in the tree through plotters.
-png = "0.17.16"
+png = "0.18"
 
 [[bench]]
 name = "native_export"
