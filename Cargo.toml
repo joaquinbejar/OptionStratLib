@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.24.1"
+version = "0.24.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -125,7 +125,8 @@ optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true, optional = true }
 # Re-exports `ImpliedVolatilitySurface::point_with_derivatives`, new in 0.24.1.
 optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.24.1", default-features = false, optional = true }
-optionstratlib-simulation = { workspace = true, optional = true }
+# Re-exports the quadratic rough Heston VIX and calibrations, new in 0.24.1.
+optionstratlib-simulation = { path = "crates/optionstratlib-simulation", version = "0.24.1", default-features = false, optional = true }
 optionstratlib-market = { workspace = true, optional = true }
 optionstratlib-analytics = { workspace = true, optional = true }
 optionstratlib-strategies = { workspace = true, optional = true }

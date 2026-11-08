@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-11-08
+
+Only `optionstratlib-simulation` (at 0.24.1) and `optionstratlib` (at 0.24.2) are released;
+`optionstratlib-pricing` stays at 0.24.1 and the other seven crates at 0.24.0
+(`docs/versioning-policy.md`). The facade requires `optionstratlib-simulation` `^0.24.1`. A
+direct consumer of the simulation crate picks it up with
+`cargo update -p optionstratlib-simulation`. Every change is an addition.
+
 ### Added
 
 - **Joint SPX and VIX calibration of the quadratic rough Heston model** (#970).
