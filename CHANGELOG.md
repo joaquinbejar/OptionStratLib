@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `brownian_delta_quadratic_rough_heston` in `optionstratlib-simulation`: the delta along
+  the Brownian of vanilla, VIX future and VIX option instruments under the quadratic rough
+  Heston model, with its Monte Carlo standard error (#974).
+
 ## [0.24.2] - 2026-11-08
 
 Only `optionstratlib-simulation` (at 0.24.1) and `optionstratlib` (at 0.24.2) are released;
