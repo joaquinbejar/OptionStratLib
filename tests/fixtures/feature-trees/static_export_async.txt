@@ -365,6 +365,7 @@ read-fonts -> bytemuck
 read-fonts -> foldhash
 read-fonts -> font-types
 read-fonts -> once_cell
+read-fonts -> smallvec
 read-fonts -> yoke
 redox_syscall -> bitflags
 redox_users -> getrandom
@@ -412,7 +413,10 @@ simba -> num-complex
 simba -> num-traits
 simba -> wide
 skrifa -> bytemuck
+skrifa -> once_cell
 skrifa -> read-fonts
+skrifa -> smallvec
+skrifa -> yoke
 socket2 -> libc
 socket2 -> windows-sys
 statrs -> approx
@@ -690,7 +694,7 @@ simba [std,wide]
 simd-adler32 [const-generics,default,std]
 skrifa [std]
 slab [std]
-smallvec []
+smallvec [const_generics,union]
 socket2 [all]
 stable_deref_trait [alloc]
 statrs [default,nalgebra,rand,std]

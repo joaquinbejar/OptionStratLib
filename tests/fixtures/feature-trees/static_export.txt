@@ -306,6 +306,7 @@ read-fonts -> bytemuck
 read-fonts -> foldhash
 read-fonts -> font-types
 read-fonts -> once_cell
+read-fonts -> smallvec
 read-fonts -> yoke
 redox_users -> getrandom
 redox_users -> libredox
@@ -344,7 +345,10 @@ simba -> num-complex
 simba -> num-traits
 simba -> wide
 skrifa -> bytemuck
+skrifa -> once_cell
 skrifa -> read-fonts
+skrifa -> smallvec
+skrifa -> yoke
 statrs -> approx
 statrs -> nalgebra
 statrs -> num-traits
@@ -523,6 +527,7 @@ simba [std,wide]
 simd-adler32 [const-generics,default,std]
 skrifa [std]
 slab [std]
+smallvec [const_generics,union]
 stable_deref_trait [alloc]
 statrs [default,nalgebra,rand,std]
 strsim []

@@ -26,4 +26,4 @@ rust_decimal_macros = "1.40"
 # The runtime the tests drive the wrappers on. The library brings `tokio`
 # itself (`async` -> `optionstratlib-market/async`); the consumer only asks
 # for the macros and the multi-threaded scheduler a service would run.
-tokio = { version = "1.53", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.54", features = ["macros", "rt-multi-thread"] }
