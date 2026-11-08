@@ -276,6 +276,10 @@ wasm-bindgen-shared -> unicode-ident
 wide -> bytemuck
 wide -> safe_arch
 windows-sys -> windows-link
+zeroize -> zeroize_derive
+zeroize_derive -> proc-macro2
+zeroize_derive -> quote
+zeroize_derive -> syn
 zip -> aes
 zip -> bzip2
 zip -> constant_time_eq
@@ -442,7 +446,8 @@ wasm-bindgen-shared []
 wide [std]
 windows-link []
 windows-sys [Wdk,Wdk_Foundation,Wdk_Storage,Wdk_Storage_FileSystem,Wdk_System,Wdk_System_IO,Win32,Win32_Foundation,Win32_Networking,Win32_Networking_WinSock,Win32_Security,Win32_Security_Authorization,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,Win32_System_Diagnostics,Win32_System_Diagnostics_Debug,Win32_System_IO,Win32_System_Pipes,Win32_System_SystemServices,Win32_System_Threading,Win32_System_WindowsProgramming,default]
-zeroize [alloc,default]
+zeroize [alloc,default,derive,zeroize_derive]
+zeroize_derive []
 zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,lzma,ppmd,time,xz,zstd]
 zlib-rs [rust-allocator]
 zmij []
