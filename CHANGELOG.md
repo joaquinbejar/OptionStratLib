@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.3] - 2026-11-08
+
+Only `optionstratlib-simulation` (at 0.24.2), `optionstratlib-visualization` (at 0.24.1) and
+`optionstratlib` (at 0.24.3) are released; `optionstratlib-pricing` stays at 0.24.1 and the
+other six crates at 0.24.0 (`docs/versioning-policy.md`). Every API change is an addition.
+
+### Changed
+
+- Every external dependency requirement names its latest stable release as `X.X` (#976):
+  among them `base64` 0.23, `png` 0.18 and `skrifa` 0.49, the last one a requirement of
+  `optionstratlib-visualization`.
+
 ### Added
 
 - `brownian_delta_quadratic_rough_heston` in `optionstratlib-simulation`: the delta along

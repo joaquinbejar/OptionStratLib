@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib-simulation"
-version = "0.24.1"
+version = "0.24.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
