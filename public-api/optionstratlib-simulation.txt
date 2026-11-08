@@ -252,6 +252,13 @@ pub fn optionstratlib_simulation::simulation::exit::ExitPolicy::name() -> alloc:
 pub fn optionstratlib_simulation::simulation::exit::ExitPolicy::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_simulation::simulation::exit::ExitPolicy
 pub fn optionstratlib_simulation::simulation::exit::ExitPolicy::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+#[non_exhaustive] pub enum optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vanilla
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vanilla::strike: positive::positive::Positive
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vanilla::style: financial_types::OptionStyle
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vix
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vix::payoff: optionstratlib_simulation::simulation::QuadraticRoughHestonVixPayoff
+pub optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument::Vix::window: positive::positive::Positive
 pub enum optionstratlib_simulation::simulation::QuadraticRoughHestonVixPayoff
 pub optionstratlib_simulation::simulation::QuadraticRoughHestonVixPayoff::Future
 pub optionstratlib_simulation::simulation::QuadraticRoughHestonVixPayoff::Vanilla
@@ -349,6 +356,11 @@ pub optionstratlib_simulation::simulation::PathStatistics::win_rate: rust_decima
 pub optionstratlib_simulation::simulation::PathStatistics::worst_pnl: rust_decimal::decimal::Decimal
 impl optionstratlib_simulation::simulation::PathStatistics
 pub fn optionstratlib_simulation::simulation::PathStatistics::from_outcomes(&[optionstratlib_simulation::simulation::PathOutcome]) -> core::result::Result<Self, optionstratlib_simulation::error::SimulationError>
+pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta
+impl optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta::delta(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta::paths(&self) -> usize
+pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta::standard_error(&self) -> rust_decimal::decimal::Decimal
 pub struct optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration
 impl optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration
 pub fn optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration::evaluations(&self) -> u64
@@ -525,6 +537,7 @@ pub trait optionstratlib_simulation::simulation::WalkTypeAbleClone<X, Y> where X
 pub fn optionstratlib_simulation::simulation::WalkTypeAbleClone::clone_box(&self) -> alloc::boxed::Box<dyn optionstratlib_simulation::simulation::WalkTypeAble<X, Y>>
 impl<T, X, Y> optionstratlib_simulation::simulation::WalkTypeAbleClone<X, Y> for T where T: 'static + optionstratlib_simulation::simulation::WalkTypeAble<X, Y> + core::clone::Clone, X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn T::clone_box(&self) -> alloc::boxed::Box<dyn optionstratlib_simulation::simulation::WalkTypeAble<X, Y>>
+pub fn optionstratlib_simulation::simulation::brownian_delta_quadratic_rough_heston(&optionstratlib_simulation::simulation::QuadraticRoughHestonParams, &optionstratlib_simulation::simulation::QuadraticRoughHestonGrid, optionstratlib_simulation::simulation::QuadraticRoughHestonInstrument, positive::positive::Positive, core::num::nonzero::NonZeroUsize, u64) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonBrownianDelta, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::calibrate_quadratic_rough_heston(&[optionstratlib_simulation::simulation::QuadraticRoughHestonQuote], &optionstratlib_simulation::simulation::QuadraticRoughHestonParams, optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters, &optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::calibrate_quadratic_rough_heston_joint(&[optionstratlib_simulation::simulation::QuadraticRoughHestonQuote], &[optionstratlib_simulation::simulation::QuadraticRoughHestonVixQuote], &optionstratlib_simulation::simulation::QuadraticRoughHestonParams, optionstratlib_simulation::simulation::QuadraticRoughHestonFreeParameters, &optionstratlib_simulation::simulation::QuadraticRoughHestonCalibrationConfig) -> core::result::Result<optionstratlib_simulation::simulation::QuadraticRoughHestonCalibration, optionstratlib_simulation::error::QuadraticRoughHestonError>
 pub fn optionstratlib_simulation::simulation::check_exit_policy(&optionstratlib_simulation::simulation::exit::ExitPolicy, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize, positive::positive::Positive, positive::positive::Positive, bool) -> core::option::Option<optionstratlib_simulation::simulation::exit::ExitPolicy>

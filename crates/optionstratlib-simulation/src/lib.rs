@@ -56,6 +56,7 @@
 //!   [`simulation::price_vanilla_quadratic_rough_heston`],
 //!   [`simulation::QuadraticRoughHestonVix`],
 //!   [`simulation::price_vix_quadratic_rough_heston`],
+//!   [`simulation::brownian_delta_quadratic_rough_heston`],
 //!   [`simulation::calibrate_quadratic_rough_heston`],
 //!   [`simulation::calibrate_quadratic_rough_heston_joint`],
 //!   [`simulation::price_surface_quadratic_rough_heston`]); exit policies

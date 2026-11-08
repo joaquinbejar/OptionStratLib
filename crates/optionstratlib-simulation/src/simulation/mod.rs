@@ -163,6 +163,12 @@ pub use quadratic_rough_heston::{
     QuadraticRoughHestonParams, QuadraticRoughHestonPath, price_vanilla_quadratic_rough_heston,
     simulate_quadratic_rough_heston_path,
 };
+/// The delta along the Brownian. See [`brownian_delta_quadratic_rough_heston`].
+mod quadratic_rough_heston_delta;
+pub use quadratic_rough_heston_delta::{
+    QuadraticRoughHestonBrownianDelta, QuadraticRoughHestonInstrument,
+    brownian_delta_quadratic_rough_heston,
+};
 /// The VIX under the quadratic rough Heston model. See [`QuadraticRoughHestonVix`].
 mod quadratic_rough_heston_vix;
 pub use quadratic_rough_heston_vix::{
