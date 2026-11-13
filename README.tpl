@@ -84,8 +84,7 @@ If you have any questions, issues, or would like to provide feedback, please fee
 
 
 ### **Contact Information**
-
-- **Author**: Joaquín Béjar García <https://joaquinbejar.taunais.com/>
+- **Author**: Joaquín Béjar García
 - **Email**: jb@taunais.com
 - **Telegram**: [@joaquin_bejar](https://t.me/joaquin_bejar)
 - **Repository**: <https://github.com/joaquinbejar/OptionStratLib>
@@ -106,21 +105,23 @@ Repositories by the same author that this project depends on, and repositories t
 
 | Repository | Description |
 |------------|-------------|
-| [ExpirationDate](https://github.com/joaquinbejar/ExpirationDate) · [crates.io](https://crates.io/crates/expiration_date) | Financial instrument expiration dates: parsing, arithmetic and time-to-expiry helpers. |
-| [financial_types](https://github.com/joaquinbejar/financial_types) · [crates.io](https://crates.io/crates/financial_types) | Fundamental enums for financial applications (sides, asset classes, order types). |
-| [option_type](https://github.com/joaquinbejar/option_type) · [crates.io](https://crates.io/crates/option_type) | Enum-based classification of vanilla and exotic option contracts. |
-| [positive](https://github.com/joaquinbejar/positive) · [crates.io](https://crates.io/crates/positive) | Type-safe wrapper for guaranteed non-negative Decimal values. |
+| [ExpirationDate](https://github.com/joaquinbejar/ExpirationDate) | Expiration date type and time-to-expiry calculations for every option. |
+| [financial_types](https://github.com/joaquinbejar/financial_types) | Shared enums such as side, option style and asset class used across the API. |
+| [option_type](https://github.com/joaquinbejar/option_type) | Classification of vanilla and exotic option contracts used by the pricing models. |
+| [positive](https://github.com/joaquinbejar/positive) | The `Positive` decimal type used for prices, strikes, volatilities and quantities. |
 
 ### Used by
 
 | Repository | Description |
 |------------|-------------|
-| [ChainView](https://github.com/joaquinbejar/ChainView) | Terminal UI for option chains, Greeks and volatility, real-time and backtest replay. |
-| [fauxchange](https://github.com/joaquinbejar/fauxchange) | Exchange-in-a-box: local options exchange simulator with realistic matching, FIX/WS/REST APIs and historical replay. |
-| [IronCondor](https://github.com/joaquinbejar/IronCondor) | Backtesting engine for options strategies with order-book-level fill simulation. |
-| [market-maker-rs](https://github.com/joaquinbejar/market-maker-rs) | Quantitative market making strategies, starting with the Avellaneda-Stoikov model. |
-| [Option-Chain-OrderBook](https://github.com/joaquinbejar/Option-Chain-OrderBook) · [crates.io](https://crates.io/crates/option-chain-orderbook) | Option chain order book system (underlying, expiration, strike) built on OrderBook-rs, PriceLevel and OptionStratLib. |
-| [Option-Chain-OrderBook-Backend](https://github.com/joaquinbejar/Option-Chain-OrderBook-Backend) | REST and WebSocket backend service exposing Option-Chain-OrderBook. |
-| [OptionChain-Simulator](https://github.com/joaquinbejar/OptionChain-Simulator) | RESTful simulator for option chains that evolve over time with each request. |
+| [ChainView](https://github.com/joaquinbejar/ChainView) | Terminal UI for option chains, Greeks and volatility; uses OptionStratLib for pricing and Greeks. |
+| [fauxchange](https://github.com/joaquinbejar/fauxchange) | Exchange-in-a-box options venue simulator; uses OptionStratLib for pricing, Greeks and price walks. |
+| [IronCondor](https://github.com/joaquinbejar/IronCondor) | Options backtesting engine; uses OptionStratLib for strategy definitions and pricing. |
+| [market-maker-rs](https://github.com/joaquinbejar/market-maker-rs) | Quantitative market making library; uses OptionStratLib for options pricing and Greeks. |
+| [metalbook](https://github.com/joaquinbejar/metalbook) | Cash-settled gold and silver options on Solana; uses OptionStratLib as the off-chain pricing reference. |
+| [optfix](https://github.com/joaquinbejar/optfix) | Fixed-point option pricing for Solana programs; uses OptionStratLib as its floating-point reference. |
+| [Option-Chain-OrderBook](https://github.com/joaquinbejar/Option-Chain-OrderBook) | Option chain order book infrastructure; uses OptionStratLib for option contract types and pricing. |
+| [Option-Chain-OrderBook-Backend](https://github.com/joaquinbejar/Option-Chain-OrderBook-Backend) | REST and WebSocket backend for option-chain-orderbook; uses OptionStratLib for option types and pricing. |
+| [OptionChain-Simulator](https://github.com/joaquinbejar/OptionChain-Simulator) | RESTful option chain simulator; uses OptionStratLib to price and evolve the chains. |
 
 <!-- related-projects:end -->
