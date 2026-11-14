@@ -418,7 +418,8 @@ pub use everlasting::{
 pub use exchange::exchange_black_scholes;
 pub use funding_network::{
     FUNDING_NETWORK_MAX_ORDER, FundingNetwork, FundingNetworkParams, FundingSchedule, LevyModel,
-    funding_network_deltas, funding_network_funding, funding_network_prices,
+    funding_network_deltas, funding_network_deltas_with, funding_network_funding,
+    funding_network_prices, funding_network_prices_with,
 };
 pub use funding_network_monte_carlo::{FundingNetworkEstimate, funding_network_prices_monte_carlo};
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
