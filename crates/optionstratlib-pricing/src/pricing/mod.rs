@@ -262,6 +262,15 @@ pub mod power;
 /// motion.
 pub mod everlasting;
 
+/// Funding networks: perpetual contracts whose funding rates are linear in
+/// each other's prices, priced by Fourier inversion under exponential Lévy
+/// models.
+pub mod funding_network;
+
+/// Monte Carlo estimator for funding networks, with funding that accrues
+/// continuously or is paid at discrete times.
+pub mod funding_network_monte_carlo;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -401,11 +410,18 @@ pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;
 pub use compound::compound_black_scholes;
 pub use everlasting::{
-    EVERLASTING_MAX_RUNG, EverlastingParams, everlasting_delta, everlasting_equivalent_maturity,
+    EVERLASTING_MAX_RUNG, EverlastingParams, black_forward_implied_volatility, everlasting_delta,
+    everlasting_equivalent_maturity, everlasting_european_implied_volatility, everlasting_forward,
     everlasting_funding, everlasting_funding_rate_sensitivity, everlasting_gamma,
-    everlasting_mean_maturity, everlasting_price, everlasting_vega,
+    everlasting_implied_volatility, everlasting_mean_maturity, everlasting_price, everlasting_vega,
 };
 pub use exchange::exchange_black_scholes;
+pub use funding_network::{
+    FUNDING_NETWORK_MAX_ORDER, FundingNetwork, FundingNetworkParams, FundingSchedule, LevyModel,
+    funding_network_deltas, funding_network_deltas_with, funding_network_funding,
+    funding_network_prices, funding_network_prices_with,
+};
+pub use funding_network_monte_carlo::{FundingNetworkEstimate, funding_network_prices_monte_carlo};
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
