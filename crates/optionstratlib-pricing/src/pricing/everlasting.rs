@@ -53,6 +53,20 @@
 //! - `κ·∂F_j/∂κ = j·(F_j − F_{j+1})`;
 //! - `σ·∂F_j/∂σ = 2j·[(F_{j+1} − F_j) − (μ/κ)·S·Δ_{j+1}]`.
 //!
+//! # Implied Volatility
+//!
+//! A price of an everlasting option reads as a volatility in two ways.
+//! [`everlasting_implied_volatility`] is the constant volatility at which
+//! the closed form returns the price. [`everlasting_european_implied_volatility`]
+//! is the Black volatility a European option of a chosen maturity needs to
+//! reach the same price, on the forward `S·(κ/(κ − μ))^j` of the contract
+//! ([`everlasting_forward`]). The contract mixes maturities, so the second
+//! one is not flat in the strike even though the model volatility is: at the
+//! [`everlasting_equivalent_maturity`] it equals the model volatility at the
+//! money and rises on both sides, less so on a higher rung.
+//! [`black_forward_implied_volatility`] is the same inversion for any
+//! undiscounted price on a forward.
+//!
 //! # Numerical Method
 //!
 //! The kernel runs in `f64` on logarithms of the binomial and power factors,
@@ -104,6 +118,21 @@ pub const EVERLASTING_MAX_RUNG: u32 = 64;
 
 /// Method name carried by the errors of this module.
 const METHOD: &str = "everlasting";
+
+/// Bracket of the volatility an implied-volatility solve searches, per
+/// square root of a year.
+const IMPLIED_VOLATILITY_FLOOR: f64 = 1e-6;
+const IMPLIED_VOLATILITY_CAP: f64 = 100.0;
+
+/// Bracket of the total volatility `σ√T` the Black inversion searches. At
+/// the cap the option is worth its upper bound to the last bit of an `f64`.
+const TOTAL_VOLATILITY_FLOOR: f64 = 1e-9;
+const TOTAL_VOLATILITY_CAP: f64 = 40.0;
+
+/// Bisection stops when the bracket is this narrow, relative to its top, or
+/// after `BISECTION_STEPS` halvings of its logarithm.
+const BISECTION_TOLERANCE: f64 = 1e-15;
+const BISECTION_STEPS: u32 = 200;
 
 /// Inputs of an everlasting option on rung `rung` of a ladder, under
 /// geometric Brownian motion.
@@ -396,6 +425,302 @@ pub fn everlasting_equivalent_maturity(
     Ok(Positive::new_decimal(maturity)?)
 }
 
+/// Forward of an everlasting option: the expected underlying price at the
+/// random maturity, `S·(κ/(κ − μ))^j`. It is the level around which call and
+/// put are symmetric, `C − P = forward − K`, and equals the underlying price
+/// when the drift is zero.
+///
+/// # Errors
+///
+/// - [`PricingError::Decimal`] when an input has no `f64` form.
+/// - [`PricingError::NonFinite`] when the funding rate is so close to the
+///   drift that the forward overflows.
+pub fn everlasting_forward(params: &EverlastingParams) -> Result<Positive, PricingError> {
+    let inputs = params.kernel_inputs()?;
+    let forward = to_decimal(
+        "pricing::everlasting::forward",
+        inputs.spot * forward_factor(&inputs),
+    )?;
+    Ok(Positive::new_decimal(forward)?)
+}
+
+/// Implied volatility of an everlasting option: the constant volatility `σ`
+/// at which [`everlasting_price`] returns `price`.
+///
+/// The price grows with the volatility, so the root is unique; it is found
+/// by bisection on the logarithm of `σ`, between `1e-6` and `100` per square
+/// root of a year.
+///
+/// # Arguments
+///
+/// * `price` - Price of the contract, per unit of underlying.
+/// * `underlying_price`, `strike_price`, `drift`, `funding_rate`, `rung`,
+///   `option_style` - As in [`EverlastingParams::try_new`].
+///
+/// # Errors
+///
+/// - [`PricingError::InvalidParameter`] when an input is outside the domain
+///   of [`EverlastingParams::try_new`], or when `price` is not attainable:
+///   at or below the price at the lowest volatility (the value on the
+///   forward without volatility) or at or above the price at the highest
+///   one.
+/// - [`PricingError::Decimal`] when an input has no `f64` form.
+/// - [`PricingError::NonFinite`] when the `f64` kernel leaves its range.
+pub fn everlasting_implied_volatility(
+    price: Positive,
+    underlying_price: Positive,
+    strike_price: Positive,
+    drift: Decimal,
+    funding_rate: Positive,
+    rung: NonZeroU32,
+    option_style: OptionStyle,
+) -> Result<Positive, PricingError> {
+    // The volatility is the unknown: any valid value builds the inputs.
+    let params = EverlastingParams::try_new(
+        underlying_price,
+        strike_price,
+        Positive::ONE,
+        drift,
+        funding_rate,
+        rung,
+        option_style,
+    )?;
+    let base = params.kernel_inputs()?;
+    let target = decimal_to_f64(price.to_dec())?;
+    let root = solve_increasing(IMPLIED_VOLATILITY_FLOOR, IMPLIED_VOLATILITY_CAP, |sigma| {
+        ladder_values(&KernelInputs { sigma, ..base }).price - target
+    });
+    let sigma = match root {
+        Root::Found(sigma) => sigma,
+        Root::Below => {
+            return Err(PricingError::invalid_parameter(
+                "price",
+                price.to_dec(),
+                "at or below the price without volatility: no volatility is implied",
+            ));
+        }
+        Root::Above => {
+            return Err(PricingError::invalid_parameter(
+                "price",
+                price.to_dec(),
+                "at or above the price at the highest volatility searched",
+            ));
+        }
+        Root::Undefined(value) => {
+            return Err(PricingError::non_finite(
+                "pricing::everlasting::implied_volatility",
+                value,
+            ));
+        }
+    };
+    let sigma = to_decimal("pricing::everlasting::implied_volatility", sigma)?;
+    Ok(Positive::new_decimal(sigma)?)
+}
+
+/// Black implied volatility of an undiscounted price on a forward: the `σ`
+/// for which `F·Φ(d₁) − K·Φ(d₂)` (call) or `K·Φ(−d₂) − F·Φ(−d₁)` (put), with
+/// `d₁ = ln(F/K)/(σ√T) + σ√T/2` and `d₂ = d₁ − σ√T`, equals `price`.
+///
+/// This is the quote convention of a contract that is margined and settled
+/// through funding, where no discounting applies. The inversion runs on the
+/// out-of-the-money side, reached by parity `C − P = F − K`, and is accurate
+/// to about `1e-10` relative, the accuracy of the normal distribution
+/// function.
+///
+/// # Arguments
+///
+/// * `price` - Undiscounted price of the option.
+/// * `forward` - Forward `F` of the underlying at the maturity.
+/// * `strike_price` - Strike `K`.
+/// * `maturity` - Maturity `T`, in years.
+/// * `option_style` - Call or put.
+///
+/// # Errors
+///
+/// - [`PricingError::InvalidParameter`] when the forward, the strike or the
+///   maturity is zero, or when `price` is outside the open interval between
+///   the intrinsic value on the forward and the upper bound of the option
+///   (the forward for a call, the strike for a put).
+/// - [`PricingError::Decimal`] when an input has no `f64` form.
+/// - [`PricingError::MethodError`] when the standard normal law cannot be
+///   built.
+pub fn black_forward_implied_volatility(
+    price: Positive,
+    forward: Positive,
+    strike_price: Positive,
+    maturity: Positive,
+    option_style: OptionStyle,
+) -> Result<Positive, PricingError> {
+    reject_zero("forward", forward)?;
+    reject_zero("strike_price", strike_price)?;
+    reject_zero("maturity", maturity)?;
+    let forward = decimal_to_f64(forward.to_dec())?;
+    let strike = decimal_to_f64(strike_price.to_dec())?;
+    let years = decimal_to_f64(maturity.to_dec())?;
+    let value = decimal_to_f64(price.to_dec())?;
+    // The out-of-the-money option: the call from the forward upwards.
+    let out_of_the_money = match (option_style, strike >= forward) {
+        (OptionStyle::Call, true) | (OptionStyle::Put, false) => value,
+        (OptionStyle::Call, false) => value - (forward - strike),
+        (OptionStyle::Put, true) => value - (strike - forward),
+    };
+    let total = black_total_volatility(out_of_the_money, forward, strike)?;
+    let sigma = to_decimal(
+        "pricing::everlasting::black_forward_implied_volatility",
+        total / sqrt_f64(years),
+    )?;
+    Ok(Positive::new_decimal(sigma)?)
+}
+
+/// European implied volatility of an everlasting option at `maturity`: the
+/// Black volatility a European option of that maturity needs, on the forward
+/// of the contract ([`everlasting_forward`]), to be worth the everlasting
+/// price of `params`.
+///
+/// The everlasting price is a mixture of European prices over the maturity,
+/// so this volatility depends on the strike even though the model volatility
+/// is constant. With zero drift it is symmetric in the logarithm of `K/S`;
+/// at [`everlasting_equivalent_maturity`] it equals the model volatility at
+/// the money and is higher on both sides. Call and put give the same value.
+///
+/// The result is accurate to about `1e-10` relative, the accuracy of the
+/// normal distribution function behind the Black formula.
+///
+/// # Arguments
+///
+/// * `params` - The everlasting option.
+/// * `maturity` - Maturity `T` of the European option, in years.
+///
+/// # Errors
+///
+/// - [`PricingError::InvalidParameter`] when `maturity` is zero, or when the
+///   price is so far out of the money that it is zero in `f64` and implies
+///   no volatility.
+/// - [`PricingError::Decimal`] when an input has no `f64` form.
+/// - [`PricingError::MethodError`] when the standard normal law cannot be
+///   built.
+/// - [`PricingError::NonFinite`] when the `f64` kernel leaves its range.
+pub fn everlasting_european_implied_volatility(
+    params: &EverlastingParams,
+    maturity: Positive,
+) -> Result<Positive, PricingError> {
+    reject_zero("maturity", maturity)?;
+    let inputs = params.kernel_inputs()?;
+    let years = decimal_to_f64(maturity.to_dec())?;
+    let forward = inputs.spot * forward_factor(&inputs);
+    // The out-of-the-money option on the forward, priced directly.
+    let style = if inputs.strike >= forward {
+        OptionStyle::Call
+    } else {
+        OptionStyle::Put
+    };
+    let out_of_the_money = ladder_values(&KernelInputs { style, ..inputs }).price;
+    let total = black_total_volatility(out_of_the_money, forward, inputs.strike)?;
+    let sigma = to_decimal(
+        "pricing::everlasting::european_implied_volatility",
+        total / sqrt_f64(years),
+    )?;
+    Ok(Positive::new_decimal(sigma)?)
+}
+
+/// What a bracketed search for the root of an increasing function found.
+#[derive(Debug, Clone, Copy)]
+enum Root {
+    /// The argument at which the function crosses zero.
+    Found(f64),
+    /// The function is already zero or positive at the bottom of the bracket.
+    Below,
+    /// The function is still negative or zero at the top of the bracket.
+    Above,
+    /// The function returned `NaN`; the argument at which it did.
+    Undefined(f64),
+}
+
+/// Root of the increasing function `residual` on `[low, high]`, both
+/// positive, by bisection at the geometric mean: the scale of a volatility
+/// is logarithmic.
+fn solve_increasing<F>(low: f64, high: f64, residual: F) -> Root
+where
+    F: Fn(f64) -> f64,
+{
+    let at_low = residual(low);
+    if at_low.is_nan() {
+        return Root::Undefined(low);
+    }
+    if at_low >= 0.0 {
+        return Root::Below;
+    }
+    let at_high = residual(high);
+    if at_high.is_nan() {
+        return Root::Undefined(high);
+    }
+    if at_high <= 0.0 {
+        return Root::Above;
+    }
+    let (mut low, mut high) = (low, high);
+    for _ in 0..BISECTION_STEPS {
+        let middle = sqrt_f64(low * high);
+        let value = residual(middle);
+        if value.is_nan() {
+            return Root::Undefined(middle);
+        }
+        if value < 0.0 {
+            low = middle;
+        } else {
+            high = middle;
+        }
+        if high - low <= BISECTION_TOLERANCE * high {
+            break;
+        }
+    }
+    Root::Found(sqrt_f64(low * high))
+}
+
+/// Total volatility `σ√T` at which the undiscounted Black price of the
+/// out-of-the-money option on `forward` (the call when `strike ≥ forward`,
+/// the put otherwise) equals `price`.
+fn black_total_volatility(price: f64, forward: f64, strike: f64) -> Result<f64, PricingError> {
+    let normal = Normal::new(0.0, 1.0)
+        .map_err(|e| PricingError::method_error(METHOD, &format!("standard normal: {e}")))?;
+    let log_moneyness = ln_f64(forward / strike);
+    let call = strike >= forward;
+    let root = solve_increasing(TOTAL_VOLATILITY_FLOOR, TOTAL_VOLATILITY_CAP, |total| {
+        let d1 = log_moneyness / total + 0.5 * total;
+        let d2 = d1 - total;
+        let value = if call {
+            forward * normal.cdf(d1) - strike * normal.cdf(d2)
+        } else {
+            strike * normal.cdf(-d2) - forward * normal.cdf(-d1)
+        };
+        value - price
+    });
+    let reported = finite_decimal(price).unwrap_or_default();
+    match root {
+        Root::Found(total) => Ok(total),
+        Root::Below => Err(PricingError::invalid_parameter(
+            "price",
+            reported,
+            "at or below the intrinsic value on the forward: no volatility is implied",
+        )),
+        Root::Above => Err(PricingError::invalid_parameter(
+            "price",
+            reported,
+            "at or above the upper bound of the option price",
+        )),
+        Root::Undefined(value) => Err(PricingError::non_finite(
+            "pricing::everlasting::black_total_volatility",
+            value,
+        )),
+    }
+}
+
+/// `E[S_τ]/S = (κ/(κ − μ))^j`: the forward of rung `j` over the underlying
+/// price.
+#[inline]
+fn forward_factor(inputs: &KernelInputs) -> f64 {
+    exp_f64(-f64::from(inputs.rung) * (-inputs.mu / inputs.kappa).ln_1p())
+}
+
 /// Rejects a zero value of a parameter that must be strictly positive.
 fn reject_zero(parameter: &'static str, value: Positive) -> Result<(), PricingError> {
     if value == Positive::ZERO {
@@ -564,8 +889,7 @@ fn ladder_values(inputs: &KernelInputs) -> LadderValues {
     };
     // a − 1 from the value of the quadratic at 1, exact when κ is near μ.
     let a_minus_one = (inputs.kappa - inputs.mu) / (0.5 * variance * (1.0 + b));
-    // E[S_τ]/S = (κ/(κ − μ))^j.
-    let forward_factor = exp_f64(-f64::from(inputs.rung) * (-inputs.mu / inputs.kappa).ln_1p());
+    let forward_factor = forward_factor(inputs);
 
     let ln_a = ln_f64(a);
     let ln_b = ln_f64(b);
@@ -1110,5 +1434,276 @@ mod tests {
         let p = params(100.0, 1e6, 0.0, 0.2, 64.0 * 365.0, 64, OptionStyle::Call);
         assert_eq!(everlasting_price(&p).unwrap(), Decimal::ZERO);
         assert_eq!(everlasting_gamma(&p).unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_everlasting_forward_is_spot_times_the_rate_ratio_to_the_rung() {
+        let flat = params(100.0, 90.0, 0.0, 0.5, 12.0, 3, OptionStyle::Call);
+        assert_eq!(everlasting_forward(&flat).unwrap(), Positive::HUNDRED);
+        let drifting = params(100.0, 90.0, 0.05, 0.5, 2.0 / MONTH, 2, OptionStyle::Put);
+        let forward = everlasting_forward(&drifting).unwrap().to_f64();
+        assert!(relative(forward, 100.412_229_037_486_9) < 1e-14);
+        // Parity: C − P = forward − K.
+        let call = price(100.0, 90.0, 0.05, 0.5, 2.0 / MONTH, 2);
+        let put = everlasting_price(&drifting).unwrap().to_f64().unwrap();
+        assert!((call - put - (forward - 90.0)).abs() < 1e-11);
+    }
+
+    #[test]
+    fn test_everlasting_implied_volatility_round_trip_recovers_the_volatility() {
+        let mut worst = 0.0_f64;
+        for j in [1_u32, 3, 16, 64] {
+            for kappa in [f64::from(j) / MONTH, 8760.0] {
+                for strike in [80.0, 100.0, 125.0] {
+                    for sigma in [0.1, 0.5, 1.5] {
+                        for mu in [0.0, 0.05] {
+                            for style in [OptionStyle::Call, OptionStyle::Put] {
+                                let p = params(100.0, strike, mu, sigma, kappa, j, style);
+                                let value = everlasting_price(&p).unwrap();
+                                let other = match style {
+                                    OptionStyle::Call => OptionStyle::Put,
+                                    OptionStyle::Put => OptionStyle::Call,
+                                };
+                                let time_value = value.min(
+                                    everlasting_price(&params(
+                                        100.0, strike, mu, sigma, kappa, j, other,
+                                    ))
+                                    .unwrap(),
+                                );
+                                // Below this the volatility is not readable
+                                // from a price in `f64`.
+                                if time_value < dec!(0.000001) {
+                                    continue;
+                                }
+                                let implied = everlasting_implied_volatility(
+                                    Positive::new_decimal(value).unwrap(),
+                                    pos_or_panic!(100.0),
+                                    pos_or_panic!(strike),
+                                    Decimal::try_from(mu).unwrap(),
+                                    pos_or_panic!(kappa),
+                                    rung(j),
+                                    style,
+                                )
+                                .unwrap()
+                                .to_f64();
+                                worst = worst.max(relative(implied, sigma));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(worst < 1e-9, "worst relative error {worst:e}");
+    }
+
+    #[test]
+    fn test_everlasting_implied_volatility_rejects_unattainable_prices() {
+        let solve = |value: f64, strike: f64, style: OptionStyle| {
+            everlasting_implied_volatility(
+                pos_or_panic!(value),
+                Positive::HUNDRED,
+                pos_or_panic!(strike),
+                Decimal::ZERO,
+                pos_or_panic!(12.0),
+                rung(1),
+                style,
+            )
+        };
+        // Below the intrinsic value of a call in the money.
+        assert!(matches!(
+            solve(10.0, 80.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        // A call is never worth more than the forward, nor a put more than
+        // the strike.
+        assert!(matches!(
+            solve(150.0, 100.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        assert!(matches!(
+            solve(100.0, 100.0, OptionStyle::Put),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        // The domain of the contract is checked first.
+        assert!(matches!(
+            everlasting_implied_volatility(
+                Positive::ONE,
+                Positive::HUNDRED,
+                Positive::HUNDRED,
+                dec!(13),
+                pos_or_panic!(12.0),
+                rung(1),
+                OptionStyle::Call,
+            ),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+    }
+
+    #[test]
+    fn test_black_forward_implied_volatility_round_trip_recovers_the_volatility() {
+        let mut worst = 0.0_f64;
+        for forward in [90.0, 100.0, 140.0] {
+            for sigma in [0.05, 0.5, 2.0] {
+                for years in [1.0 / 365.0, MONTH, 2.0] {
+                    let call = european_call(forward, 100.0, 0.0, sigma, years);
+                    let put = call - forward + 100.0;
+                    if call.min(put) < 1e-6 {
+                        continue;
+                    }
+                    for (value, style) in [(call, OptionStyle::Call), (put, OptionStyle::Put)] {
+                        let implied = black_forward_implied_volatility(
+                            pos_or_panic!(value),
+                            pos_or_panic!(forward),
+                            Positive::HUNDRED,
+                            pos_or_panic!(years),
+                            style,
+                        )
+                        .unwrap()
+                        .to_f64();
+                        worst = worst.max(relative(implied, sigma));
+                    }
+                }
+            }
+        }
+        assert!(worst < 1e-9, "worst relative error {worst:e}");
+    }
+
+    #[test]
+    fn test_black_forward_implied_volatility_rejects_values_outside_the_domain() {
+        let solve = |value: f64, forward: f64, years: f64, style: OptionStyle| {
+            black_forward_implied_volatility(
+                pos_or_panic!(value),
+                pos_or_panic!(forward),
+                Positive::HUNDRED,
+                pos_or_panic!(years),
+                style,
+            )
+        };
+        // At the intrinsic value, and below it.
+        assert!(matches!(
+            solve(20.0, 120.0, 1.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        assert!(matches!(
+            solve(5.0, 80.0, 1.0, OptionStyle::Put),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        // At the upper bound: the forward for a call, the strike for a put.
+        assert!(matches!(
+            solve(120.0, 120.0, 1.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        assert!(matches!(
+            solve(100.0, 120.0, 1.0, OptionStyle::Put),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        // Zero forward, strike or maturity.
+        assert!(matches!(
+            solve(5.0, 0.0, 1.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        assert!(matches!(
+            solve(5.0, 100.0, 0.0, OptionStyle::Call),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        assert!(matches!(
+            black_forward_implied_volatility(
+                Positive::ONE,
+                Positive::HUNDRED,
+                Positive::ZERO,
+                Positive::ONE,
+                OptionStyle::Call,
+            ),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+    }
+
+    #[test]
+    fn test_everlasting_european_implied_volatility_at_equivalent_maturity_is_the_model_volatility()
+    {
+        for j in [1_u32, 4, 32] {
+            for sigma in [0.2, 0.5, 1.2] {
+                let kappa = f64::from(j) / MONTH;
+                let equivalent = everlasting_equivalent_maturity(
+                    pos_or_panic!(sigma),
+                    pos_or_panic!(kappa),
+                    rung(j),
+                )
+                .unwrap();
+                let p = params(100.0, 100.0, 0.0, sigma, kappa, j, OptionStyle::Call);
+                let implied = everlasting_european_implied_volatility(&p, equivalent)
+                    .unwrap()
+                    .to_f64();
+                assert!(relative(implied, sigma) < 1e-10, "rung {j}, sigma {sigma}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_everlasting_european_implied_volatility_matches_reference_values() {
+        // Independent values: the closed form of the ladder inverted through
+        // the Black formula with 40 digits, at a maturity of 30 days.
+        // (rung, drift, volatility, strike, implied volatility)
+        let cases = [
+            (1_u32, 0.0, 0.5, 80.0, 0.550_122_929_688_433_9),
+            (1, 0.0, 0.5, 100.0, 0.442_842_726_922_637_54),
+            (1, 0.0, 0.5, 125.0, 0.550_122_929_688_434),
+            (3, 0.0, 0.5, 80.0, 0.523_635_907_306_160_8),
+            (3, 0.0, 0.5, 100.0, 0.479_583_297_271_382_5),
+            (3, 0.0, 0.5, 125.0, 0.523_635_907_306_159_6),
+            (8, 0.0, 0.5, 80.0, 0.510_175_840_624_422_8),
+            (8, 0.0, 0.5, 100.0, 0.492_213_910_579_979_3),
+            (8, 0.0, 0.5, 125.0, 0.510_175_840_624_422_1),
+            (2, 0.05, 0.8, 80.0, 0.800_315_802_985_800_2),
+            (2, 0.05, 0.8, 100.0, 0.751_785_682_763_583_3),
+            (2, 0.05, 0.8, 125.0, 0.803_334_747_426_603_7),
+        ];
+        let mut worst = 0.0_f64;
+        for (j, mu, sigma, strike, expected) in cases {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                let p = params(100.0, strike, mu, sigma, f64::from(j) / MONTH, j, style);
+                let implied = everlasting_european_implied_volatility(&p, pos_or_panic!(MONTH))
+                    .unwrap()
+                    .to_f64();
+                worst = worst.max(relative(implied, expected));
+            }
+        }
+        // The normal distribution function of the library is good to about
+        // `1e-10` away from zero, and the inversion inherits that.
+        assert!(worst < 1e-9, "worst relative error {worst:e}");
+    }
+
+    #[test]
+    fn test_everlasting_european_implied_volatility_agrees_with_the_black_inversion_of_the_price() {
+        let p = params(100.0, 115.0, 0.03, 0.6, 24.0, 2, OptionStyle::Call);
+        let maturity = pos_or_panic!(1.0 / 12.0);
+        let direct = everlasting_european_implied_volatility(&p, maturity)
+            .unwrap()
+            .to_f64();
+        let through_price = black_forward_implied_volatility(
+            Positive::new_decimal(everlasting_price(&p).unwrap()).unwrap(),
+            everlasting_forward(&p).unwrap(),
+            p.strike_price(),
+            maturity,
+            OptionStyle::Call,
+        )
+        .unwrap()
+        .to_f64();
+        assert!(relative(direct, through_price) < 1e-10);
+    }
+
+    #[test]
+    fn test_everlasting_european_implied_volatility_rejects_zero_maturity_and_vanished_prices() {
+        let p = params(100.0, 110.0, 0.0, 0.5, 12.0, 1, OptionStyle::Call);
+        assert!(matches!(
+            everlasting_european_implied_volatility(&p, Positive::ZERO),
+            Err(PricingError::InvalidParameter { .. })
+        ));
+        // So far out of the money that the price is zero in `f64`.
+        let vanished = params(100.0, 1e6, 0.0, 0.2, 64.0 * 365.0, 64, OptionStyle::Call);
+        assert!(matches!(
+            everlasting_european_implied_volatility(&vanished, Positive::ONE),
+            Err(PricingError::InvalidParameter { .. })
+        ));
     }
 }

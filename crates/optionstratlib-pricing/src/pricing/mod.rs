@@ -406,9 +406,10 @@ pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;
 pub use compound::compound_black_scholes;
 pub use everlasting::{
-    EVERLASTING_MAX_RUNG, EverlastingParams, everlasting_delta, everlasting_equivalent_maturity,
+    EVERLASTING_MAX_RUNG, EverlastingParams, black_forward_implied_volatility, everlasting_delta,
+    everlasting_equivalent_maturity, everlasting_european_implied_volatility, everlasting_forward,
     everlasting_funding, everlasting_funding_rate_sensitivity, everlasting_gamma,
-    everlasting_mean_maturity, everlasting_price, everlasting_vega,
+    everlasting_implied_volatility, everlasting_mean_maturity, everlasting_price, everlasting_vega,
 };
 pub use exchange::exchange_black_scholes;
 pub use funding_network::{
