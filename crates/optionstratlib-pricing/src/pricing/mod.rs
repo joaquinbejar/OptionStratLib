@@ -262,6 +262,11 @@ pub mod power;
 /// motion.
 pub mod everlasting;
 
+/// Funding networks: perpetual contracts whose funding rates are linear in
+/// each other's prices, priced by Fourier inversion under exponential Lévy
+/// models.
+pub mod funding_network;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -406,6 +411,10 @@ pub use everlasting::{
     everlasting_mean_maturity, everlasting_price, everlasting_vega,
 };
 pub use exchange::exchange_black_scholes;
+pub use funding_network::{
+    FUNDING_NETWORK_MAX_ORDER, FundingNetwork, FundingNetworkParams, LevyModel,
+    funding_network_deltas, funding_network_funding, funding_network_prices,
+};
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
