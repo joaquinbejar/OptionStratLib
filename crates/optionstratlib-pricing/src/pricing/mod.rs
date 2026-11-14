@@ -257,6 +257,11 @@ pub mod exchange;
 /// Power option pricing (non-linear payoffs).
 pub mod power;
 
+/// Everlasting options and ladders of them: perpetual contracts on an option
+/// payoff, settled through funding, in closed form under geometric Brownian
+/// motion.
+pub mod everlasting;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -395,6 +400,11 @@ pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;
 pub use compound::compound_black_scholes;
+pub use everlasting::{
+    EVERLASTING_MAX_RUNG, EverlastingParams, everlasting_delta, everlasting_equivalent_maturity,
+    everlasting_funding, everlasting_funding_rate_sensitivity, everlasting_gamma,
+    everlasting_mean_maturity, everlasting_price, everlasting_vega,
+};
 pub use exchange::exchange_black_scholes;
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;

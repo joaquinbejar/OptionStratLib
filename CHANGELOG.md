@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `pricing::everlasting` in `optionstratlib-pricing`: everlasting options, perpetual contracts
+  on an option payoff settled through funding, and ladders of them, in closed form under
+  geometric Brownian motion. `EverlastingParams` holds the validated inputs;
+  `everlasting_price`, `everlasting_delta`, `everlasting_gamma`, `everlasting_vega`,
+  `everlasting_funding` and `everlasting_funding_rate_sensitivity` value rung `j` of a ladder
+  (rung 1 is the plain everlasting option), and `everlasting_mean_maturity` and
+  `everlasting_equivalent_maturity` give its maturity in years.
+
 ## [0.24.3] - 2026-11-08
 
 Only `optionstratlib-simulation` (at 0.24.2), `optionstratlib-visualization` (at 0.24.1) and
