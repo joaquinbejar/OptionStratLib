@@ -9,13 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `pricing::everlasting` in `optionstratlib-pricing`: everlasting options, perpetual contracts
+- `pricing::everlasting` in `optionstratlib-pricing` (#979): everlasting options, perpetual contracts
   on an option payoff settled through funding, and ladders of them, in closed form under
   geometric Brownian motion. `EverlastingParams` holds the validated inputs;
   `everlasting_price`, `everlasting_delta`, `everlasting_gamma`, `everlasting_vega`,
   `everlasting_funding` and `everlasting_funding_rate_sensitivity` value rung `j` of a ladder
   (rung 1 is the plain everlasting option), and `everlasting_mean_maturity` and
   `everlasting_equivalent_maturity` give its maturity in years.
+- `pricing::funding_network` in `optionstratlib-pricing` (#981): funding networks, sets of
+  perpetual contracts whose funding rates are linear in each other's prices,
+  `f = A·(F − φ·1)`. `FundingNetwork` holds a validated funding matrix (square, of order at
+  most `FUNDING_NETWORK_MAX_ORDER`, stable) with its decay rate and the mean and variance of
+  each contract's maturity; `FundingNetwork::ladder` builds a ladder. `funding_network_prices`,
+  `funding_network_deltas` and `funding_network_funding` value every contract of a call or put
+  network by Fourier inversion under a `LevyModel` (Black-Scholes or the jump diffusion of
+  Merton) with a drift. No new dependency: the complex arithmetic and the dense solver are
+  private to the module.
+- Implied volatilities in `pricing::everlasting` (#983): `everlasting_implied_volatility` is
+  the constant volatility at which the closed form returns a price;
+  `everlasting_european_implied_volatility` is the Black volatility a European option of a
+  chosen maturity needs to reach the price of an everlasting option, on the forward given by
+  `everlasting_forward`; `black_forward_implied_volatility` is that inversion for any
+  undiscounted price on a forward.
+- `pricing::funding_network_monte_carlo` in `optionstratlib-pricing` (#984):
+  `funding_network_prices_monte_carlo` estimates the price of every contract of a funding
+  network whose weights are not negative, with its standard error (`FundingNetworkEstimate`).
+  The maturity of a contract is sampled as the absorption time of a Markov chain on the
+  contracts and the underlying from its exact law at that time, so the estimate has no
+  discretisation bias. `FundingSchedule` chooses funding that accrues continuously or is paid
+  at a fixed interval; with an interval the value is the price just after a payment.
 
 ## [0.24.3] - 2026-11-08
 
