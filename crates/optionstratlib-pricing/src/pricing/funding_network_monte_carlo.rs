@@ -164,7 +164,7 @@ pub fn funding_network_prices_monte_carlo<R: Rng + ?Sized>(
     let spot = decimal_to_f64(params.underlying_price().to_dec())?;
     let strike = decimal_to_f64(params.strike_price().to_dec())?;
     let drift = decimal_to_f64(params.drift())?;
-    if drift >= network.decay() {
+    if drift >= network.scheduled_decay(schedule)? {
         return Err(PricingError::invalid_parameter(
             "drift",
             params.drift(),
@@ -384,7 +384,9 @@ fn sample_terminal<R: Rng + ?Sized>(
 mod tests {
     use super::*;
     use crate::pricing::everlasting::{EverlastingParams, everlasting_price};
-    use crate::pricing::funding_network::{LevyModel, funding_network_prices};
+    use crate::pricing::funding_network::{
+        LevyModel, funding_network_prices, funding_network_prices_with,
+    };
     use optionstratlib_core::model::Positive;
     use optionstratlib_core::pos_or_panic;
     use optionstratlib_core::utils::deterministic_rng;
@@ -603,6 +605,23 @@ mod tests {
         );
         let second = estimates.get(1).copied().unwrap();
         let worst = worst_deviation(&[second], &[reference]);
+        assert!(worst < 4.0, "{worst} standard errors");
+    }
+
+    #[test]
+    fn test_funding_network_prices_monte_carlo_discrete_merton_matches_fourier() {
+        let network = network(&[&[30.0, -10.0], &[-15.0, 25.0]]);
+        let schedule = FundingSchedule::Discrete {
+            interval: pos_or_panic!(1.0 / 365.0),
+        };
+        let params = params(103.0, 0.0, merton(), OptionStyle::Call);
+        let reference: Vec<f64> = funding_network_prices_with(&network, &params, schedule)
+            .unwrap()
+            .iter()
+            .map(|value| value.to_f64().unwrap())
+            .collect();
+        let estimates = estimate(&network, &params, schedule, 71);
+        let worst = worst_deviation(&estimates, &reference);
         assert!(worst < 4.0, "{worst} standard errors");
     }
 

@@ -563,12 +563,14 @@ pub const fn optionstratlib_pricing::pricing::funding_network::LevyModel::volati
 pub struct optionstratlib_pricing::pricing::funding_network::FundingNetwork
 impl optionstratlib_pricing::pricing::funding_network::FundingNetwork
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::decay_rate(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::decay_rate_with(&self, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::entry(&self, usize, usize) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::is_non_negative(&self) -> bool
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::ladder(positive::positive::Positive, core::num::nonzero::NonZeroU32) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::maturity_variance(&self, usize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::mean_maturity(&self, usize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::order(&self) -> usize
+pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::stable_interval_bound(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::try_new(&[alloc::vec::Vec<rust_decimal::decimal::Decimal>]) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
 pub struct optionstratlib_pricing::pricing::funding_network::FundingNetworkParams
 impl optionstratlib_pricing::pricing::funding_network::FundingNetworkParams
@@ -580,8 +582,10 @@ pub fn optionstratlib_pricing::pricing::funding_network::FundingNetworkParams::t
 pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetworkParams::underlying_price(&self) -> positive::positive::Positive
 pub const optionstratlib_pricing::pricing::funding_network::FUNDING_NETWORK_MAX_ORDER: usize
 pub fn optionstratlib_pricing::pricing::funding_network::funding_network_deltas(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network::funding_network_deltas_with(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::funding_network_funding(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::funding_network_prices(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network::funding_network_prices_with(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::funding_network_monte_carlo
 pub struct optionstratlib_pricing::pricing::funding_network_monte_carlo::FundingNetworkEstimate
 impl optionstratlib_pricing::pricing::funding_network_monte_carlo::FundingNetworkEstimate
@@ -703,12 +707,14 @@ pub const fn optionstratlib_pricing::pricing::everlasting::EverlastingParams::vo
 pub struct optionstratlib_pricing::pricing::FundingNetwork
 impl optionstratlib_pricing::pricing::funding_network::FundingNetwork
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::decay_rate(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::decay_rate_with(&self, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::entry(&self, usize, usize) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::is_non_negative(&self) -> bool
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::ladder(positive::positive::Positive, core::num::nonzero::NonZeroU32) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::maturity_variance(&self, usize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::mean_maturity(&self, usize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::order(&self) -> usize
+pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::stable_interval_bound(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetwork::try_new(&[alloc::vec::Vec<rust_decimal::decimal::Decimal>]) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
 pub struct optionstratlib_pricing::pricing::FundingNetworkEstimate
 impl optionstratlib_pricing::pricing::funding_network_monte_carlo::FundingNetworkEstimate
@@ -806,9 +812,11 @@ pub fn optionstratlib_pricing::pricing::everlasting_price(&optionstratlib_pricin
 pub fn optionstratlib_pricing::pricing::everlasting_vega(&optionstratlib_pricing::pricing::everlasting::EverlastingParams) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::exchange_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network_deltas(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network_deltas_with(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network_funding(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network_prices(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::funding_network_prices_monte_carlo<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule, core::num::nonzero::NonZeroUsize, &mut R) -> core::result::Result<alloc::vec::Vec<optionstratlib_pricing::pricing::funding_network_monte_carlo::FundingNetworkEstimate>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::funding_network_prices_with(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::garman_kohlhagen(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::generate_binomial_tree(&optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<(alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>), optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::lookback_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>

@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contracts and the underlying from its exact law at that time, so the estimate has no
   discretisation bias. `FundingSchedule` chooses funding that accrues continuously or is paid
   at a fixed interval; with an interval the value is the price just after a payment.
+- Discrete funding in `pricing::funding_network` (#985): `funding_network_prices_with` and
+  `funding_network_deltas_with` take a `FundingSchedule` and value a network whose funding is
+  paid at a fixed interval by the same Fourier inversion, signed weights included (the
+  characteristic exponent `χ` becomes `(1 − e^{−Δ·χ})/Δ`). `FundingNetwork::decay_rate_with`
+  gives the decay rate under a schedule and `FundingNetwork::stable_interval_bound` the
+  payment interval below which discrete funding is stable.
 
 ## [0.24.3] - 2026-11-08
 

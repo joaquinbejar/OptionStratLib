@@ -172,6 +172,8 @@ pub struct FundingNetwork {
     values: Vec<Vec<f64>>,
     anchor: Vec<f64>,
     decay_rate: f64,
+    /// Eigenvalues of the funding matrix, as (real part, imaginary part).
+    spectrum: Vec<(f64, f64)>,
     non_negative: bool,
 }
 
@@ -230,9 +232,13 @@ impl FundingNetwork {
             anchor.push(decimal_to_f64(row_sum)?);
             values.push(converted);
         }
-        let decay_rate = eigenvalues(&values)?
+        let spectrum: Vec<(f64, f64)> = eigenvalues(&values)?
             .iter()
-            .map(|eigenvalue| eigenvalue.re)
+            .map(|eigenvalue| (eigenvalue.re, eigenvalue.im))
+            .collect();
+        let decay_rate = spectrum
+            .iter()
+            .map(|(real, _)| *real)
             .fold(f64::INFINITY, f64::min);
         // An eigenvalue on the imaginary axis is computed with a real part
         // of the order of the rounding error, of either sign.
@@ -252,6 +258,7 @@ impl FundingNetwork {
             values,
             anchor,
             decay_rate,
+            spectrum,
             non_negative,
         })
     }
@@ -326,9 +333,77 @@ impl FundingNetwork {
         &self.anchor
     }
 
-    /// The decay rate in `f64`.
-    pub(super) const fn decay(&self) -> f64 {
-        self.decay_rate
+    /// Decay rate under a funding schedule, in `f64`: `η(A)` when funding
+    /// accrues continuously, and `−ln(max |1 − Δ·λ|)/Δ` over the eigenvalues
+    /// `λ` of `A` when it is paid every `Δ` years. Infinite when every
+    /// `Δ·λ` is one.
+    pub(super) fn scheduled_decay(&self, schedule: FundingSchedule) -> Result<f64, PricingError> {
+        let interval = match schedule {
+            FundingSchedule::Continuous => return Ok(self.decay_rate),
+            FundingSchedule::Discrete { interval } => interval,
+        };
+        reject_zero("interval", interval)?;
+        let years = decimal_to_f64(interval.to_dec())?;
+        // `|1 − Δ·λ|² − 1 = Δ·(Δ·|λ|² − 2·Re λ)`, the largest over the
+        // spectrum: negative when the network is stable at this interval.
+        let excess = self
+            .spectrum
+            .iter()
+            .map(|(real, imaginary)| {
+                years * (years * (real * real + imaginary * imaginary) - 2.0 * real)
+            })
+            .fold(f64::NEG_INFINITY, f64::max);
+        if excess.is_nan() || excess >= 0.0 {
+            return Err(PricingError::invalid_parameter(
+                "interval",
+                interval.to_dec(),
+                "must be below the stability bound of the network",
+            ));
+        }
+        Ok(-0.5 * excess.ln_1p() / years)
+    }
+
+    /// Decay rate of the network under a funding schedule, per year.
+    ///
+    /// With continuous funding it is [`FundingNetwork::decay_rate`]. With a
+    /// payment every `Δ` years a mispricing is multiplied by `I − Δ·A` at
+    /// each payment, so the rate is `−ln(max |1 − Δ·λ|)/Δ` over the
+    /// eigenvalues `λ` of `A`. Exponential moments of the underlying up to
+    /// this rate are finite at every maturity of the network.
+    ///
+    /// # Errors
+    ///
+    /// - [`PricingError::InvalidParameter`] when the interval is zero, or at
+    ///   or above [`FundingNetwork::stable_interval_bound`].
+    /// - [`PricingError::Decimal`] when the interval has no `f64` form.
+    /// - [`PricingError::NonFinite`] when the rate has no `Decimal` form:
+    ///   it is infinite when a single payment closes the whole gap.
+    pub fn decay_rate_with(&self, schedule: FundingSchedule) -> Result<Decimal, PricingError> {
+        to_decimal(
+            "pricing::funding_network::decay_rate_with",
+            self.scheduled_decay(schedule)?,
+        )
+    }
+
+    /// Payment interval below which discrete funding is stable, in years:
+    /// the smallest `2·Re λ/|λ|²` over the eigenvalues `λ` of the funding
+    /// matrix.
+    ///
+    /// Funding paid every `Δ` years multiplies a mispricing by `I − Δ·A` at
+    /// each payment; it clears only when every `|1 − Δ·λ|` is below one. For
+    /// a single contract or a ladder of rate `κ` the bound is `2/κ`; complex
+    /// eigenvalues, which only signed weights produce, lower it.
+    ///
+    /// # Errors
+    ///
+    /// [`PricingError::NonFinite`] when the bound has no `Decimal` form.
+    pub fn stable_interval_bound(&self) -> Result<Decimal, PricingError> {
+        let bound = self
+            .spectrum
+            .iter()
+            .map(|(real, imaginary)| 2.0 * real / (real * real + imaginary * imaginary))
+            .fold(f64::INFINITY, f64::min);
+        to_decimal("pricing::funding_network::stable_interval_bound", bound)
     }
 
     /// Decay rate `η(A)`: the smallest real part of an eigenvalue of the
@@ -552,7 +627,39 @@ pub fn funding_network_prices(
     network: &FundingNetwork,
     params: &FundingNetworkParams,
 ) -> Result<Vec<Decimal>, PricingError> {
-    let values = network_values(network, params, Quantity::Price)?;
+    funding_network_prices_with(network, params, FundingSchedule::Continuous)
+}
+
+/// Prices of every contract of a funding network under a funding schedule,
+/// per unit of underlying, in the order of the rows of the funding matrix.
+///
+/// With [`FundingSchedule::Continuous`] this is [`funding_network_prices`].
+/// With [`FundingSchedule::Discrete`] funding is paid every `Δ` years, each
+/// payment being `Δ·A·(F − φ(S)·1)` on the prices at the payment time, and
+/// the value is the price just after a payment:
+///
+/// ```text
+/// F = Σ_{k≥1} (I − Δ·A)^{k−1}·Δ·A·1·E[φ(S_{kΔ})]
+/// ```
+///
+/// Its transform is the continuous one with the characteristic exponent
+/// `χ(u)` replaced by `(1 − e^{−Δ·χ(u)})/Δ`, so the same inversion applies.
+/// For a single contract of rate `κ` the weights are `κΔ·(1 − κΔ)^{k−1}`;
+/// with `κΔ = 1` the contract is the European option that expires at the
+/// next payment.
+///
+/// # Errors
+///
+/// As [`funding_network_prices`], with the decay rate of the schedule
+/// ([`FundingNetwork::decay_rate_with`]) in place of that of the network,
+/// and [`PricingError::InvalidParameter`] when the interval is zero or not
+/// below [`FundingNetwork::stable_interval_bound`].
+pub fn funding_network_prices_with(
+    network: &FundingNetwork,
+    params: &FundingNetworkParams,
+    schedule: FundingSchedule,
+) -> Result<Vec<Decimal>, PricingError> {
+    let values = network_values(network, params, schedule, Quantity::Price)?;
     collect("pricing::funding_network::price", &values, network.order())
 }
 
@@ -567,7 +674,22 @@ pub fn funding_network_deltas(
     network: &FundingNetwork,
     params: &FundingNetworkParams,
 ) -> Result<Vec<Decimal>, PricingError> {
-    let values = network_values(network, params, Quantity::Delta)?;
+    funding_network_deltas_with(network, params, FundingSchedule::Continuous)
+}
+
+/// Deltas of every contract of a funding network under a funding schedule:
+/// the derivative of each price of [`funding_network_prices_with`] with
+/// respect to the underlying price.
+///
+/// # Errors
+///
+/// As [`funding_network_prices_with`].
+pub fn funding_network_deltas_with(
+    network: &FundingNetwork,
+    params: &FundingNetworkParams,
+    schedule: FundingSchedule,
+) -> Result<Vec<Decimal>, PricingError> {
+    let values = network_values(network, params, schedule, Quantity::Delta)?;
     collect("pricing::funding_network::delta", &values, network.order())
 }
 
@@ -585,7 +707,12 @@ pub fn funding_network_funding(
     network: &FundingNetwork,
     params: &FundingNetworkParams,
 ) -> Result<Vec<Decimal>, PricingError> {
-    let prices = network_values(network, params, Quantity::Price)?;
+    let prices = network_values(
+        network,
+        params,
+        FundingSchedule::Continuous,
+        Quantity::Price,
+    )?;
     let spot = decimal_to_f64(params.underlying_price.to_dec())?;
     let strike = decimal_to_f64(params.strike_price.to_dec())?;
     let payoff = match params.option_style {
@@ -1152,15 +1279,50 @@ struct Inversion<'a> {
     kernel: ModelKernel,
     log_moneyness: f64,
     damping: f64,
+    /// Years between two funding payments; `None` for continuous funding.
+    interval: Option<f64>,
     quantity: Quantity,
     workspace: Workspace,
+}
+
+/// Value of `−Δ·Re χ` beyond which the transform of a discrete schedule,
+/// of the order of `e^{Δ·Re χ}`, is taken as zero: `e^{−100}` is far below
+/// the tolerance of the inversion, and `e^{−Δ·χ}` stays well inside the
+/// range of an `f64` for the linear solve.
+const DISCRETE_CUTOFF: f64 = 100.0;
+
+/// `(1 − e^{−Δ·χ})/Δ`: the exponent that takes the place of `χ` when
+/// funding is paid every `Δ` years. Computed without the cancellation of
+/// `1 − e^{−z}` for small `z`.
+fn discrete_exponent(exponent: Complex, interval: f64) -> Complex {
+    let growth = (-interval * exponent.re).exp_m1();
+    let (half_sine, half_cosine) = (0.5 * interval * exponent.im).sin_cos();
+    let sine = 2.0 * half_sine * half_cosine;
+    let versine = 2.0 * half_sine * half_sine;
+    // `e^{−z} = (1 + growth)·(cos b − i·sin b)` with `b = Δ·Im χ`.
+    Complex::new(
+        (versine - growth * (1.0 - versine)) / interval,
+        (growth + 1.0) * sine / interval,
+    )
 }
 
 impl Inversion<'_> {
     /// The integrand at frequency `v`, or `None` when the linear system is
     /// singular or the value is not finite.
     fn sample(&mut self, v: f64) -> Option<Sample> {
-        let exponent = self.kernel.exponent(Complex::new(v, -self.damping));
+        let mut exponent = self.kernel.exponent(Complex::new(v, -self.damping));
+        if !exponent.re.is_finite() || !exponent.im.is_finite() {
+            return None;
+        }
+        if let Some(interval) = self.interval {
+            if -interval * exponent.re > DISCRETE_CUTOFF {
+                return Some(Sample {
+                    real: [0.0; FUNDING_NETWORK_MAX_ORDER],
+                    modulus: [0.0; FUNDING_NETWORK_MAX_ORDER],
+                });
+            }
+            exponent = discrete_exponent(exponent, interval);
+        }
         self.workspace
             .load(&self.network.values, exponent, &self.network.anchor);
         self.workspace.solve()?;
@@ -1335,18 +1497,24 @@ fn damping(kernel: &ModelKernel, decay_rate: f64, side: OptionStyle) -> Result<f
 fn network_values(
     network: &FundingNetwork,
     params: &FundingNetworkParams,
+    schedule: FundingSchedule,
     quantity: Quantity,
 ) -> Result<Values, PricingError> {
     let spot = decimal_to_f64(params.underlying_price.to_dec())?;
     let strike = decimal_to_f64(params.strike_price.to_dec())?;
     let drift = decimal_to_f64(params.drift)?;
-    if drift >= network.decay_rate {
+    let decay_rate = network.scheduled_decay(schedule)?;
+    if drift >= decay_rate {
         return Err(PricingError::invalid_parameter(
             "drift",
             params.drift,
             "must be below the decay rate of the network",
         ));
     }
+    let interval = match schedule {
+        FundingSchedule::Continuous => None,
+        FundingSchedule::Discrete { interval } => Some(decimal_to_f64(interval.to_dec())?),
+    };
     let kernel = ModelKernel::new(&params.model, drift)?;
     let log_moneyness = ln_f64(spot / strike);
     // The side that is out of the money is inverted directly; the factor
@@ -1356,12 +1524,13 @@ fn network_values(
     } else {
         OptionStyle::Put
     };
-    let order = damping(&kernel, network.decay_rate, direct_side)?;
+    let order = damping(&kernel, decay_rate, direct_side)?;
     let integral = Inversion {
         network,
         kernel,
         log_moneyness,
         damping: order,
+        interval,
         quantity,
         workspace: Workspace::new(network.order()),
     }
@@ -1378,8 +1547,13 @@ fn network_values(
         return Ok(values);
     }
     // Parity: `C_i − P_i = S·E[S_τ]/S − K`, with the forward factor
-    // `Ξ_i(−i) = e_iᵀ·(A − μI)⁻¹·A·1`.
-    let forward = network.solve_real(drift, &network.anchor)?;
+    // `Ξ_i(−i) = e_iᵀ·(A − μI)⁻¹·A·1`; a payment interval `Δ` turns `μ`
+    // into `(1 − e^{−Δμ})/Δ`.
+    let carry = match interval {
+        None => drift,
+        Some(interval) => -(-interval * drift).exp_m1() / interval,
+    };
+    let forward = network.solve_real(carry, &network.anchor)?;
     for ((target, value), factor) in values.iter_mut().zip(integral.iter()).zip(forward.iter()) {
         let direct = scale * value;
         *target = match (quantity, params.option_style) {
@@ -2185,5 +2359,273 @@ mod tests {
         assert_eq!(inputs.model(), merton());
         assert_eq!(inputs.model().volatility(), pos_or_panic!(SIGMA));
         assert_eq!(inputs.option_style(), OptionStyle::Put);
+    }
+
+    /// Undiscounted Black-Scholes call at maturity `years`, with drift `mu`.
+    fn black_call(spot: f64, strike: f64, mu: f64, years: f64) -> f64 {
+        use statrs::distribution::{ContinuousCDF, Normal};
+        let normal = Normal::new(0.0, 1.0).unwrap();
+        let root = SIGMA * years.sqrt();
+        let d1 = ((spot / strike).ln() + (mu + 0.5 * SIGMA * SIGMA) * years) / root;
+        spot * (mu * years).exp() * normal.cdf(d1) - strike * normal.cdf(d1 - root)
+    }
+
+    fn discrete(interval: f64) -> FundingSchedule {
+        FundingSchedule::Discrete {
+            interval: pos_or_panic!(interval),
+        }
+    }
+
+    /// `Σ_k (I − Δ·A)^{k−1}·Δ·A·1·C(kΔ)` by direct iteration.
+    fn power_sum(rows: &[&[f64]], interval: f64, spot: f64, strike: f64, mu: f64) -> Vec<f64> {
+        let order = rows.len();
+        let mut weights: Vec<f64> = rows
+            .iter()
+            .map(|row| interval * row.iter().sum::<f64>())
+            .collect();
+        let mut prices = vec![0.0; order];
+        for period in 1..=4_000_u32 {
+            let value = black_call(spot, strike, mu, f64::from(period) * interval);
+            for (price, weight) in prices.iter_mut().zip(weights.iter()) {
+                *price += weight * value;
+            }
+            weights = (0..order)
+                .map(|i| {
+                    weights[i] - interval * (0..order).map(|j| rows[i][j] * weights[j]).sum::<f64>()
+                })
+                .collect();
+        }
+        prices
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_daily_funding_matches_geometric_sum() {
+        // One contract with a mean maturity of 30 days, funded every day.
+        let rate = 365.0 / 30.0;
+        let interval = 1.0 / 365.0;
+        let mut worst = 0.0_f64;
+        for (spot, mu, style) in [
+            (100.0, 0.0, OptionStyle::Call),
+            (92.0, 0.05, OptionStyle::Call),
+            (109.0, 0.0, OptionStyle::Call),
+            (100.0, 0.05, OptionStyle::Put),
+        ] {
+            let call = power_sum(&[&[rate]], interval, spot, 100.0, mu)[0];
+            let expected = match style {
+                OptionStyle::Call => call,
+                // Parity on the forward `Σ_k p·(1 − p)^{k−1}·S·e^{μkΔ}`.
+                OptionStyle::Put => {
+                    let leave = rate * interval;
+                    let growth = (mu * interval).exp();
+                    call - spot * leave * growth / (1.0 - (1.0 - leave) * growth) + 100.0
+                }
+            };
+            let prices = funding_network_prices_with(
+                &ladder(rate, 1),
+                &params(spot, 100.0, mu, black_scholes(SIGMA), style),
+                discrete(interval),
+            )
+            .unwrap();
+            worst = worst.max(relative(floats(&prices)[0], expected));
+        }
+        assert!(worst < 1e-8, "worst relative error {worst:e}");
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_discrete_ladder_matches_power_sum() {
+        // Rung `j` leaves after `j` payments in its favour: negative
+        // binomial weights, here from the powers of `I − Δ·A`.
+        let rate = 3.0 * 365.0 / 30.0;
+        let interval = 2.0 / 365.0;
+        let rows: [&[f64]; 3] = [&[rate, 0.0, 0.0], &[-rate, rate, 0.0], &[0.0, -rate, rate]];
+        let expected = power_sum(&rows, interval, 96.0, 100.0, 0.0);
+        let prices = floats(
+            &funding_network_prices_with(
+                &ladder(rate, 3),
+                &params(96.0, 100.0, 0.0, black_scholes(SIGMA), OptionStyle::Call),
+                discrete(interval),
+            )
+            .unwrap(),
+        );
+        for (price, reference) in prices.iter().zip(expected.iter()) {
+            assert!(
+                relative(*price, *reference) < 1e-8,
+                "{price} against {reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_signed_network_matches_power_sum() {
+        let rows: [&[f64]; 3] = [&SIGNED[0], &SIGNED[1], &SIGNED[2]];
+        let interval = 1.0 / 365.0;
+        for spot in [90.0, 100.0, 110.0] {
+            let expected = power_sum(&rows, interval, spot, 100.0, 0.0);
+            let prices = floats(
+                &funding_network_prices_with(
+                    &signed(),
+                    &params(spot, 100.0, 0.0, black_scholes(SIGMA), OptionStyle::Call),
+                    discrete(interval),
+                )
+                .unwrap(),
+            );
+            for (price, reference) in prices.iter().zip(expected.iter()) {
+                assert!(
+                    relative(*price, *reference) < 1e-8,
+                    "spot {spot}: {price} against {reference}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_full_funding_is_a_european_option() {
+        // `interval·rate = 1`: every payment closes the whole gap.
+        for (spot, style) in [(100.0, OptionStyle::Call), (97.0, OptionStyle::Call)] {
+            let prices = funding_network_prices_with(
+                &ladder(12.0, 1),
+                &params(spot, 100.0, 0.0, black_scholes(SIGMA), style),
+                FundingSchedule::Discrete {
+                    interval: Positive::ONE / pos_or_panic!(12.0),
+                },
+            )
+            .unwrap();
+            let expected = black_call(spot, 100.0, 0.0, 1.0 / 12.0);
+            assert!(relative(floats(&prices)[0], expected) < 1e-8);
+        }
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_shrinking_interval_tends_to_continuous_at_first_order() {
+        let network = ladder(RATE, 2);
+        let params = params(100.0, 100.0, 0.0, black_scholes(SIGMA), OptionStyle::Call);
+        let continuous = floats(&funding_network_prices(&network, &params).unwrap());
+        let gap = |hours: f64| -> Vec<f64> {
+            floats(
+                &funding_network_prices_with(&network, &params, discrete(hours / 8760.0)).unwrap(),
+            )
+            .iter()
+            .zip(continuous.iter())
+            .map(|(price, limit)| price - limit)
+            .collect()
+        };
+        let (coarse, fine) = (gap(2.0), gap(1.0));
+        for ((wide, narrow), limit) in coarse.iter().zip(fine.iter()).zip(continuous.iter()) {
+            // Small against the price, and halved with the interval.
+            assert!(wide.abs() < 0.02 * limit);
+            assert!(wide.abs() > 1e-7 * limit);
+            assert!(
+                (wide / narrow - 2.0).abs() < 0.05,
+                "ratio {}",
+                wide / narrow
+            );
+        }
+        // The same entry point with continuous funding is the plain pricer.
+        assert_eq!(
+            funding_network_prices_with(&network, &params, FundingSchedule::Continuous).unwrap(),
+            funding_network_prices(&network, &params).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_funding_network_deltas_with_discrete_funding_match_finite_differences() {
+        let interval = 1.0 / 365.0;
+        let step = 0.01;
+        for (network, mu, style) in [
+            (ladder(RATE, 3), 0.03, OptionStyle::Call),
+            (signed(), 0.0, OptionStyle::Put),
+        ] {
+            let price = |spot: f64| {
+                floats(
+                    &funding_network_prices_with(
+                        &network,
+                        &params(spot, 100.0, mu, merton(), style),
+                        discrete(interval),
+                    )
+                    .unwrap(),
+                )
+            };
+            let deltas = floats(
+                &funding_network_deltas_with(
+                    &network,
+                    &params(104.0, 100.0, mu, merton(), style),
+                    discrete(interval),
+                )
+                .unwrap(),
+            );
+            let (up, down) = (price(104.0 + step), price(104.0 - step));
+            for ((delta, high), low) in deltas.iter().zip(up.iter()).zip(down.iter()) {
+                assert!((delta - (high - low) / (2.0 * step)).abs() < 1e-6);
+            }
+        }
+    }
+
+    #[test]
+    fn test_funding_network_decay_rate_with_matches_the_spectrum() {
+        let network = ladder(RATE, 3);
+        assert_eq!(
+            network
+                .decay_rate_with(FundingSchedule::Continuous)
+                .unwrap(),
+            network.decay_rate().unwrap()
+        );
+        // One eigenvalue `κ`: `−ln(1 − κΔ)/Δ`, above `κ`.
+        let interval = 1.0 / 365.0;
+        let rate = network
+            .decay_rate_with(discrete(interval))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        assert!(relative(rate, -(1.0 - RATE * interval).ln() / interval) < 1e-12);
+        assert!(rate > RATE);
+        assert!(
+            relative(
+                network.stable_interval_bound().unwrap().to_f64().unwrap(),
+                2.0 / RATE
+            ) < 1e-12
+        );
+        // A complex pair lowers the bound below `2/Re λ`.
+        let (real, imaginary) = (27.461_221_363_433_275, 28.447_984_070_088_694);
+        let bound = signed().stable_interval_bound().unwrap().to_f64().unwrap();
+        assert!(relative(bound, 2.0 * real / (real * real + imaginary * imaginary)) < 1e-9);
+        assert!(bound < 2.0 / real);
+    }
+
+    #[test]
+    fn test_funding_network_prices_with_rejects_schedules_outside_the_domain() {
+        let params = params(100.0, 100.0, 0.0, black_scholes(SIGMA), OptionStyle::Call);
+        let bound = signed().stable_interval_bound().unwrap().to_f64().unwrap();
+        for interval in [bound * 1.000_001, 2.0 * bound] {
+            assert!(matches!(
+                funding_network_prices_with(&signed(), &params, discrete(interval)),
+                Err(PricingError::InvalidParameter {
+                    parameter: "interval",
+                    ..
+                })
+            ));
+        }
+        // Just inside the bound the network is stable, if slow to clear.
+        assert!(signed().decay_rate_with(discrete(0.9 * bound)).unwrap() > Decimal::ZERO);
+        assert!(matches!(
+            funding_network_prices_with(
+                &signed(),
+                &params,
+                FundingSchedule::Discrete {
+                    interval: Positive::ZERO
+                }
+            ),
+            Err(PricingError::InvalidParameter {
+                parameter: "interval",
+                ..
+            })
+        ));
+        // A single payment closes the gap: the rate is infinite and has no
+        // `Decimal` form.
+        assert!(matches!(
+            ladder(12.0, 1).decay_rate_with(FundingSchedule::Discrete {
+                interval: Positive::ONE / pos_or_panic!(12.0)
+            }),
+            Err(PricingError::NonFinite { .. })
+        ));
     }
 }
