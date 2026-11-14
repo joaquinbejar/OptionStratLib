@@ -315,6 +315,22 @@ impl FundingNetwork {
         self.non_negative
     }
 
+    /// The funding matrix in `f64`, row by row.
+    pub(super) fn rows(&self) -> &[Vec<f64>] {
+        &self.values
+    }
+
+    /// `A·1` in `f64`: the weight of the payoff in the funding of each
+    /// contract.
+    pub(super) fn anchor(&self) -> &[f64] {
+        &self.anchor
+    }
+
+    /// The decay rate in `f64`.
+    pub(super) const fn decay(&self) -> f64 {
+        self.decay_rate
+    }
+
     /// Decay rate `η(A)`: the smallest real part of an eigenvalue of the
     /// funding matrix, per year. Exponential moments of the underlying up to
     /// this rate are finite at every maturity of the network, and under a
@@ -385,6 +401,20 @@ impl FundingNetwork {
         }
         Ok(solution)
     }
+}
+
+/// How the funding of a network is paid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum FundingSchedule {
+    /// Funding accrues continuously, at the rate `A·(F − φ(S)·1)` per year.
+    Continuous,
+    /// Funding is paid every `interval` years, each payment being
+    /// `interval·A·(F − φ(S)·1)` on the prices at the payment time.
+    Discrete {
+        /// Time between two payments, in years.
+        interval: Positive,
+    },
 }
 
 /// Exponential Lévy model of the underlying.
@@ -578,7 +608,7 @@ pub fn funding_network_funding(
 }
 
 /// Rejects a zero value of a parameter that must be strictly positive.
-fn reject_zero(parameter: &'static str, value: Positive) -> Result<(), PricingError> {
+pub(super) fn reject_zero(parameter: &'static str, value: Positive) -> Result<(), PricingError> {
     if value == Positive::ZERO {
         return Err(PricingError::invalid_parameter(
             parameter,
@@ -590,7 +620,7 @@ fn reject_zero(parameter: &'static str, value: Positive) -> Result<(), PricingEr
 }
 
 /// Converts a kernel result to `Decimal`, rejecting non-finite values.
-fn to_decimal(context: &'static str, value: f64) -> Result<Decimal, PricingError> {
+pub(super) fn to_decimal(context: &'static str, value: f64) -> Result<Decimal, PricingError> {
     finite_decimal(value).ok_or_else(|| PricingError::non_finite(context, value))
 }
 
@@ -624,17 +654,17 @@ fn pick(values: &Values, order: usize, contract: usize) -> Result<f64, PricingEr
 }
 
 #[inline]
-fn exp_f64(x: f64) -> f64 {
+pub(super) fn exp_f64(x: f64) -> f64 {
     x.exp() // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 }
 
 #[inline]
-fn ln_f64(x: f64) -> f64 {
+pub(super) fn ln_f64(x: f64) -> f64 {
     x.ln() // scan-banned: allow -- f64 `ln`: returns -inf or NaN outside its domain, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 }
 
 #[inline]
-fn sqrt_f64(x: f64) -> f64 {
+pub(super) fn sqrt_f64(x: f64) -> f64 {
     x.sqrt() // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 }
 
@@ -980,18 +1010,22 @@ fn qr_sweep(
 
 /// Characteristic exponent of the log price in `f64`.
 #[derive(Debug, Clone, Copy)]
-struct ModelKernel {
+pub(super) struct ModelKernel {
     /// Linear coefficient of the exponent: the drift of the log price net
     /// of the convexity of the diffusion and of the jumps.
-    location: f64,
-    variance: f64,
-    intensity: f64,
-    jump_mean: f64,
-    jump_variance: f64,
+    pub(super) location: f64,
+    /// Variance of the diffusion, per year.
+    pub(super) variance: f64,
+    /// Jumps per year.
+    pub(super) intensity: f64,
+    /// Mean of the logarithm of a jump.
+    pub(super) jump_mean: f64,
+    /// Variance of the logarithm of a jump.
+    pub(super) jump_variance: f64,
 }
 
 impl ModelKernel {
-    fn new(model: &LevyModel, drift: f64) -> Result<Self, PricingError> {
+    pub(super) fn new(model: &LevyModel, drift: f64) -> Result<Self, PricingError> {
         let (sigma, intensity, jump_mean, jump_sd) = match model {
             LevyModel::BlackScholes { volatility } => {
                 (decimal_to_f64(volatility.to_dec())?, 0.0, 0.0, 0.0)
