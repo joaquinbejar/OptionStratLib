@@ -267,6 +267,10 @@ pub mod everlasting;
 /// models.
 pub mod funding_network;
 
+/// Monte Carlo estimator for funding networks, with funding that accrues
+/// continuously or is paid at discrete times.
+pub mod funding_network_monte_carlo;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -413,9 +417,10 @@ pub use everlasting::{
 };
 pub use exchange::exchange_black_scholes;
 pub use funding_network::{
-    FUNDING_NETWORK_MAX_ORDER, FundingNetwork, FundingNetworkParams, LevyModel,
+    FUNDING_NETWORK_MAX_ORDER, FundingNetwork, FundingNetworkParams, FundingSchedule, LevyModel,
     funding_network_deltas, funding_network_funding, funding_network_prices,
 };
+pub use funding_network_monte_carlo::{FundingNetworkEstimate, funding_network_prices_monte_carlo};
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;

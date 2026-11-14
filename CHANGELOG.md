@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chosen maturity needs to reach the price of an everlasting option, on the forward given by
   `everlasting_forward`; `black_forward_implied_volatility` is that inversion for any
   undiscounted price on a forward.
+- `pricing::funding_network_monte_carlo` in `optionstratlib-pricing` (#984):
+  `funding_network_prices_monte_carlo` estimates the price of every contract of a funding
+  network whose weights are not negative, with its standard error (`FundingNetworkEstimate`).
+  The maturity of a contract is sampled as the absorption time of a Markov chain on the
+  contracts and the underlying from its exact law at that time, so the estimate has no
+  discretisation bias. `FundingSchedule` chooses funding that accrues continuously or is paid
+  at a fixed interval; with an interval the value is the price just after a payment.
 
 ## [0.24.3] - 2026-11-08
 
