@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   network by Fourier inversion under a `LevyModel` (Black-Scholes or the jump diffusion of
   Merton) with a drift. No new dependency: the complex arithmetic and the dense solver are
   private to the module.
+- Implied volatilities in `pricing::everlasting` (#983): `everlasting_implied_volatility` is
+  the constant volatility at which the closed form returns a price;
+  `everlasting_european_implied_volatility` is the Black volatility a European option of a
+  chosen maturity needs to reach the price of an everlasting option, on the forward given by
+  `everlasting_forward`; `black_forward_implied_volatility` is that inversion for any
+  undiscounted price on a forward.
 
 ## [0.24.3] - 2026-11-08
 
