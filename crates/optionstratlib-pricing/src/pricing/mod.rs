@@ -271,6 +271,10 @@ pub mod funding_network;
 /// continuously or is paid at discrete times.
 pub mod funding_network_monte_carlo;
 
+/// Ladders of everlasting options under the stochastic variance of Heston,
+/// priced as the Black-Scholes ladder plus a Fourier correction.
+pub mod heston_ladder;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -423,6 +427,10 @@ pub use funding_network::{
 };
 pub use funding_network_monte_carlo::{FundingNetworkEstimate, funding_network_prices_monte_carlo};
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
+pub use heston_ladder::{
+    HestonLadderParams, HestonModel, heston_ladder_deltas, heston_ladder_prices,
+    heston_ladder_variance_sensitivities,
+};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use option_pricing::OptionPricing;
