@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.5] - 2026-11-16
+
+Only `optionstratlib-pricing` (at 0.24.3) and `optionstratlib` (at 0.24.5) are released;
+`optionstratlib-simulation` stays at 0.24.2, `optionstratlib-visualization` at 0.24.1 and the
+other six crates at 0.24.0 (`docs/versioning-policy.md`). Every API change is an addition.
+
 ### Added
 
 - `pricing::heston_ladder` in `optionstratlib-pricing` (#990): ladders of everlasting options
