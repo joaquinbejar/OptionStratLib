@@ -157,7 +157,7 @@ const STABILITY_MARGIN: f64 = 1e-12;
 const MAX_SWEEPS: u32 = 200;
 
 /// One value per contract; entries past the order of the network are zero.
-type Values = [f64; FUNDING_NETWORK_MAX_ORDER];
+pub(super) type Values = [f64; FUNDING_NETWORK_MAX_ORDER];
 
 /// Funding matrix of a stable funding network.
 ///
@@ -803,36 +803,36 @@ fn cos_f64(x: f64) -> f64 {
 /// A complex number in `f64`. The operations are named, not operators, so
 /// that the arithmetic lints of the crate keep applying to everything else.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-struct Complex {
-    re: f64,
-    im: f64,
+pub(super) struct Complex {
+    pub(super) re: f64,
+    pub(super) im: f64,
 }
 
 impl Complex {
-    const fn new(re: f64, im: f64) -> Self {
+    pub(super) const fn new(re: f64, im: f64) -> Self {
         Self { re, im }
     }
 
-    const fn real(re: f64) -> Self {
+    pub(super) const fn real(re: f64) -> Self {
         Self { re, im: 0.0 }
     }
 
-    fn plus(self, other: Self) -> Self {
+    pub(super) fn plus(self, other: Self) -> Self {
         Self::new(self.re + other.re, self.im + other.im)
     }
 
-    fn minus(self, other: Self) -> Self {
+    pub(super) fn minus(self, other: Self) -> Self {
         Self::new(self.re - other.re, self.im - other.im)
     }
 
-    fn times(self, other: Self) -> Self {
+    pub(super) fn times(self, other: Self) -> Self {
         Self::new(
             self.re * other.re - self.im * other.im,
             self.re * other.im + self.im * other.re,
         )
     }
 
-    fn scale(self, factor: f64) -> Self {
+    pub(super) fn scale(self, factor: f64) -> Self {
         Self::new(self.re * factor, self.im * factor)
     }
 
@@ -840,7 +840,7 @@ impl Complex {
         Self::new(self.re, -self.im)
     }
 
-    fn norm(self) -> f64 {
+    pub(super) fn norm(self) -> f64 {
         self.re.hypot(self.im)
     }
 
@@ -850,7 +850,7 @@ impl Complex {
 
     /// Quotient by the algorithm of Smith, which does not overflow when the
     /// square of the divisor would.
-    fn over(self, other: Self) -> Self {
+    pub(super) fn over(self, other: Self) -> Self {
         if other.re.abs() >= other.im.abs() {
             let ratio = other.im / other.re;
             let denominator = other.re + other.im * ratio;
@@ -868,15 +868,38 @@ impl Complex {
         }
     }
 
-    fn exponential(self) -> Self {
+    pub(super) fn exponential(self) -> Self {
         let modulus = exp_f64(self.re);
         // `sin_cos` is the f64 method: total on the floats.
         let (sine, cosine) = self.im.sin_cos();
         Self::new(modulus * cosine, modulus * sine)
     }
 
+    /// `exp(z) − 1` without the cancellation of the subtraction for small
+    /// `z`.
+    pub(super) fn exp_m1(self) -> Self {
+        let growth = self.re.exp_m1();
+        let (sine, cosine) = self.im.sin_cos();
+        let (half_sine, _) = (0.5 * self.im).sin_cos();
+        // `e^x·cos y − 1 = (e^x − 1)·cos y − 2·sin²(y/2)`.
+        Self::new(
+            growth * cosine - 2.0 * half_sine * half_sine,
+            (growth + 1.0) * sine,
+        )
+    }
+
+    /// Principal value of `ln(1 + z)` without the cancellation of the sum
+    /// for small `z`.
+    pub(super) fn ln_1p(self) -> Self {
+        // `|1 + z|² − 1 = 2·Re z + |z|²`.
+        Self::new(
+            0.5 * (2.0 * self.re + self.norm_sqr()).ln_1p(),
+            self.im.atan2(1.0 + self.re),
+        )
+    }
+
     /// Principal square root.
-    fn square_root(self) -> Self {
+    pub(super) fn square_root(self) -> Self {
         let modulus = self.norm();
         let re = sqrt_f64((0.5 * (modulus + self.re)).max(0.0));
         let im = sqrt_f64((0.5 * (modulus - self.re)).max(0.0));
@@ -1211,7 +1234,7 @@ impl ModelKernel {
 
 /// What the inversion returns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Quantity {
+pub(super) enum Quantity {
     Price,
     Delta,
 }
@@ -1219,19 +1242,27 @@ enum Quantity {
 /// The integrand at one frequency: its real part and its modulus, per
 /// contract.
 #[derive(Clone, Copy)]
-struct Sample {
-    real: Values,
-    modulus: Values,
+pub(super) struct Sample {
+    pub(super) real: Values,
+    pub(super) modulus: Values,
+}
+
+/// An integrand of the Fourier inversion: one value per contract at every
+/// frequency.
+pub(super) trait Integrand {
+    /// The integrand at frequency `v`, or `None` when it cannot be
+    /// evaluated or is not finite.
+    fn sample(&mut self, v: f64) -> Option<Sample>;
 }
 
 /// Gauss-Legendre rule on `[−1, 1]`.
-struct Rule {
-    nodes: [f64; NODES],
-    weights: [f64; NODES],
+pub(super) struct Rule {
+    pub(super) nodes: [f64; NODES],
+    pub(super) weights: [f64; NODES],
 }
 
 impl Rule {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let mut nodes = [0.0; NODES];
         let mut weights = [0.0; NODES];
         let mut position = 1.0;
@@ -1306,7 +1337,7 @@ fn discrete_exponent(exponent: Complex, interval: f64) -> Complex {
     )
 }
 
-impl Inversion<'_> {
+impl Integrand for Inversion<'_> {
     /// The integrand at frequency `v`, or `None` when the linear system is
     /// singular or the value is not finite.
     fn sample(&mut self, v: f64) -> Option<Sample> {
@@ -1353,120 +1384,138 @@ impl Inversion<'_> {
         }
         Some(sample)
     }
+}
 
-    /// The rule applied to `[low, high]`.
-    fn panel(&mut self, rule: &Rule, low: f64, high: f64) -> Option<Values> {
-        let half_width = 0.5 * (high - low);
-        let middle = 0.5 * (high + low);
-        let mut total = [0.0; FUNDING_NETWORK_MAX_ORDER];
-        for (node, weight) in rule.nodes.iter().zip(rule.weights.iter()) {
-            let sample = self.sample(middle + half_width * node)?;
-            for (target, value) in total.iter_mut().zip(sample.real.iter()) {
-                *target += weight * half_width * value;
-            }
+/// The rule applied to `[low, high]`.
+fn panel<I: Integrand>(integrand: &mut I, rule: &Rule, low: f64, high: f64) -> Option<Values> {
+    let half_width = 0.5 * (high - low);
+    let middle = 0.5 * (high + low);
+    let mut total = [0.0; FUNDING_NETWORK_MAX_ORDER];
+    for (node, weight) in rule.nodes.iter().zip(rule.weights.iter()) {
+        let sample = integrand.sample(middle + half_width * node)?;
+        for (target, value) in total.iter_mut().zip(sample.real.iter()) {
+            *target += weight * half_width * value;
         }
-        Some(total)
     }
+    Some(total)
+}
 
-    /// Refines `whole`, the rule on `[low, high]`, by bisection until both
-    /// halves agree with it to `tolerance`. `None` when `depth` bisections
-    /// are not enough.
-    fn refine(
-        &mut self,
-        rule: &Rule,
-        low: f64,
-        high: f64,
-        whole: &Values,
-        tolerance: f64,
-        depth: u32,
-    ) -> Option<Values> {
-        let middle = 0.5 * (low + high);
-        let left = self.panel(rule, low, middle)?;
-        let right = self.panel(rule, middle, high)?;
-        let mut refined = [0.0; FUNDING_NETWORK_MAX_ORDER];
-        let mut error: f64 = 0.0;
-        for (((target, a), b), coarse) in refined
-            .iter_mut()
-            .zip(left.iter())
-            .zip(right.iter())
-            .zip(whole.iter())
-        {
-            *target = a + b;
-            error = error.max((a + b - coarse).abs());
-        }
-        if error <= tolerance {
-            return Some(refined);
-        }
-        let deeper = depth.checked_sub(1)?;
-        let left = self.refine(rule, low, middle, &left, 0.5 * tolerance, deeper)?;
-        let right = self.refine(rule, middle, high, &right, 0.5 * tolerance, deeper)?;
-        for ((target, a), b) in refined.iter_mut().zip(left.iter()).zip(right.iter()) {
-            *target = a + b;
-        }
-        Some(refined)
+/// Refines `whole`, the rule on `[low, high]`, by bisection until both
+/// halves agree with it to `tolerance`. `None` when `depth` bisections are
+/// not enough.
+fn refine<I: Integrand>(
+    integrand: &mut I,
+    rule: &Rule,
+    low: f64,
+    high: f64,
+    whole: &Values,
+    tolerance: f64,
+    depth: u32,
+) -> Option<Values> {
+    let middle = 0.5 * (low + high);
+    let left = panel(integrand, rule, low, middle)?;
+    let right = panel(integrand, rule, middle, high)?;
+    let mut refined = [0.0; FUNDING_NETWORK_MAX_ORDER];
+    let mut error: f64 = 0.0;
+    for (((target, a), b), coarse) in refined
+        .iter_mut()
+        .zip(left.iter())
+        .zip(right.iter())
+        .zip(whole.iter())
+    {
+        *target = a + b;
+        error = error.max((a + b - coarse).abs());
     }
+    if error <= tolerance {
+        return Some(refined);
+    }
+    let deeper = depth.checked_sub(1)?;
+    let left = refine(integrand, rule, low, middle, &left, 0.5 * tolerance, deeper)?;
+    let right = refine(
+        integrand,
+        rule,
+        middle,
+        high,
+        &right,
+        0.5 * tolerance,
+        deeper,
+    )?;
+    for ((target, a), b) in refined.iter_mut().zip(left.iter()).zip(right.iter()) {
+        *target = a + b;
+    }
+    Some(refined)
+}
 
-    /// The integral over `[0, ∞)`.
-    fn integrate(&mut self) -> Result<Values, PricingError> {
-        let failed = || {
-            PricingError::method_error(
-                METHOD,
-                "the Fourier integrand could not be integrated to tolerance",
-            )
-        };
-        let rule = Rule::new();
-        // Panels start at the distance from the contour to the poles of the
-        // payoff transform and double until each holds two cycles of
-        // `exp(iv·ln(S/K))`.
-        let frequency = self.log_moneyness.abs();
-        let widest = if frequency > 0.0 {
-            4.0 * std::f64::consts::PI / frequency
-        } else {
-            f64::INFINITY
-        };
-        let mut width = self
-            .damping
-            .abs()
-            .min((self.damping - 1.0).abs())
-            .min(widest);
-        let mut low = 0.0;
-        let mut total = [0.0; FUNDING_NETWORK_MAX_ORDER];
-        let mut quiet = false;
-        for _ in 0..MAX_PANELS {
-            let high = low + width;
-            let whole = self.panel(&rule, low, high).ok_or_else(failed)?;
-            let part = self
-                .refine(&rule, low, high, &whole, PANEL_TOLERANCE, MAX_DEPTH)
-                .ok_or_else(failed)?;
-            for (target, value) in total.iter_mut().zip(part.iter()) {
-                *target += value;
-            }
-            // Past `high` the modulus decays and the phase turns at the rate
-            // `frequency`, so the tail is at most the modulus times the
-            // shorter of `high` and the area of one half cycle.
-            let edge = self.sample(high).ok_or_else(failed)?;
-            let reach = if frequency > 0.0 {
-                high.min(2.0 / frequency)
-            } else {
-                high
-            };
-            let bound = edge.modulus.iter().fold(0.0_f64, |a, b| a.max(*b)) * reach;
-            if bound <= TAIL_TOLERANCE {
-                if quiet {
-                    return Ok(total);
-                }
-                quiet = true;
-            } else {
-                quiet = false;
-            }
-            low = high;
-            width = (2.0 * width).min(widest);
-        }
-        Err(PricingError::method_error(
+/// The integral of `integrand` over `[0, ∞)`.
+///
+/// `frequency` is the rate at which the phase of the integrand turns, the
+/// absolute log-moneyness, and `first_width` the width of the first panel,
+/// the distance from the contour to the poles of the payoff transform.
+pub(super) fn integrate<I: Integrand>(
+    integrand: &mut I,
+    frequency: f64,
+    first_width: f64,
+) -> Result<Values, PricingError> {
+    let failed = || {
+        PricingError::method_error(
             METHOD,
-            "the Fourier inversion did not converge",
-        ))
+            "the Fourier integrand could not be integrated to tolerance",
+        )
+    };
+    let rule = Rule::new();
+    // Panels start at the distance from the contour to the poles of the
+    // payoff transform and double until each holds two cycles of
+    // `exp(iv·ln(S/K))`.
+    let widest = if frequency > 0.0 {
+        4.0 * std::f64::consts::PI / frequency
+    } else {
+        f64::INFINITY
+    };
+    let mut width = first_width.min(widest);
+    let mut low = 0.0;
+    let mut total = [0.0; FUNDING_NETWORK_MAX_ORDER];
+    let mut quiet = false;
+    for _ in 0..MAX_PANELS {
+        let high = low + width;
+        let whole = panel(integrand, &rule, low, high).ok_or_else(failed)?;
+        let part = refine(
+            integrand,
+            &rule,
+            low,
+            high,
+            &whole,
+            PANEL_TOLERANCE,
+            MAX_DEPTH,
+        )
+        .ok_or_else(failed)?;
+        for (target, value) in total.iter_mut().zip(part.iter()) {
+            *target += value;
+        }
+        // Past `high` the modulus decays and the phase turns at the rate
+        // `frequency`, so the tail is at most the modulus times the
+        // shorter of `high` and the area of one half cycle.
+        let edge = integrand.sample(high).ok_or_else(failed)?;
+        let reach = if frequency > 0.0 {
+            high.min(2.0 / frequency)
+        } else {
+            high
+        };
+        let bound = edge.modulus.iter().fold(0.0_f64, |a, b| a.max(*b)) * reach;
+        if bound <= TAIL_TOLERANCE {
+            if quiet {
+                return Ok(total);
+            }
+            quiet = true;
+        } else {
+            quiet = false;
+        }
+        low = high;
+        width = (2.0 * width).min(widest);
     }
+    Err(PricingError::method_error(
+        METHOD,
+        "the Fourier inversion did not converge",
+    ))
 }
 
 /// Order `p` of the exponential moment along which the inversion runs:
@@ -1494,7 +1543,7 @@ fn damping(kernel: &ModelKernel, decay_rate: f64, side: OptionStyle) -> Result<f
 }
 
 /// Prices or deltas of every contract, in `f64`.
-fn network_values(
+pub(super) fn network_values(
     network: &FundingNetwork,
     params: &FundingNetworkParams,
     schedule: FundingSchedule,
@@ -1525,7 +1574,7 @@ fn network_values(
         OptionStyle::Put
     };
     let order = damping(&kernel, decay_rate, direct_side)?;
-    let integral = Inversion {
+    let mut inversion = Inversion {
         network,
         kernel,
         log_moneyness,
@@ -1533,8 +1582,9 @@ fn network_values(
         interval,
         quantity,
         workspace: Workspace::new(network.order()),
-    }
-    .integrate()?;
+    };
+    let first_width = order.abs().min((order - 1.0).abs());
+    let integral = integrate(&mut inversion, log_moneyness.abs(), first_width)?;
     let scale = match quantity {
         Quantity::Price => strike * exp_f64(order * log_moneyness) / std::f64::consts::PI,
         Quantity::Delta => exp_f64((order - 1.0) * log_moneyness) / std::f64::consts::PI,

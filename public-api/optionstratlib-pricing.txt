@@ -597,6 +597,28 @@ pub trait optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen
 pub fn optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen::calculate_price_garman_kohlhagen(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::garman_kohlhagen::garman_kohlhagen(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
+pub mod optionstratlib_pricing::pricing::heston_ladder
+pub struct optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams
+impl optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::drift(&self) -> rust_decimal::decimal::Decimal
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::funding_rate(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::model(&self) -> optionstratlib_pricing::pricing::heston_ladder::HestonModel
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::option_style(&self) -> financial_types::OptionStyle
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::rungs(&self) -> core::num::nonzero::NonZeroU32
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::strike_price(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::try_new(positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, optionstratlib_pricing::pricing::heston_ladder::HestonModel, positive::positive::Positive, core::num::nonzero::NonZeroU32, financial_types::OptionStyle) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::underlying_price(&self) -> positive::positive::Positive
+pub struct optionstratlib_pricing::pricing::heston_ladder::HestonModel
+impl optionstratlib_pricing::pricing::heston_ladder::HestonModel
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::correlation(&self) -> rust_decimal::decimal::Decimal
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::initial_variance(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::long_run_variance(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::mean_reversion(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::try_new(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::volatility_of_variance(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::heston_ladder::heston_ladder_deltas(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::heston_ladder::heston_ladder_prices(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::heston_ladder::heston_ladder_variance_sensitivities(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::lookback
 pub fn optionstratlib_pricing::pricing::lookback::lookback_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::monte_carlo
@@ -728,6 +750,24 @@ pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetworkPar
 pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetworkParams::strike_price(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::pricing::funding_network::FundingNetworkParams::try_new(positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, optionstratlib_pricing::pricing::funding_network::LevyModel, financial_types::OptionStyle) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
 pub const fn optionstratlib_pricing::pricing::funding_network::FundingNetworkParams::underlying_price(&self) -> positive::positive::Positive
+pub struct optionstratlib_pricing::pricing::HestonLadderParams
+impl optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::drift(&self) -> rust_decimal::decimal::Decimal
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::funding_rate(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::model(&self) -> optionstratlib_pricing::pricing::heston_ladder::HestonModel
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::option_style(&self) -> financial_types::OptionStyle
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::rungs(&self) -> core::num::nonzero::NonZeroU32
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::strike_price(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::try_new(positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, optionstratlib_pricing::pricing::heston_ladder::HestonModel, positive::positive::Positive, core::num::nonzero::NonZeroU32, financial_types::OptionStyle) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams::underlying_price(&self) -> positive::positive::Positive
+pub struct optionstratlib_pricing::pricing::HestonModel
+impl optionstratlib_pricing::pricing::heston_ladder::HestonModel
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::correlation(&self) -> rust_decimal::decimal::Decimal
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::initial_variance(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::long_run_variance(&self) -> positive::positive::Positive
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::mean_reversion(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::try_new(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub const fn optionstratlib_pricing::pricing::heston_ladder::HestonModel::volatility_of_variance(&self) -> positive::positive::Positive
 pub struct optionstratlib_pricing::pricing::NoMonteCarlo
 impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
 pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::PricingResult<positive::positive::Positive>
@@ -819,6 +859,9 @@ pub fn optionstratlib_pricing::pricing::funding_network_prices_monte_carlo<R: ra
 pub fn optionstratlib_pricing::pricing::funding_network_prices_with(&optionstratlib_pricing::pricing::funding_network::FundingNetwork, &optionstratlib_pricing::pricing::funding_network::FundingNetworkParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::garman_kohlhagen(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::generate_binomial_tree(&optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<(alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>), optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::heston_ladder_deltas(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::heston_ladder_prices(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::heston_ladder_variance_sensitivities(&optionstratlib_pricing::pricing::heston_ladder::HestonLadderParams, optionstratlib_pricing::pricing::funding_network::FundingSchedule) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::lookback_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::monte_carlo_option_pricing<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::power_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>

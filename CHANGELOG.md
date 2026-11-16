@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `pricing::heston_ladder` in `optionstratlib-pricing` (#990): ladders of everlasting options
+  under the stochastic variance of Heston. `HestonModel` holds the validated parameters of the
+  variance and `HestonLadderParams` the market, the ladder and the payoff;
+  `heston_ladder_prices`, `heston_ladder_deltas` and `heston_ladder_variance_sensitivities`
+  value every rung of a call or put ladder, with funding that accrues continuously or is paid
+  at discrete times (`FundingSchedule`). Each value is that of the Black-Scholes ladder of the
+  current variance, from the funding network pricer, plus a correction inverted along
+  `Im u = −1/2`, where the two models have the same forward and every moment involved exists.
+  Against mixtures of European Heston values integrated one by one the prices agree to
+  `1e-10·K` in the cases tested. The Fourier quadrature of `pricing::funding_network` is now
+  shared by both pricers; its results are unchanged.
+
 ## [0.24.4] - 2026-11-14
 
 Only `optionstratlib-pricing` (at 0.24.2) and `optionstratlib` (at 0.24.4) are released;
