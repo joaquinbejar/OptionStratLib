@@ -68,7 +68,7 @@
 //! damping `p` is chosen so that the exponential moment of order `p` stays
 //! inside the decay rate, `χ(−ip) < η(A)`. Against the closed form of a
 //! ladder the absolute error stays below `1e-12·K` in the cases tested, from
-//! hourly to yearly funding rates and up to sixteen rungs, and the relative
+//! hourly to yearly funding rates and up to thirty-two rungs, and the relative
 //! error near the money below `1e-9`.
 //!
 //! The spectrum of `A` comes from a shifted QR iteration in complex
@@ -126,7 +126,7 @@ use rust_decimal::Decimal;
 use std::num::NonZeroU32;
 
 /// Largest number of contracts in a funding network.
-pub const FUNDING_NETWORK_MAX_ORDER: usize = 16;
+pub const FUNDING_NETWORK_MAX_ORDER: usize = 32;
 
 /// Method name carried by the errors of this module.
 const METHOD: &str = "funding_network";
@@ -1878,7 +1878,8 @@ mod tests {
                 ..
             })
         ));
-        let large = vec![vec![Decimal::ONE; 17]; 17];
+        let large =
+            vec![vec![Decimal::ONE; FUNDING_NETWORK_MAX_ORDER + 1]; FUNDING_NETWORK_MAX_ORDER + 1];
         assert!(matches!(
             FundingNetwork::try_new(&large),
             Err(PricingError::InvalidParameter {
@@ -1916,7 +1917,7 @@ mod tests {
             })
         ));
         assert!(matches!(
-            FundingNetwork::ladder(Positive::ONE, NonZeroU32::new(17).unwrap()),
+            FundingNetwork::ladder(Positive::ONE, NonZeroU32::new(33).unwrap()),
             Err(PricingError::InvalidParameter {
                 parameter: "rungs",
                 ..
@@ -2004,6 +2005,89 @@ mod tests {
             }
         }
         assert!(worst < 1e-9, "worst relative error {worst:e}");
+    }
+
+    #[test]
+    fn test_funding_network_prices_long_ladders_match_closed_form() {
+        // Up to the largest order, at the rate that keeps the top rung at a
+        // mean maturity of thirty days.
+        let mut worst: f64 = 0.0;
+        for rungs in [16_u32, 24, 32] {
+            let rate = f64::from(rungs) * 365.0 / 30.0;
+            let ladder = ladder(rate, rungs);
+            for spot in [85.0, 100.0, 115.0] {
+                for style in [OptionStyle::Call, OptionStyle::Put] {
+                    let inputs = params(spot, 100.0, 0.0, black_scholes(SIGMA), style);
+                    let prices = floats(&funding_network_prices(&ladder, &inputs).unwrap());
+                    assert_eq!(prices.len(), rungs as usize);
+                    for (index, price) in prices.iter().enumerate() {
+                        let reference = everlasting_price(&closed_form(
+                            spot,
+                            100.0,
+                            0.0,
+                            SIGMA,
+                            rate,
+                            index as u32 + 1,
+                            style,
+                        ))
+                        .unwrap()
+                        .to_f64()
+                        .unwrap();
+                        worst = worst.max((price - reference).abs());
+                    }
+                }
+            }
+        }
+        assert!(worst < 1e-10, "worst absolute error {worst:e}");
+    }
+
+    #[test]
+    fn test_funding_network_deltas_long_ladder_match_closed_form() {
+        let rungs = 32_u32;
+        let rate = f64::from(rungs) * 365.0 / 30.0;
+        let ladder = ladder(rate, rungs);
+        let mut worst: f64 = 0.0;
+        for spot in [85.0, 100.0, 115.0] {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                let inputs = params(spot, 100.0, 0.0, black_scholes(SIGMA), style);
+                let deltas = floats(&funding_network_deltas(&ladder, &inputs).unwrap());
+                for (index, delta) in deltas.iter().enumerate() {
+                    let reference = everlasting_delta(&closed_form(
+                        spot,
+                        100.0,
+                        0.0,
+                        SIGMA,
+                        rate,
+                        index as u32 + 1,
+                        style,
+                    ))
+                    .unwrap()
+                    .to_f64()
+                    .unwrap();
+                    worst = worst.max((delta - reference).abs());
+                }
+            }
+        }
+        assert!(worst < 1e-10, "worst absolute error {worst:e}");
+    }
+
+    #[test]
+    fn test_funding_network_prices_longer_ladder_keeps_the_lower_rungs() {
+        // A rung is funded against the rung below only, so rungs added on
+        // top of a ladder at the same rate leave the others where they were.
+        let rate = 16.0 * 365.0 / 30.0;
+        let inputs = params(96.0, 100.0, 0.0, black_scholes(SIGMA), OptionStyle::Call);
+        for schedule in [FundingSchedule::Continuous, discrete(1.0 / 8760.0)] {
+            let short =
+                floats(&funding_network_prices_with(&ladder(rate, 16), &inputs, schedule).unwrap());
+            let long =
+                floats(&funding_network_prices_with(&ladder(rate, 18), &inputs, schedule).unwrap());
+            assert_eq!(long.len(), 18);
+            for (lower, same) in short.iter().zip(&long) {
+                assert!((lower - same).abs() < 1e-10, "{lower} against {same}");
+            }
+            assert!(long.windows(2).all(|pair| pair[0] < pair[1]));
+        }
     }
 
     #[test]
