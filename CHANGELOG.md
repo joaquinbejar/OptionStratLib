@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `FUNDING_NETWORK_MAX_ORDER` in `optionstratlib-pricing` goes from 16 to 32 (#993): funding
+  networks, and with them the ladders of `pricing::funding_network` and
+  `pricing::heston_ladder`, take up to thirty-two contracts. Nothing changes for a network of
+  sixteen contracts or fewer. Against the closed form of the Black-Scholes ladder the prices
+  and deltas of ladders of 16, 24 and 32 rungs agree to `1e-12·K`, and rungs added on top of a
+  ladder at the same rate leave the lower rungs where they were.
+
 ## [0.24.5] - 2026-11-16
 
 Only `optionstratlib-pricing` (at 0.24.3) and `optionstratlib` (at 0.24.5) are released;

@@ -1281,7 +1281,7 @@ mod tests {
         assert!(build(Positive::ZERO, Positive::HUNDRED, rate, 2).is_err());
         assert!(build(Positive::HUNDRED, Positive::ZERO, rate, 2).is_err());
         assert!(build(Positive::HUNDRED, Positive::HUNDRED, Positive::ZERO, 2).is_err());
-        assert!(build(Positive::HUNDRED, Positive::HUNDRED, rate, 17).is_err());
+        assert!(build(Positive::HUNDRED, Positive::HUNDRED, rate, 33).is_err());
         let inputs = build(Positive::HUNDRED, Positive::HUNDRED, rate, 16).unwrap();
         assert_eq!(inputs.underlying_price(), Positive::HUNDRED);
         assert_eq!(inputs.strike_price(), Positive::HUNDRED);
@@ -1312,6 +1312,73 @@ mod tests {
             heston_ladder_prices(&inputs, discrete(1e-10)),
             Err(PricingError::MethodError { .. })
         ));
+    }
+
+    #[test]
+    fn test_heston_ladder_prices_longer_ladder_keeps_the_lower_rungs() {
+        // Rungs added on top of a ladder at the same rate leave the others
+        // where they were, up to the largest order.
+        let rate = 16.0 * 365.0 / 30.0;
+        for schedule in [FundingSchedule::Continuous, discrete(1.0 / 8760.0)] {
+            let short = floats(
+                &heston_ladder_prices(
+                    &params(96.0, 0.0, CRYPTO, rate, 16, OptionStyle::Call),
+                    schedule,
+                )
+                .unwrap(),
+            );
+            for rungs in [18_u32, 32] {
+                let long = floats(
+                    &heston_ladder_prices(
+                        &params(96.0, 0.0, CRYPTO, rate, rungs, OptionStyle::Call),
+                        schedule,
+                    )
+                    .unwrap(),
+                );
+                assert_eq!(long.len(), rungs as usize);
+                for (lower, same) in short.iter().zip(&long) {
+                    assert!((lower - same).abs() < 1e-9, "{lower} against {same}");
+                }
+                assert!(long.windows(2).all(|pair| pair[0] < pair[1]));
+            }
+        }
+    }
+
+    #[test]
+    fn test_heston_ladder_prices_thirty_two_rungs_without_volatility_of_variance_are_black_scholes()
+    {
+        // The largest order against the closed form of the Black-Scholes
+        // ladder, with a variance that barely moves.
+        let flat = [0.16, 0.16, 2.0, 1e-6, -0.5];
+        let rate = 32.0 * 365.0 / 30.0;
+        for spot in [85.0, 100.0, 120.0] {
+            let prices = floats(
+                &heston_ladder_prices(
+                    &params(spot, 0.0, flat, rate, 32, OptionStyle::Call),
+                    FundingSchedule::Continuous,
+                )
+                .unwrap(),
+            );
+            assert_eq!(prices.len(), 32);
+            for (index, price) in prices.iter().enumerate() {
+                let closed = everlasting_price(
+                    &EverlastingParams::try_new(
+                        pos_or_panic!(spot),
+                        Positive::HUNDRED,
+                        pos_or_panic!(0.4),
+                        dec!(0),
+                        pos_or_panic!(rate),
+                        NonZeroU32::new(u32::try_from(index).unwrap() + 1).unwrap(),
+                        OptionStyle::Call,
+                    )
+                    .unwrap(),
+                )
+                .unwrap()
+                .to_f64()
+                .unwrap();
+                assert!((price - closed).abs() < 1e-6, "{price} against {closed}");
+            }
+        }
     }
 
     #[test]
