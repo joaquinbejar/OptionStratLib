@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.24.5"
+version = "0.24.6"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -123,8 +123,8 @@ features = ["plotly", "async", "static_export"]
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true, optional = true }
-# Re-exports the Heston ladders of everlasting options, new in 0.24.3.
-optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.24.3", default-features = false, optional = true }
+# Re-exports the funding networks of up to thirty-two contracts, new in 0.24.4.
+optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.24.4", default-features = false, optional = true }
 # Re-exports the quadratic rough Heston delta along the Brownian, new in 0.24.2.
 optionstratlib-simulation = { path = "crates/optionstratlib-simulation", version = "0.24.2", default-features = false, optional = true }
 optionstratlib-market = { workspace = true, optional = true }

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.6] - 2026-11-18
+
+Only `optionstratlib-pricing` (at 0.24.4) and `optionstratlib` (at 0.24.6) are released;
+`optionstratlib-simulation` stays at 0.24.2, `optionstratlib-visualization` at 0.24.1 and the
+other six crates at 0.24.0 (`docs/versioning-policy.md`). No item is added or removed: a
+limit is raised.
+
 ### Changed
 
 - `FUNDING_NETWORK_MAX_ORDER` in `optionstratlib-pricing` goes from 16 to 32 (#993): funding
@@ -15,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sixteen contracts or fewer. Against the closed form of the Black-Scholes ladder the prices
   and deltas of ladders of 16, 24 and 32 rungs agree to `1e-12·K`, and rungs added on top of a
   ladder at the same rate leave the lower rungs where they were.
+
+### Security
+
+- **RUSTSEC-2026-0543 (`chrono` unmaintained) is waived** in `.cargo/audit.toml` (#996), with
+  its rationale, owner and review date. The advisory, issued on 2026-11-17, reports no
+  vulnerability and has no fixed release: 0.4.45 is the latest `chrono`. The alternatives
+  it names would change the public date types of the library, which is a decision for the
+  next breaking line.
 
 ## [0.24.5] - 2026-11-16
 
