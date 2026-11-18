@@ -23,6 +23,14 @@ limit is raised.
   and deltas of ladders of 16, 24 and 32 rungs agree to `1e-12·K`, and rungs added on top of a
   ladder at the same rate leave the lower rungs where they were.
 
+### Security
+
+- **RUSTSEC-2026-0543 (`chrono` unmaintained) is waived** in `.cargo/audit.toml` (#996), with
+  its rationale, owner and review date. The advisory, issued on 2026-11-17, reports no
+  vulnerability and has no fixed release: 0.4.45 is the latest `chrono`. The alternatives
+  it names would change the public date types of the library, which is a decision for the
+  next breaking line.
+
 ## [0.24.5] - 2026-11-16
 
 Only `optionstratlib-pricing` (at 0.24.3) and `optionstratlib` (at 0.24.5) are released;

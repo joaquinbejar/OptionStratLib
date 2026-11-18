@@ -7,7 +7,8 @@
 # review date. Every entry MUST be re-evaluated on or before its review date;
 # an entry whose upstream fix has shipped must be removed, not extended.
 #
-# None is ignored since #928. A fresh resolution of the workspace
+# #928 removed every waiver then in force; the ones below came later. A fresh
+# resolution of the workspace
 # (`cargo generate-lockfile`: every member, feature and target, optional
 # dependencies included) left every former waiver without a package to
 # cover:
@@ -53,8 +54,30 @@
 # Owner        : @joaquinbejar
 # Review by    : 2027-01-25
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# RUSTSEC-2026-0543 — chrono 0.4.45, unmaintained. Issued 2026-11-17; the
+#                     nightly audit has failed on it since 2026-11-18 (#996).
+#
+# Reachability : RUN TIME, in every build. chrono is a direct dependency of
+#                the facade and of six component crates (core, analytics,
+#                backtest, market, pricing, strategies), and its types are
+#                part of the public API: `DateTime<Utc>` and `NaiveDate` in
+#                expiration dates, time frames and market data.
+#                The advisory reports no vulnerability: it says that the
+#                crate has no maintainer, so a future defect may go unfixed.
+# Upgrade path : None to take. An unmaintained advisory has no fixed release
+#                and 0.4.45 is the latest chrono. The alternatives it names,
+#                `jiff` and `time`, change the public date types of the
+#                library: a breaking change, to be decided for the next
+#                breaking line and not inside 0.24.x.
+# Tracking     : https://github.com/chronotope/chrono/issues/1768
+#                https://github.com/joaquinbejar/OptionStratLib/issues/996
+# Owner        : @joaquinbejar
+# Review by    : 2027-02-18
+# ---------------------------------------------------------------------------
 ignore = [
     "RUSTSEC-2026-0374",
+    "RUSTSEC-2026-0543",
 ]
 
 # Every other advisory class fails the run, so a new unmaintained or unsound
